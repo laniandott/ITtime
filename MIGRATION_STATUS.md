@@ -10,10 +10,11 @@ This repository contains the ITtime application.
 - Categories, tags, todos, timer records, goals and memo JSON are stored in browser IndexedDB through PouchDB.
 - Timer entries have independent IDs, supporting simultaneous activities. Stopping a tag persists its record and displays a local-save confirmation.
 - CouchDB live replication is wired to the local PouchDB database. Configure an existing database and an account authorized for it; HTTPS and matching CORS are required for cross-origin use.
+- Settings can export all SQLite-backed core records to PouchDB while preserving IDs; repeated imports skip existing IDs rather than overwriting local data.
 
 ## Outstanding before production
 
-- Existing SQLite data has NOT been imported. Local database starts empty; keep the original SQLite file backed up.
+- SQLite-backed core data is not imported automatically. Use Settings → Data Migration after deployment; keep a server backup before importing.
 - Conflict resolution and cross-device timer behavior require design and actual CouchDB tests. Basic replication alone does not guarantee application-level merge correctness.
 - Calendar HTTP endpoints and file uploads still use the original server. Their data source has NOT been migrated. The new statistics page reads PouchDB but advanced historical charts and fragmentation analysis remain pending.
 - Complex termination chains, recurring activities, attachment storage, validation parity and full goal periods need migration. Unsupported termination currently returns an error rather than success.

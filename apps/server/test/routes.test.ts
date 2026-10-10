@@ -31,6 +31,7 @@ before(async () => {
   const goalRoutes = (await import('../src/routes/goals.js')).default
   const calendarRoutes = (await import('../src/routes/calendar.js')).default
   const calendarsRoutes = (await import('../src/routes/calendars.js')).default
+  const migrationRoutes = (await import('../src/routes/migration.js')).default
   uploadDir = (await import('../src/config.js')).UPLOAD_DIR
 
   app = Fastify({ logger: false })
@@ -44,6 +45,7 @@ before(async () => {
   await app.register(goalRoutes, { prefix: '/api/goals' })
   await app.register(calendarRoutes, { prefix: '/api/calendar' })
   await app.register(calendarsRoutes, { prefix: '/api/calendars' })
+  await app.register(migrationRoutes, { prefix: '/api/migration' })
   await app.ready()
 })
 
@@ -51,6 +53,16 @@ after(async () => {
   await app?.close()
   await prisma?.$disconnect()
   rmSync(tmpRoot, { recursive: true, force: true })
+})
+
+test('数据迁移导出：返回 SQLite 中完整的核心数据集合', async () => {
+  const category = await prisma.category.create({ data: { name: '迁移导出检查' } })
+  const response = await app.inject({ method: 'GET', url: '/api/migration/export' })
+  assert.equal(response.statusCode, 200)
+  const result = response.json()
+  assert.equal(result.version, 1)
+  assert.ok(result.categories.some((item: { id: string }) => item.id === category.id))
+  for (const key of ['tags', 'timeEntries', 'todos', 'goals', 'memos']) assert.ok(Array.isArray(result[key]))
 })
 
 test('日记附件：拒绝越界路径，编辑保留旧文件，只清理移除项', async () => {

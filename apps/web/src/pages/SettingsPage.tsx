@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import TagsPage from './TagsPage'
 import { testConnection, startSync, stopSync, type SyncConfig } from '../couchSync'
+import { importLegacyServerData } from '../legacyMigration'
 
 const key = 'ittime-couchdb-settings'
 function load(): SyncConfig { try { return { couchUrl: '', couchDatabase: 'ittime', couchUsername: '', couchPassword: '', ...JSON.parse(localStorage.getItem(key) ?? '{}') } } catch { return { couchUrl: '', couchDatabase: 'ittime', couchUsername: '', couchPassword: '' } } }
@@ -10,12 +11,21 @@ export default function SettingsPage() {
   const [settings, setSettings] = useState<SyncConfig>(load)
   const [message, setMessage] = useState('同步未启动')
   const [busy, setBusy] = useState(false)
+  const [migrationMessage, setMigrationMessage] = useState('')
   const update = (field: keyof SyncConfig, value: string) => setSettings(current => ({ ...current, [field]: value }))
   const connect = async (test: boolean) => { setBusy(true); try { setMessage('正在连接…'); if (test) { await testConnection(settings); setMessage('连接测试成功') } else { await startSync(settings, setMessage) } } catch (error) { setMessage(error instanceof Error ? error.message : String(error)) } finally { setBusy(false) } }
+  const migrate = async () => { setBusy(true); setMigrationMessage('正在读取旧服务器数据…'); try { const result = await importLegacyServerData(); setMigrationMessage(`导入完成：新增 ${result.imported} 条，跳过 ${result.skipped} 条（共 ${result.total} 条）`) } catch (error) { setMigrationMessage(error instanceof Error ? error.message : String(error)) } finally { setBusy(false) } }
   return <div className="space-y-6">
     <h1 className="text-2xl font-semibold">设置</h1>
-    <nav className="flex gap-2 border-b border-gray-200 dark:border-gray-800 pb-3">{[['tags', '打卡标签'], ['sync', 'CouchDB 同步'], ['general', '常规']].map(([id, name]) => <button key={id} onClick={() => setPage(id)} className={`px-3 py-2 text-sm rounded-lg ${page === id ? 'bg-brand/10 text-brand' : 'text-gray-500'}`}>{name}</button>)}</nav>
+    <nav className="flex gap-2 border-b border-gray-200 dark:border-gray-800 pb-3">{[['tags', '打卡标签'], ['sync', 'CouchDB 同步'], ['migration', '数据迁移'], ['general', '常规']].map(([id, name]) => <button key={id} onClick={() => setPage(id)} className={`px-3 py-2 text-sm rounded-lg ${page === id ? 'bg-brand/10 text-brand' : 'text-gray-500'}`}>{name}</button>)}</nav>
     {page === 'tags' && <TagsPage />}
+    {page === 'migration' && <section className="max-w-2xl space-y-4">
+      <h2 className="font-semibold">从服务器导入旧数据</h2>
+      <p className="text-sm text-gray-600 dark:text-gray-300">将服务器 SQLite 中的分类、标签、计时记录、待办、目标和随手记导入此浏览器的 PouchDB。原记录 ID 会保留，已有记录不会被覆盖，因此可重复运行。</p>
+      <p className="text-sm text-amber-700 dark:text-amber-300">建议先备份服务器数据，并在开始 CouchDB 同步前完成导入。附件文件仍保存在服务器 uploads 目录。</p>
+      <button type="button" disabled={busy} onClick={() => void migrate()} className="rounded-md bg-brand px-4 py-2 text-sm text-white disabled:opacity-50">{busy ? '正在处理…' : '扫描并导入旧数据'}</button>
+      {migrationMessage && <p role="status" className="text-sm">{migrationMessage}</p>}
+    </section>}
     {page === 'general' && <div className="space-y-4"><p className="text-sm">设备时区：{Intl.DateTimeFormat().resolvedOptions().timeZone}</p><Link className="text-brand" to="/calendar">日历</Link></div>}
     {page === 'sync' && <form onSubmit={event => { event.preventDefault(); localStorage.setItem(key, JSON.stringify(settings)); setMessage('配置已保存到本机') }} className="space-y-5 max-w-xl">
       <h2 className="font-semibold">CouchDB 连接</h2>
