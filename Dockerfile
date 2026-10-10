@@ -34,7 +34,7 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/apps/server/dist ./apps/server/dist
 COPY --from=builder /app/apps/server/src/schema.prisma ./apps/server/src/schema.prisma
 # The Fastify entrypoint resolves ../../web/dist from apps/server/dist.
-COPY --from=builder /app/apps/web/dist ./web/dist
+COPY --from=builder /app/apps/web/dist ./apps/web/dist
 COPY --from=builder /app/apps/server/package.json ./apps/server/package.json
 COPY --from=builder /app/package.json ./package.json
 
