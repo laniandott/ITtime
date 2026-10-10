@@ -15,5 +15,8 @@ export function periodBounds(period: string, days = 7, anchor = new Date()): [nu
   return [start.getTime(), end.getTime()]
 }
 export function elapsed(entries: TimeEntry[], start: number, end: number): number {
-  return entries.reduce((sum, entry) => sum + (entry.endTime ? Math.max(0, Math.min(end, Date.parse(entry.endTime)) - Math.max(start, Date.parse(entry.startTime))) : 0), 0)
+  return entries.reduce((sum, entry) => {
+    const entryEnd = entry.endTime ? Date.parse(entry.endTime) : Date.now()
+    return sum + Math.max(0, Math.min(end, entryEnd) - Math.max(start, Date.parse(entry.startTime)))
+  }, 0)
 }

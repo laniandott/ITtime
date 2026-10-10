@@ -13,7 +13,7 @@ export default function SettingsPage() {
   const [busy, setBusy] = useState(false)
   const [migrationMessage, setMigrationMessage] = useState('')
   const update = (field: keyof SyncConfig, value: string) => setSettings(current => ({ ...current, [field]: value }))
-  const connect = async (test: boolean) => { setBusy(true); try { setMessage('正在连接…'); if (test) { await testConnection(settings); setMessage('连接测试成功') } else { await startSync(settings, setMessage) } } catch (error) { setMessage(error instanceof Error ? error.message : String(error)) } finally { setBusy(false) } }
+  const connect = async (test: boolean) => { setBusy(true); try { setMessage('正在连接…'); if (test) { const status = await testConnection(settings); setMessage(status.guidance) } else { await startSync(settings, setMessage) } } catch (error) { setMessage(error instanceof Error ? error.message : String(error)) } finally { setBusy(false) } }
   const migrate = async () => { setBusy(true); setMigrationMessage('正在读取旧服务器数据…'); try { const result = await importLegacyServerData(); setMigrationMessage(`导入完成：新增 ${result.imported} 条，跳过 ${result.skipped} 条（共 ${result.total} 条）`) } catch (error) { setMigrationMessage(error instanceof Error ? error.message : String(error)) } finally { setBusy(false) } }
   return <div className="space-y-6">
     <h1 className="text-2xl font-semibold">设置</h1>
@@ -35,6 +35,7 @@ export default function SettingsPage() {
       <label className="block text-sm">密码<input className="input mt-2" type="password" value={settings.couchPassword} onChange={event => update('couchPassword', event.target.value)} autoComplete="current-password" /></label>
       <div className="flex flex-wrap gap-3"><button className="px-4 py-2 rounded-lg bg-brand text-white text-sm">保存配置</button><button disabled={busy} type="button" onClick={() => void connect(true)} className="text-brand text-sm">测试连接</button><button disabled={busy} type="button" onClick={() => void connect(false)} className="text-brand text-sm">开始同步</button><button type="button" onClick={() => void stopSync().then(() => setMessage('同步已停止'))} className="text-gray-500 text-sm">停止同步</button></div>
       <p role="status" className="text-sm">{message}</p>
+      <p className="text-xs text-gray-500">判断方式：仅本机为空、CouchDB 有文档时，用同步从云端恢复本机；两边都有数据时会合并，删除标记也会同步。若要开始一个全新的空数据集，请使用新的数据库，并确保本机也为空。应用内删除不是重置操作，不能靠重新同步恢复已删除记录。</p>
       <p className="text-xs text-gray-500">密码保存在当前浏览器。CouchDB 数据库须预先建立，跨域连接须配置 CORS；生产环境使用 HTTPS。</p>
     </form>}
   </div>

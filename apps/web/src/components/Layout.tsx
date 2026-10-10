@@ -1,11 +1,12 @@
 import { NavLink } from 'react-router-dom'
-import { Timer, ListTodo, Sprout, ChartColumn, Settings } from 'lucide-react'
+import { Timer, ListTodo, Sprout, ChartColumn, Settings, CalendarDays } from 'lucide-react'
 
 const navItems = [
   { to: '/', label: '打卡', icon: Timer },
   { to: '/todos', label: '待办', icon: ListTodo },
   { to: '/habits', label: '习惯', icon: Sprout },
   { to: '/stats', label: '统计', icon: ChartColumn },
+  { to: '/calendar', label: '日历', icon: CalendarDays },
   { to: '/settings', label: '设置', icon: Settings },
 ] as const
 
@@ -26,7 +27,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
 
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-5 sm:py-8">{children}</main>
       <nav aria-label="主导航" className="fixed inset-x-0 bottom-0 z-20 border-t border-gray-200/80 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl dark:border-gray-800 dark:bg-gray-950/95">
-        <div className="mx-auto grid h-[4.35rem] max-w-xl grid-cols-5 px-2">
+        <div className="mx-auto grid h-[4.35rem] max-w-2xl grid-cols-6 px-2">
           {navItems.map((item) => (
             <NavLink
               key={item.to}

@@ -8,6 +8,7 @@ import { CalendarSyncModal } from '../components/CalendarSyncModal'
 import { SubscriptionManager } from '../components/SubscriptionManager'
 import type { CalendarEvent } from '../types'
 import { Solar } from 'lunar-javascript'
+import { readCalendarEventSnapshot, saveCalendarEventSnapshot } from '../calendarCache'
 
 // 农历工具：公历转农历
 function getLunarText(d: Date): string {
@@ -146,6 +147,18 @@ function activityIsOnDay(todo: Todo, day: Date): boolean {
   return date ? isSameDay(date, day) : false
 }
 
+async function loadExternalEvents(params: { from: string; to: string }) {
+  try {
+    const events = await api.calendars.events(params)
+    await saveCalendarEventSnapshot(params.from, params.to, events)
+    return { events, fetchedAt: null as string | null }
+  } catch (error) {
+    const snapshot = await readCalendarEventSnapshot(params.from, params.to)
+    if (!snapshot) throw error
+    return { events: snapshot.events, fetchedAt: snapshot.fetchedAt }
+  }
+}
+
 // ===== 重叠布局算法（同 Google Calendar）=====
 
 interface LayoutItem {
@@ -234,6 +247,7 @@ export default function CalendarPage() {
   const [now, setNow] = useState(new Date())
   const [calendarLoading, setCalendarLoading] = useState(false)
   const [calendarError, setCalendarError] = useState('')
+  const [externalEventsCachedAt, setExternalEventsCachedAt] = useState<string | null>(null)
   const [dayLinkedNotes, setDayLinkedNotes] = useState<LinkedNoteEntry[]>([])
   const dayNotesRequest = useRef(0)
   const goNote = useNavigate()
@@ -317,21 +331,29 @@ export default function CalendarPage() {
 
     Promise.allSettled([
       api.timer.list(params),
-      api.calendars.events(params),
+      loadExternalEvents(params),
       api.memos.list(params),
       api.todos.list(),
     ]).then(([entryResult, externalResult, memoResult, activityResult]) => {
       if (cancelled) return
       const failures: string[] = []
+      const optionalFailures: string[] = []
       if (entryResult.status === 'fulfilled') setEntries(entryResult.value)
       else failures.push('时间记录')
-      if (externalResult.status === 'fulfilled') setExternalEvents(externalResult.value)
-      else failures.push('外部日历')
+      if (externalResult.status === 'fulfilled') {
+        setExternalEvents(externalResult.value.events)
+        setExternalEventsCachedAt(externalResult.value.fetchedAt)
+      }
+      else optionalFailures.push('外部日历订阅')
       if (memoResult.status === 'fulfilled') setMemos(memoResult.value)
       else failures.push('记事')
       if (activityResult.status === 'fulfilled') setActivities(activityResult.value)
       else failures.push('活动')
-      setCalendarError(failures.length ? `${failures.join('、')}加载失败，请稍后重试` : '')
+      const messages = [
+        failures.length ? `${failures.join('、')}加载失败，请稍后重试` : '',
+        optionalFailures.length ? `${optionalFailures.join('、')}暂时不可用，本地日历仍可正常使用` : '',
+      ].filter(Boolean)
+      setCalendarError(messages.join('；'))
       setCalendarLoading(false)
     })
 
@@ -453,13 +475,13 @@ export default function CalendarPage() {
           </button>
           <h1 className="text-lg sm:text-xl font-semibold ml-2 text-gray-800 dark:text-gray-100 truncate">{title}</h1>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full items-center gap-2 overflow-x-auto pb-1 sm:w-auto sm:overflow-visible sm:pb-0">
           {periodTotal > 0 && (
             <span className="text-xs text-gray-400 mr-1">
               合计 <span className="font-mono font-medium text-gray-500 dark:text-gray-400">{formatDuration(periodTotal)}</span>
             </span>
           )}
-          <div className="flex items-center rounded-full bg-gray-100 dark:bg-gray-800 p-0.5">
+          <div className="flex shrink-0 items-center rounded-full bg-gray-100 dark:bg-gray-800 p-0.5">
             {([['all', '全部'], ['timer', '计时'], ['activity', '活动']] as const).map(([value, label]) => (
               <button
                 key={value}
@@ -474,7 +496,7 @@ export default function CalendarPage() {
               </button>
             ))}
           </div>
-          <div className="relative">
+          <div className="relative shrink-0">
             <button
               onClick={() => setShowFilter((open) => !open)}
               className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
@@ -531,7 +553,7 @@ export default function CalendarPage() {
               </div>
             )}
           </div>
-          <div className="flex bg-gray-100 dark:bg-gray-800 rounded-full p-0.5">
+          <div className="flex shrink-0 bg-gray-100 dark:bg-gray-800 rounded-full p-0.5">
             {(['day', 'week', 'month'] as const).map((v) => (
               <button
                 key={v}
@@ -548,14 +570,14 @@ export default function CalendarPage() {
           </div>
           <button
             onClick={() => setShowSyncModal(true)}
-            className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-colors"
+            className="w-9 h-9 shrink-0 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-colors"
             title="日历同步 (iCalendar)"
           >
             🗓️
           </button>
           <button
             onClick={() => setShowSubManager(true)}
-            className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-colors"
+            className="w-9 h-9 shrink-0 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-colors"
             title="外部日历订阅管理"
           >
             📡
@@ -563,7 +585,21 @@ export default function CalendarPage() {
         </div>
       </div>
 
+      {view === 'month' && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-400" aria-label="月视图图例">
+          <span className="font-medium text-gray-500 dark:text-gray-300">月视图</span>
+          <span className="inline-flex items-center gap-1"><i className="h-2 w-2 rounded-full bg-brand" />计时记录</span>
+          <span className="inline-flex items-center gap-1"><i className="h-2 w-2 rounded-full bg-amber-400" />活动</span>
+          <span className="inline-flex items-center gap-1"><i className="h-2 w-2 rounded-full bg-emerald-500" />外部日历</span>
+        </div>
+      )}
+
       {/* 日历主体 */}
+      {externalEventsCachedAt && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200" role="status">
+          当前显示本机缓存的外部日历，缓存于 {new Date(externalEventsCachedAt).toLocaleString()}。
+        </div>
+      )}
       {calendarError && <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300">{calendarError}</div>}
       {calendarLoading && !hasCalendarContent ? (
         <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-12 text-center text-gray-400">加载日历中...</div>
@@ -647,8 +683,8 @@ export default function CalendarPage() {
       {/* 外部日历订阅管理弹窗 */}
       {showSubManager && <SubscriptionManager onClose={() => {
         setShowSubManager(false)
-        api.calendars.events({ from: range.from.toISOString(), to: range.to.toISOString() })
-          .then((nextEvents) => { setExternalEvents(nextEvents); setCalendarError('') })
+        loadExternalEvents({ from: range.from.toISOString(), to: range.to.toISOString() })
+          .then((result) => { setExternalEvents(result.events); setExternalEventsCachedAt(result.fetchedAt); setCalendarError('') })
           .catch((err) => setCalendarError(err instanceof Error ? err.message : '刷新外部日历失败'))
       }} />}
 
@@ -1115,7 +1151,7 @@ function MonthView({ date, entriesByDay, activities, memosByDay, externalEvents,
             <button
               key={d.toISOString()}
               onClick={() => onDayClick(d)}
-              className={`min-h-[100px] border-r border-b border-gray-100 dark:border-gray-800 p-1.5 text-left hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group ${!inMonth ? 'opacity-30' : ''}`}
+              className={`min-h-[78px] sm:min-h-[92px] border-r border-b border-gray-100 dark:border-gray-800 p-1.5 text-left hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group ${!inMonth ? 'opacity-30' : ''}`}
             >
               <div className="flex items-center justify-between mb-0.5">
                 <div className="flex items-center gap-1">
@@ -1132,80 +1168,17 @@ function MonthView({ date, entriesByDay, activities, memosByDay, externalEvents,
                   <span className="text-[10px] text-gray-400 font-mono">{formatDuration(total)}</span>
                 )}
               </div>
-              {uniqueColors.length > 0 && (
-                <div className="flex items-center gap-0.5 mb-1 flex-wrap">
-                  {uniqueColors.slice(0, 6).map((c, i) => (
-                    <span key={i} className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: c }} />
-                  ))}
-                </div>
-              )}
-              {dayActivities.length > 0 && (
-                <div className="space-y-px mb-1">
-                  {dayActivities.slice(0, 2).map((todo) => {
-                    const color = todo.tag?.color ?? todo.category?.color ?? '#6d5efc'
-                    return (
-                      <div
-                        key={todo.id}
-                        className={`text-[9px] truncate rounded px-1 py-px leading-tight border ${todo.status === 'done' ? 'line-through opacity-60' : ''}`}
-                        style={{ color, borderColor: `${color}55`, backgroundColor: `${color}12` }}
-                        title={todo.title}
-                      >
-                        ◆ {todo.title}
-                      </div>
-                    )
-                  })}
-                  {dayActivities.length > 2 && <div className="text-[8px] text-gray-400 px-1">+{dayActivities.length - 2} 个活动</div>}
-                </div>
-              )}
-              {/* 全天外部事件 — 彩色横条 banner */}
-              {(() => {
-                const dayExtStart = startOfDay(d).getTime()
-                const dayExtEnd = endOfDay(d).getTime()
-                const dayExt = externalEvents.filter((ev) => externalEventOverlapsDay(ev, dayExtStart, dayExtEnd))
-                if (dayExt.length === 0) return null
-                // 去重：同名事件只显示一个
-                const seen = new Set<string>()
-                const unique = dayExt.filter((e) => { if (seen.has(e.summary)) return false; seen.add(e.summary); return true })
-                return (
-                  <div className="space-y-0.5 mb-1">
-                    {unique.slice(0, 2).map((ev) => {
-                      const color = ev.subscription?.color ?? '#2ecc71'
-                      return (
-                        <div
-                          key={ev.id}
-                          className="text-[9px] font-semibold text-white rounded px-1.5 py-0.5 truncate leading-tight"
-                          style={{ backgroundColor: color }}
-                          title={ev.summary}
-                        >
-                          {formatExternalEventLabel(ev)}
-                        </div>
-                      )
-                    })}
-                    {unique.length > 2 && (
-                      <div className="text-[8px] text-gray-400 px-1">+{unique.length - 2} 更多</div>
-                    )}
-                  </div>
-                )
-              })()}
-              <div className="space-y-px">
-                {dayEntries.slice(0, 3).map((e) => (
-                  <div
-                    key={e.id}
-                    className="text-[9px] truncate rounded px-1 py-px leading-tight font-medium"
-                    style={{
-                      backgroundColor: `${e.tag?.color ?? '#6d5efc'}18`,
-                      color: e.tag?.color ?? '#6d5efc',
-                    }}
-                  >
-                    {e.tag?.name}
-                  </div>
-                ))}
-                {dayEntries.length > 3 && (
-                  <div className="text-[9px] text-gray-400 px-1">+{dayEntries.length - 3}</div>
-                )}
+              <div className="mt-2 flex min-h-5 items-center gap-1.5">
+                {uniqueColors.slice(0, 5).map((c, i) => <span key={i} className="h-2 w-2 rounded-full" style={{ backgroundColor: c }} />)}
+                {dayActivities.length > 0 && <span className="h-2 w-2 rounded-full bg-amber-400" title="有活动" />}
+                {externalEvents.some((ev) => externalEventOverlapsDay(ev, startOfDay(d).getTime(), endOfDay(d).getTime())) && <span className="h-2 w-2 rounded-full bg-emerald-500" title="有外部日历事件" />}
+                {dayMemos.length > 0 && <span className="text-[10px] text-gray-400">备忘 {dayMemos.length}</span>}
               </div>
-              {dayMemos.length > 0 && (
-                <div className="text-[9px] text-gray-500 dark:text-gray-400 mt-1 truncate">📝 {dayMemos.length}</div>
+              {(dayEntries.length > 0 || dayActivities.length > 0 || total > 0) && (
+                <div className="mt-1 flex items-center gap-1 text-[10px] text-gray-500 dark:text-gray-400">
+                  {dayEntries.length > 0 && <span>{dayEntries.length} 条记录</span>}
+                  {dayActivities.length > 0 && <span>{dayActivities.length} 项活动</span>}
+                </div>
               )}
             </button>
           )

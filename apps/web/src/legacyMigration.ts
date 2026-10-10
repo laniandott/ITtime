@@ -34,7 +34,9 @@ export async function importLegacyServerData() {
     if (!record.id) throw new Error(`导出数据 ${source} 中存在缺少 ID 的记录`)
     const value = { ...record }
     for (const relation of relations) delete value[relation]
-    return { _id: `${target}:${record.id}`, entity: target, value, updatedAt: record.updatedAt ?? record.createdAt ?? payload.exportedAt }
+    const updatedAt = record.updatedAt ?? record.createdAt ?? payload.exportedAt
+    const fieldClock = Object.fromEntries(Object.keys(value).map((field) => [field, updatedAt]))
+    return { _id: `${target}:${record.id}`, entity: target, value, updatedAt, fieldClock }
   }))
 
   const existing = new Set<string>()
