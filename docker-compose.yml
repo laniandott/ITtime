@@ -1,0 +1,31 @@
+services:
+  tagtime:
+    build: .
+    image: tagtime:latest
+    container_name: tagtime
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/data
+    environment:
+      - DATABASE_URL=file:/data/tagtime.db
+      - DATA_DIR=/data
+      - NOTES_DIR=/data/notes
+      - HOST=0.0.0.0
+      - PORT=3000
+      - TZ=Asia/Shanghai
+      - CORS_ORIGINS=${CORS_ORIGINS:-}
+      - PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
+
+  couchdb:
+    image: couchdb:3
+    container_name: ittime-couchdb
+    restart: unless-stopped
+    ports:
+      - "5984:5984"
+    volumes:
+      - ./couchdb-data:/opt/couchdb/data
+    environment:
+      COUCHDB_USER: ${COUCHDB_USER:-ittime}
+      COUCHDB_PASSWORD: ${COUCHDB_PASSWORD:-change-me-before-production}
