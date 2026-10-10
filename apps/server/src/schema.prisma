@@ -1,4 +1,4 @@
-// TagTime - Tag-based time tracker
+// ITtime - Tag-based time tracker
 // 数据模型：Category(分类) -> Tag(标签) -> TimeEntry(时间记录)
 //          Todo(待办) 可选关联 Category 和 TimeEntry
 //          Goal(目标) 关联 Tag，支持时长型/次数型习惯追踪
@@ -252,7 +252,7 @@ model NoteLink {
   @@unique([sourceNoteId, targetKey])
 }
 
-/// 笔记 ↔ TagTime 实体关联（tag/todo/date/memo 特殊链接）
+/// 笔记 ↔ ITtime 实体关联（tag/todo/date/memo 特殊链接）
 model NoteEntityLink {
   id        String   @id @default(cuid())
   noteId    String

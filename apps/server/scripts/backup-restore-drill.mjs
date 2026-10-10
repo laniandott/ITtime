@@ -1,6 +1,6 @@
 // 六-D：数据库/Markdown 组合备份恢复演练（可重复）
 // 验证：备份 SQLite + notes/ 全部 Markdown → 破坏(清空库与正文) → 恢复 → 重启后
-//       断言 Note ID 集合、出/入链接关系(outLinks/inLinks)、TagTime 实体关联(entities) 均与备份前一致。
+//       断言 Note ID 集合、出/入链接关系(outLinks/inLinks)、ITtime 实体关联(entities) 均与备份前一致。
 // 用法（仓库根，先构建服务端再跑）：
 //   npm run build -w apps/server
 //   npm run backup:drill -w apps/server
@@ -109,7 +109,7 @@ try {
 
   const s = startServer(); await waitReady()
 
-  // 1) 造数据：3 篇互相链接的笔记，其中一篇含 TagTime 实体引用
+  // 1) 造数据：3 篇互相链接的笔记，其中一篇含 ITtime 实体引用
   const seeds = [
     { title: 'BakA', content: '指向 [[BakB]] 和 [[BakC]]\n\n标签 [[tag:备份标签]]\n待办 [[todo:买牛奶]]' },
     { title: 'BakB', content: '回指 [[BakA]]' },

@@ -1,6 +1,6 @@
 {
-  "appId": "com.tagtime.app",
-  "appName": "TagTime",
+  "appId": "com.ittime.app",
+  "appName": "ITtime",
   "webDir": "dist",
   "server": {
     "androidScheme": "http",

@@ -123,7 +123,7 @@ export default function VaultPage() {
   const switchVault = async () => {
     const nextPath = vaultPathDraft.trim()
     if (!nextPath || vaultBusy) return
-    if (!confirm('切换文件库后，TagTime 会重新扫描该文件夹中的 Markdown 文件。不会移动或删除任何文件，笔记索引和笔记 ID 可能变化。继续吗？')) return
+    if (!confirm('切换文件库后，ITtime 会重新扫描该文件夹中的 Markdown 文件。不会移动或删除任何文件，笔记索引和笔记 ID 可能变化。继续吗？')) return
     setVaultBusy(true)
     try {
       const result = await api.notes.setVault(nextPath)
@@ -488,7 +488,7 @@ export default function VaultPage() {
             <h2 id="vault-settings-title" className="text-base font-semibold text-gray-800 dark:text-gray-100">设置笔记文件库</h2>
             <button type="button" onClick={() => setVaultSettingsOpen(false)} className="rounded px-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="关闭">×</button>
           </div>
-          <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">填写 TagTime 与 Obsidian 共同使用的本机 Vault 文件夹路径，例如 <code>F:/Obsidian/MyVault</code>。</p>
+          <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">填写 ITtime 与 Obsidian 共同使用的本机 Vault 文件夹路径，例如 <code>F:/Obsidian/MyVault</code>。</p>
           {vaultSource === 'environment' && <p className="mb-2 rounded-md bg-amber-50 px-2 py-1.5 text-xs text-amber-700 dark:bg-amber-900/20 dark:text-amber-200">当前路径由 NOTES_DIR 启动配置固定，请修改启动配置后重启服务。</p>}
           <input value={vaultPathDraft} onChange={(event) => setVaultPathDraft(event.target.value)} disabled={vaultSource === 'environment'} className="input w-full font-mono text-xs disabled:cursor-not-allowed disabled:opacity-60" placeholder="F:/Obsidian/MyVault" autoFocus />
           <p className="mt-2 text-[11px] text-gray-400">只会重新建立索引，不会复制、移动或删除 Markdown 文件。</p>
@@ -668,7 +668,7 @@ function VaultEditor({
         <LinkGroup title={`反向链接 (${note.inLinks.length})`} items={note.inLinks.map((link) => ({ id: link.sourceNoteId, label: link.sourceTitle }))} navigate={navigate} />
       </div>
       {entities && <div className="border-t border-gray-200 px-3 pb-3 pt-2 text-xs dark:border-gray-800">
-        <div className="mb-1 font-semibold text-gray-500 dark:text-gray-400">关联的 TagTime</div>
+        <div className="mb-1 font-semibold text-gray-500 dark:text-gray-400">关联的 ITtime</div>
         <div className="flex flex-wrap gap-1.5">
           {(['tags', 'todos', 'dates', 'memos'] as const).flatMap((key) => entities[key]).map((entity) => entity.resolved ? (
             <button key={`${entity.type}:${entity.entityKey}`} type="button" onClick={() => onGoEntity(entity)} className="rounded bg-brand/10 px-1.5 py-0.5 text-brand hover:bg-brand/20">{entity.linkText || entity.name || entity.entityKey}</button>

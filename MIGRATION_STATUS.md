@@ -1,6 +1,6 @@
-# ITtime migration from TagTime
+# ITtime Project Status
 
-This checkout is the new TagTime-based implementation. The older checkout at F:/projects/ITtime remains separate.
+This repository contains the ITtime application.
 
 ## Working migration slice
 
@@ -18,8 +18,8 @@ This checkout is the new TagTime-based implementation. The older checkout at F:/
 - Calendar HTTP endpoints and file uploads still use the original server. Their data source has NOT been migrated. The new statistics page reads PouchDB but advanced historical charts and fragmentation analysis remain pending.
 - Complex termination chains, recurring activities, attachment storage, validation parity and full goal periods need migration. Unsupported termination currently returns an error rather than success.
 - Credential protection, offline app-shell caching, desktop/mobile browser screenshots and interaction tests remain outstanding.
-- Dockerfile now builds the Prisma server and serves the built SPA from `/web/dist`; the existing SQLite volume remains for calendar, notes and upload endpoints that still use the server.
-- Dependency audit currently reports vulnerabilities inherited from the TagTime dependency graph; review before deployment.
+- Dockerfile builds the Prisma server and serves the built SPA from `/apps/web/dist`; the SQLite volume remains for calendar, notes and upload endpoints that still use the server.
+- Dependency audit currently reports vulnerabilities inherited from the ITtime dependency graph; review before deployment.
 
 ## Preview
 

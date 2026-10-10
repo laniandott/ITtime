@@ -40,7 +40,7 @@ COPY --from=builder /app/package.json ./package.json
 
 # 数据持久化
 RUN mkdir -p /data
-ENV DATABASE_URL="file:/data/tagtime.db"
+ENV DATABASE_URL="file:/data/ittime.db"
 ENV HOST=0.0.0.0
 ENV PORT=3000
 

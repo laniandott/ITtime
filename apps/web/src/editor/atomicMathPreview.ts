@@ -12,7 +12,7 @@ class MathWidget extends WidgetType {
 
   toDOM(): HTMLElement {
     const element = document.createElement(this.display ? 'div' : 'span')
-    element.className = this.display ? 'tagtime-atomic-math tagtime-atomic-math-display' : 'tagtime-atomic-math'
+    element.className = this.display ? 'ittime-atomic-math ittime-atomic-math-display' : 'ittime-atomic-math'
     try {
       katex.render(normalizeMathExpression(this.expression), element, {
         displayMode: this.display,

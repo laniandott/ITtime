@@ -24,7 +24,11 @@ import type {
 export function getServerHost(): string {
   if (typeof localStorage !== 'undefined') {
     try {
-      const custom = localStorage.getItem('tagtime_server_url')
+      const custom = localStorage.getItem('ittime_server_url') ?? localStorage.getItem('tagtime_server_url')
+      if (custom && !localStorage.getItem('ittime_server_url')) {
+        localStorage.setItem('ittime_server_url', custom)
+        localStorage.removeItem('tagtime_server_url')
+      }
       const normalized = normalizeServerHost(custom)
       if (normalized) return normalized
     } catch {
@@ -94,8 +98,10 @@ export function setServerHost(url: string): boolean {
   if (typeof localStorage !== 'undefined') {
     try {
       if (normalized) {
-        localStorage.setItem('tagtime_server_url', normalized)
+        localStorage.setItem('ittime_server_url', normalized)
+        localStorage.removeItem('tagtime_server_url')
       } else {
+        localStorage.removeItem('ittime_server_url')
         localStorage.removeItem('tagtime_server_url')
       }
     } catch {

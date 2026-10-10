@@ -56,7 +56,7 @@ export function CalendarSyncModal({ onClose }: { onClose: () => void }) {
   const downloadIcs = () => {
     const a = document.createElement('a')
     a.href = httpUrl
-    a.download = 'tagtime_calendar.ics'
+    a.download = 'ittime_calendar.ics'
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
@@ -84,7 +84,7 @@ export function CalendarSyncModal({ onClose }: { onClose: () => void }) {
 
         {/* 介绍 */}
         <div className="text-xs text-gray-500 dark:text-gray-400 bg-brand-50/50 dark:bg-brand-900/20 border border-brand-200/50 dark:border-brand-800/40 rounded-xl p-3 leading-relaxed">
-          💡 将 TagTime 的计时活动同步到 <strong>iPhone、Mac、安卓手机日历、Google 日历、Outlook</strong> 等日历中。订阅后，日历软件会自动定时拉取并实时显示您的活动轨迹与打点记录。
+          💡 将 ITtime 的计时活动同步到 <strong>iPhone、Mac、安卓手机日历、Google 日历、Outlook</strong> 等日历中。订阅后，日历软件会自动定时拉取并实时显示您的活动轨迹与打点记录。
         </div>
 
         {/* 过滤选项 */}

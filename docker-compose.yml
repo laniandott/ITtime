@@ -1,15 +1,15 @@
 services:
-  tagtime:
+  ittime:
     build: .
-    image: tagtime:latest
-    container_name: tagtime
+    image: ittime:latest
+    container_name: ittime
     restart: unless-stopped
     ports:
       - "3000:3000"
     volumes:
       - ./data:/data
     environment:
-      - DATABASE_URL=file:/data/tagtime.db
+      - DATABASE_URL=file:/data/ittime.db
       - DATA_DIR=/data
       - NOTES_DIR=/data/notes
       - HOST=0.0.0.0

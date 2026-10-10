@@ -149,12 +149,12 @@ export default async function calendarRoutes(app: FastifyInstance) {
     const lines: string[] = [
       'BEGIN:VCALENDAR',
       'VERSION:2.0',
-      'PRODID:-//TagTime//Activity Tracker//CN',
+      'PRODID:-//ITtime//Activity Tracker//CN',
       'CALSCALE:GREGORIAN',
       'METHOD:PUBLISH',
-      'X-WR-CALNAME:TagTime 活动记录',
+      'X-WR-CALNAME:ITtime 活动记录',
       'X-WR-TIMEZONE:Asia/Shanghai',
-      'X-WR-CALDESC:TagTime 时间记录与活动同步',
+      'X-WR-CALDESC:ITtime 时间记录与活动同步',
       'REFRESH-INTERVAL;VALUE=DURATION:PT1H',
       'X-PUBLISHED-TTL:PT1H',
     ]
@@ -219,7 +219,7 @@ export default async function calendarRoutes(app: FastifyInstance) {
       const localEnd = formatIcsLocalDate(entry.endTime)
 
       lines.push('BEGIN:VEVENT')
-      lines.push(`UID:timeentry-${entry.id}@tagtime`)
+      lines.push(`UID:timeentry-${entry.id}@ittime`)
       lines.push(`DTSTAMP:${nowStr}`)
 
       // 默认使用 RFC 5545 浮动本地时间，不受 Google/客户端账号异地时区偏移影响
@@ -233,7 +233,7 @@ export default async function calendarRoutes(app: FastifyInstance) {
 
       lines.push(`SUMMARY:${escapeIcsText(summary)}`)
       lines.push(`DESCRIPTION:${escapeIcsText(description)}`)
-      lines.push(`CATEGORIES:${escapeIcsText(catName || 'TagTime')}`)
+      lines.push(`CATEGORIES:${escapeIcsText(catName || 'ITtime')}`)
       lines.push('STATUS:CONFIRMED')
       if (tagColor) {
         lines.push(`COLOR:${tagColor}`)
@@ -251,7 +251,7 @@ export default async function calendarRoutes(app: FastifyInstance) {
 
     reply
       .header('Content-Type', 'text/calendar; charset=utf-8')
-      .header('Content-Disposition', 'inline; filename="tagtime_calendar.ics"')
+      .header('Content-Disposition', 'inline; filename="ittime_calendar.ics"')
       .header('Cache-Control', 'no-cache, no-store, must-revalidate')
       .send(icsContent)
   })

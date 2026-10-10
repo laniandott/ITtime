@@ -62,7 +62,7 @@ async function syncNativeNotification(running: TimeEntry[]) {
           {
             id: 1001,
             title: `⏱ 正在计时 · ${tagName}`,
-            body: `开始于 ${new Date(active.startTime).toLocaleTimeString('zh-CN', { hour12: false })} · 点击切回 TagTime`,
+            body: `开始于 ${new Date(active.startTime).toLocaleTimeString('zh-CN', { hour12: false })} · 点击切回 ITtime`,
             ongoing: true,
             autoCancel: false,
           },

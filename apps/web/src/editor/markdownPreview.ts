@@ -22,7 +22,7 @@ export function renderMarkdown(content: string): string {
     const expression = display
       ? full.startsWith('$$') ? full.slice(2, -2) : full.slice(2, -2)
       : full.startsWith('\\(') ? full.slice(2, -2) : full.slice(1, -1)
-    const token = createUniquePlaceholder('TAGTIMEMATH', source, usedPlaceholders)
+    const token = createUniquePlaceholder('ITTIMEMATH', source, usedPlaceholders)
     const html = katex.renderToString(normalizeMathExpression(expression), {
       displayMode: display,
       throwOnError: false,

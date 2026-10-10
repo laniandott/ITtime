@@ -1,5 +1,5 @@
 import PouchDB from 'pouchdb-browser'
-import { localDatabase } from './localData'
+import { localDatabase, prepareLocalDatabase } from './localData'
 export interface SyncConfig { couchUrl: string; couchDatabase: string; couchUsername: string; couchPassword: string }
 let handle: ReturnType<ReturnType<typeof localDatabase>['sync']> | null = null
 let remote: PouchDB.Database | null = null
@@ -12,7 +12,7 @@ export function createRemote(config: SyncConfig) {
 export async function testConnection(config: SyncConfig) { const db = createRemote(config); try { await db.info() } finally { await db.close() } }
 export async function stopSync() { handle?.cancel(); handle = null; if (remote) await remote.close(); remote = null }
 export async function startSync(config: SyncConfig, report: (message: string) => void) {
-  await stopSync(); remote = createRemote(config); await remote.info()
+  await stopSync(); await prepareLocalDatabase(); remote = createRemote(config); await remote.info()
   handle = localDatabase().sync(remote, { live: true, retry: true })
   handle.on('active', () => report('正在同步'))
   handle.on('paused', (error: unknown) => report(error ? '连接中断，等待重试' : '同步完成'))

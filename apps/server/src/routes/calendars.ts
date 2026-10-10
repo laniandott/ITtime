@@ -121,7 +121,7 @@ async function fetchAndParseIcs(url: string): Promise<any[]> {
   }
 
   const response = await fetch(url, {
-    headers: { 'User-Agent': 'TagTime/1.0 CalendarSubscription' },
+    headers: { 'User-Agent': 'ITtime/1.0 CalendarSubscription' },
     signal: AbortSignal.timeout(30000),
     redirect: 'error',
   })

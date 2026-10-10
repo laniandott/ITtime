@@ -95,7 +95,7 @@ const host = process.env.HOST ?? '::'
 
 try {
   const address = await app.listen({ port, host })
-  app.log.info(`TagTime server listening on ${address}`)
+  app.log.info(`ITtime server listening on ${address}`)
 } catch (err) {
   app.log.error(err)
   process.exit(1)

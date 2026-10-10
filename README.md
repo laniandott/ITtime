@@ -1,4 +1,4 @@
-# TagTime · 标签时间追踪
+# ITtime · 标签时间追踪
 
 基于标签的时间追踪应用，灵感来自 [Traggo](https://github.com/traggo/server)，在此基础上增加了日记、日历、待办、目标习惯等功能。
 
@@ -29,14 +29,14 @@ docker compose up -d --build
 # 访问 http://localhost:3000
 ```
 
-数据持久化在 `./data/tagtime.db`，上传附件存储在 `./data/uploads/`。
+数据持久化在 `./data/ittime.db`，上传附件存储在 `./data/uploads/`。
 
 核心打卡、待办、习惯和统计优先使用浏览器 PouchDB；设置页中的 CouchDB 同步用于跨设备复制这些数据。Docker 中保留 SQLite 服务，继续承载日历、笔记和附件接口。
 
 如需让其它域名托管的前端跨域访问 API，请在 `.env` 中显式配置允许的来源，例如：
 
 ```bash
-CORS_ORIGINS=https://tagtime.example.com
+CORS_ORIGINS=https://ittime.example.com
 ```
 
 多个来源使用英文逗号分隔。默认仅允许同源请求和本机 App/WebView 来源。
@@ -53,7 +53,7 @@ npm run dev
 ## 项目结构
 
 ```
-tagtime/
+ittime/
 ├── apps/
 │   ├── server/              # 后端 Fastify + Prisma
 │   │   └── src/

@@ -1,6 +1,6 @@
-# TagTime 数据备份与恢复（离线 CLI）
+# ITtime 数据备份与恢复（离线 CLI）
 
-本文说明如何对 TagTime 服务的持久化数据进行离线备份与恢复。**必须在服务端进程停止后执行**；本工具不支持在线/热备份。
+本文说明如何对 ITtime 服务的持久化数据进行离线备份与恢复。**必须在服务端进程停止后执行**；本工具不支持在线/热备份。
 
 ## 1. 覆盖范围
 
@@ -24,7 +24,7 @@
 |------|------|------|
 | `DATA_DIR` | 数据根目录（含 `uploads/`） | `/data` 或工作目录下 `data` |
 | `NOTES_DIR` | 固定笔记目录（设置后网页不能切换） | 优先级最高 |
-| `DATABASE_URL` | Prisma 数据库 URL（`file:` 或绝对路径） | `DATA_DIR/tagtime.db` |
+| `DATABASE_URL` | Prisma 数据库 URL（`file:` 或绝对路径） | `DATA_DIR/ittime.db` |
 | `PORT` | 服务端端口（用于检测服务是否在运行） | `3000` |
 
 未设置 `NOTES_DIR` 时，可在网页的“笔记库 → 设置文件库”中填写本机 Obsidian Vault 路径；路径会保存到 `DATA_DIR/notes-config.json`。切换只重建索引，不会移动或删除 Markdown 文件。
@@ -99,5 +99,5 @@ npm run backup:cli:drill -w apps/server
 
 - 本 CLI 属阶段六「离线备份/恢复」实现，首版提交 `5878218`。
 - `c1d2c09` 起移除 `--ignore-running` 旁路并加固路径校验、sidecar 清理。
-- `a8e6dbb` 把恢复改为事务式替换并补齐演练 S7-S10；其后补 Phase A/B 全阶段回滚与 Phase C「已提交待清理」语义（S11-S12），fault-injection 仅在 `TAGTIME_TEST_RUNNER=1` 时生效，生产流程无测试旁路。
+- `a8e6dbb` 把恢复改为事务式替换并补齐演练 S7-S10；其后补 Phase A/B 全阶段回滚与 Phase C「已提交待清理」语义（S11-S12），fault-injection 仅在 `ITTIME_TEST_RUNNER=1` 时生效，生产流程无测试旁路。
 - 状态：CLI 演练（12 场景）、服务端构建与既有测试通过；六-D 的「干净安装 / 升级安装 / 正式发布产物检查」及六-C 真机回归仍为独立待办，阶段六尚未正式验收与发布。

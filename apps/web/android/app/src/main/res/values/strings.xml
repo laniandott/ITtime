@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">TagTime</string>
-    <string name="title_activity_main">TagTime</string>
-    <string name="package_name">com.tagtime.app</string>
-    <string name="custom_url_scheme">com.tagtime.app</string>
+    <string name="app_name">ITtime</string>
+    <string name="title_activity_main">ITtime</string>
+    <string name="package_name">com.ittime.app</string>
+    <string name="custom_url_scheme">com.ittime.app</string>
 </resources>

@@ -247,7 +247,7 @@ export default async function noteRoutes(app: FastifyInstance) {
     return data
   })
 
-  // 反查：挂靠到某个 TagTime 实体（tag/todo/date/memo）的笔记
+  // 反查：挂靠到某个 ITtime 实体（tag/todo/date/memo）的笔记
   app.get('/linked', async (req, reply) => {
     const raw = req.query as Record<string, unknown>
     const type = singleQueryString(raw.type)
@@ -325,7 +325,7 @@ export default async function noteRoutes(app: FastifyInstance) {
     return data
   })
 
-  // 关联的 TagTime 实体（tag/todo/date/memo）
+  // 关联的 ITtime 实体（tag/todo/date/memo）
   app.get('/:id/entities', async (req, reply) => {
     const { id } = req.params as { id: string }
     const note = await prisma.note.findUnique({ where: { id } })

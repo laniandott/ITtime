@@ -1,8 +1,8 @@
 import os
 from PIL import Image
 
-src_path = r"f:\项目\tagtime\apps\web\public\logo.png"
-res_dir = r"f:\项目\tagtime\apps\web\android\app\src\main\res"
+src_path = r"f:\项目\ittime\apps\web\public\logo.png"
+res_dir = r"f:\项目\ittime\apps\web\android\app\src\main\res"
 
 if not os.path.exists(src_path):
     print("Error: logo.png not found")

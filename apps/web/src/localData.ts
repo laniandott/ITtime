@@ -3,16 +3,28 @@ import { periodBounds, elapsed } from './localStats'
 
 type Doc = PouchDB.Core.IdMeta & Partial<PouchDB.Core.GetMeta> & { entity: string; value: Record<string, any>; updatedAt: string }
 let database: PouchDB.Database<Doc> | undefined
-export function localDatabase() { return database ??= new PouchDB<Doc>('ittime-tagtime-v1') }
-async function list(entity: string) { const result = await localDatabase().allDocs({ include_docs: true, startkey: `${entity}:`, endkey: `${entity}:\uffff` }); return result.rows.flatMap(row => row.doc ? [row.doc.value] : []) }
-async function get(entity: string, id: string) { return (await localDatabase().get(`${entity}:${id}`)).value }
+let migration: Promise<void> | undefined
+export function localDatabase() {
+  database ??= new PouchDB<Doc>('ittime-v1')
+  migration ??= (async () => {
+    const legacy = new PouchDB<Doc>('ittime-tagtime-v1')
+    const { doc_count } = await legacy.info()
+    if (doc_count) await PouchDB.replicate(legacy, database!)
+  })()
+  return database
+}
+async function readyDatabase() { const db = localDatabase(); await migration; return db }
+export async function prepareLocalDatabase() { return readyDatabase() }
+async function list(entity: string) { const result = await (await readyDatabase()).allDocs({ include_docs: true, startkey: `${entity}:`, endkey: `${entity}:\uffff` }); return result.rows.flatMap(row => row.doc ? [row.doc.value] : []) }
+async function get(entity: string, id: string) { return (await (await readyDatabase()).get(`${entity}:${id}`)).value }
 async function write(entity: string, value: Record<string, any>) {
+  const db = await readyDatabase()
   const _id = `${entity}:${value.id}`
   let _rev: string | undefined
-  try { _rev = (await localDatabase().get(_id))._rev } catch (error) { if ((error as { status?: number }).status !== 404) throw error }
+  try { _rev = (await db.get(_id))._rev } catch (error) { if ((error as { status?: number }).status !== 404) throw error }
   // Persist only source fields; relations are joined when reading.
   const { tag, category, parent, todo, memos, _count, ...source } = value
-  await localDatabase().put({ _id, ...(_rev ? { _rev } : {}), entity, value: source, updatedAt: new Date().toISOString() })
+  await db.put({ _id, ...(_rev ? { _rev } : {}), entity, value: source, updatedAt: new Date().toISOString() })
   return source
 }
 async function joined(entity: string, value: Record<string, any>): Promise<any> {
@@ -41,6 +53,7 @@ const defaults: Record<string, Record<string, any>> = {
 }
 export function isLocalPath(path: string) { return /^\/(categories|tags|todos|timer|goals|memos)(\/|\?|$)/.test(path) }
 export async function localRequest<T>(path: string, options?: RequestInit): Promise<T> {
+  await readyDatabase()
   const url = new URL(path, 'http://local'); const [entity, key, action] = url.pathname.split('/').slice(1)
   const method = options?.method ?? 'GET'; const body = typeof options?.body === 'string' ? JSON.parse(options.body) : {}
   const now = new Date().toISOString()
@@ -86,7 +99,7 @@ export async function localRequest<T>(path: string, options?: RequestInit): Prom
       return Promise.all(values.map(value => joined(entity, value)))
     }
     if (method === 'GET') return joined(entity, await get(entity, key))
-    if (method === 'DELETE') { const doc = await localDatabase().get(`${entity}:${key}`); await localDatabase().remove(doc); return { ok: true } }
+    if (method === 'DELETE') { const db = await readyDatabase(); const doc = await db.get(`${entity}:${key}`); await db.remove(doc); return { ok: true } }
     if (method === 'POST' && !key) { const value = { ...defaults[entity], ...body, id: crypto.randomUUID(), createdAt: now, updatedAt: now }; await write(entity, value); return joined(entity, value) }
     const existing = await get(entity, key)
     const value = action === 'toggle' ? { ...existing, status: existing.status === 'done' ? 'pending' : 'done', completedAt: existing.status === 'done' ? null : now, updatedAt: now } : { ...existing, ...body, id: existing.id, updatedAt: now }

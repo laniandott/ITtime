@@ -103,7 +103,7 @@ export default function MarkdownEditor({
     view.dispatch({ effects: liveCompartment.reconfigure(mode === 'live' ? livePreviewPlugin : []) })
   }, [mode])
 
-  return <div ref={containerRef} className={`tagtime-editor ${className}`} />
+  return <div ref={containerRef} className={`ittime-editor ${className}`} />
 }
 
 // 供工具栏调用的命令（作用于 EditorView），保持与旧 textarea 实现一致的行为。

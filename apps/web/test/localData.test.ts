@@ -4,9 +4,13 @@ import assert from 'node:assert/strict'
 
 Object.defineProperty(globalThis, 'self', { value: globalThis, configurable: true })
 const { localRequest, localDatabase } = await import('../src/localData.ts')
+const { default: PouchDB } = await import('pouchdb-browser')
 test('two activities persist independently and stopping one retains the other', async () => {
   const post = (path: string, body: unknown = {}) => localRequest<any>(path, { method: 'POST', body: JSON.stringify(body) })
+  const legacy = new PouchDB<any>('ittime-tagtime-v1')
+  await legacy.put({ _id: 'categories:legacy', entity: 'categories', value: { id: 'legacy', name: '旧分类' }, updatedAt: new Date().toISOString() })
   try {
+    assert.equal((await localRequest<any[]>('/categories')).some(category => category.id === 'legacy'), true)
     const firstTag = await post('/tags', { name: '项目一' })
     const secondTag = await post('/tags', { name: '项目二' })
     const first = await post('/timer/start', { tagId: firstTag.id })
@@ -41,5 +45,5 @@ test('two activities persist independently and stopping one retains the other', 
     await localDatabase().put({ ...onceDoc, value: { ...onceDoc.value, status: 'done', completedAt: new Date(Date.now() - 86_400_000).toISOString() } })
     assert.equal((await localRequest<any[]>('/goals')).find(rule => rule.id === onceGoal.id)?.current, 1)
     await assert.rejects(post(`/timer/${second.id}/terminate-chain`, { reason: '测试' }), /尚未迁移/)
-  } finally { await localDatabase().destroy() }
+  } finally { await localDatabase().destroy(); await legacy.destroy() }
 })

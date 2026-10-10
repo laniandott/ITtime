@@ -78,9 +78,9 @@ test('附件地址拒绝危险协议，保留受支持的 HTTP 和同源路径',
 
 test('服务器地址只接受安全的 HTTP(S) 地址', () => {
   assert.equal(normalizeServerHost('http://example.com/'), 'http://example.com')
-  assert.equal(normalizeServerHost('https://example.com/tagtime///'), 'https://example.com/tagtime')
+  assert.equal(normalizeServerHost('https://example.com/ittime///'), 'https://example.com/ittime')
   assert.equal(normalizeServerHost('javascript:alert(1)'), '')
-  assert.equal(normalizeServerHost('file:///tmp/tagtime'), '')
+  assert.equal(normalizeServerHost('file:///tmp/ittime'), '')
   assert.equal(normalizeServerHost('https://user:pass@example.com'), '')
   assert.equal(normalizeServerHost('https://example.com/?token=secret'), '')
 })

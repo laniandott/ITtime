@@ -9,7 +9,7 @@ function batches<T>(values: T[], size: number): T[][] {
   return result
 }
 
-// 重建某笔记的 TagTime 实体关联（先删后插，按 type+entityKey 去重）
+// 重建某笔记的 ITtime 实体关联（先删后插，按 type+entityKey 去重）
 export async function rebuildEntityLinksForNote(noteId: string): Promise<void> {
   const note = await prisma.note.findUnique({ where: { id: noteId } })
   if (!note) return
@@ -131,7 +131,7 @@ export async function getRelatedEntities(
   return out
 }
 
-// 反查：挂靠到某个 TagTime 实体（tag/todo/date/memo）的笔记，按更新时间倒序
+// 反查：挂靠到某个 ITtime 实体（tag/todo/date/memo）的笔记，按更新时间倒序
 export async function getNotesByEntity(
   type: EntityLinkType,
   entityKey: string,

@@ -30,13 +30,13 @@ function renderTableCell(cell: string, element: HTMLElement): void {
   const mathTokens: Array<{ token: string; expression: string }> = []
   const usedPlaceholders = new Set<string>()
   let source = cell.replace(/`[^`\n]+`/g, (full) => {
-    const token = createUniquePlaceholder('TAGTIMETABLECODE', cell, usedPlaceholders)
+    const token = createUniquePlaceholder('ITTIMETABLECODE', cell, usedPlaceholders)
     codeTokens.push({ token, text: full.slice(1, -1) })
     return `\`${token}\``
   })
   source = source.replace(TABLE_MATH_RE, (full) => {
     const expression = full.startsWith('\\(') ? full.slice(2, -2) : full.slice(1, -1)
-    const token = createUniquePlaceholder('TAGTIMETABLEMATH', source, usedPlaceholders)
+    const token = createUniquePlaceholder('ITTIMETABLEMATH', source, usedPlaceholders)
     mathTokens.push({ token, expression })
     return token
   })

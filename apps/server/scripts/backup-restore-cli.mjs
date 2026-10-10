@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// TagTime 离线备份 / 恢复 CLI
+// ITtime 离线备份 / 恢复 CLI
 //
 // 用途：在服务端进程停止的前提下，将全部持久化用户数据（SQLite 主库及 -wal/-shm、
 //       NOTES_DIR 下 Markdown、DATA_DIR/uploads 下附件）备份到指定目录，或从备份恢复。
@@ -54,7 +54,7 @@ function parseDbPath(urlStr) {
   }
   return resolve(s)
 }
-const DB_FILE = process.env.DATABASE_URL ? parseDbPath(process.env.DATABASE_URL) : join(DATA_DIR, 'tagtime.db')
+const DB_FILE = process.env.DATABASE_URL ? parseDbPath(process.env.DATABASE_URL) : join(DATA_DIR, 'ittime.db')
 const DB_SUFFIXES = ['', '-wal', '-shm']
 
 // ---------- 工具 ----------
@@ -128,14 +128,15 @@ function isHex64(v) { return typeof v === 'string' && /^[0-9a-fA-F]{64}$/.test(v
 function validSize(v) { return Number.isInteger(v) && v >= 0 }
 function validateManifest(m) {
   if (!m || typeof m !== 'object') err('manifest 不是对象，拒绝恢复。')
-  if (m.tool !== 'tagtime-backup' || m.kind !== 'backup') err('manifest 工具/类型不匹配，拒绝恢复。')
+  if (!['ittime-backup', 'tagtime-backup'].includes(m.tool) || m.kind !== 'backup') err('manifest 工具/类型不匹配，拒绝恢复。')
   if (m.version !== 1) err(`manifest 版本不受支持：${m.version}`)
   for (const k of ['database', 'notes', 'uploads']) {
     const s = m[k]
     if (!s || typeof s !== 'object' || !Array.isArray(s.files)) err(`manifest 缺少或格式错误的 section：${k}`)
   }
   const dbBase = basename(DB_FILE)
-  const allowed = new Set([dbBase, dbBase + '-wal', dbBase + '-shm'])
+  const legacyDbBase = 'tagtime.db'
+  const allowed = new Set([dbBase, dbBase + '-wal', dbBase + '-shm', legacyDbBase, legacyDbBase + '-wal', legacyDbBase + '-shm'])
   const seen = new Set()
   for (const f of m.database.files) {
     if (!f || typeof f.file !== 'string' || !allowed.has(f.file)) err(`manifest 包含非法数据库文件名：${f?.file}`)
@@ -144,7 +145,7 @@ function validateManifest(m) {
     if (!isHex64(f.sha256)) err(`manifest 数据库文件校验和非法：${f?.file}`)
     if (!validSize(f.size)) err(`manifest 数据库文件大小非法：${f?.file}`)
   }
-  if (!m.database.files.some((f) => f.file === dbBase)) err('备份缺少 SQLite 主库文件，拒绝恢复。')
+  if (!m.database.files.some((f) => f.file === dbBase || f.file === legacyDbBase)) err('备份缺少 SQLite 主库文件，拒绝恢复。')
   for (const sec of ['notes', 'uploads']) {
     const relSeen = new Set()
     for (const f of m[sec].files) {
@@ -190,7 +191,7 @@ async function collectManifestSections(dbDestDir, notesDest, uploadsDest) {
 }
 function manifestFor(sections) {
   return {
-    tool: 'tagtime-backup',
+    tool: 'ittime-backup',
     kind: 'backup',
     version: 1,
     createdAt: new Date().toISOString(),
@@ -275,10 +276,10 @@ function targetHasDataNow() {
 }
 function baseSuffix(name) { return name.endsWith('-wal') ? '-wal' : name.endsWith('-shm') ? '-shm' : '' }
 function assignCopy(src, dst) { mkdirSync(dirname(dst), { recursive: true }); cpSync(src, dst) }
-// 测试专用故障注入：仅在显式声明测试 runner 时生效（TAGTIME_TEST_RUNNER=1），生产环境不读取。
+// 测试专用故障注入：仅在显式声明测试 runner 时生效（ITTIME_TEST_RUNNER=1），生产环境不读取。
 // 支持点位于替换事务的不同阶段：after_park_<N>（Phase A 第 N 个目标移入 park 后）、
 // after_notes/after_uploads（Phase B 落位后）、cleanup_fail（Phase C 清理时）。
-const TEST_RUNNER = process.env.TAGTIME_TEST_RUNNER === '1'
+const TEST_RUNNER = process.env.ITTIME_TEST_RUNNER === '1'
 const TEST_FAILPOINT = TEST_RUNNER ? (process.env.BACKUP_RESTORE_TEST_FAILPOINT || null) : null
 function failNow(point) { if (TEST_FAILPOINT === point) throw new Error('test-failpoint:' + point) }
 // 恢复采用事务式替换：staging 一律建在各目标同卷（rename 不跨卷）。
@@ -290,16 +291,16 @@ async function applyRestore(srcDir, manifest) {
   let notesRoot, upRoot, dbDir
   try {
     // 1) 各目标同卷 staging，先完整复制新数据
-    notesRoot = mkdtempSync(join(dirname(NOTES_DIR), '.tagtime-stage-'))
+    notesRoot = mkdtempSync(join(dirname(NOTES_DIR), '.ittime-stage-'))
     const stageNotes = join(notesRoot, 'notes')
     mkdirSync(stageNotes, { recursive: true })
     for (const f of manifest.notes.files) assignCopy(safeJoin(join(srcDir, 'notes'), f.rel), join(stageNotes, f.rel))
-    upRoot = mkdtempSync(join(dirname(UPLOAD_DIR), '.tagtime-stage-'))
+    upRoot = mkdtempSync(join(dirname(UPLOAD_DIR), '.ittime-stage-'))
     const stageUp = join(upRoot, 'uploads')
     mkdirSync(stageUp, { recursive: true })
     for (const f of manifest.uploads.files) assignCopy(safeJoin(join(srcDir, 'uploads'), f.rel), join(stageUp, f.rel))
     mkdirSync(dirname(DB_FILE), { recursive: true })
-    dbDir = mkdtempSync(join(dirname(DB_FILE), '.tagtime-stage-'))
+    dbDir = mkdtempSync(join(dirname(DB_FILE), '.ittime-stage-'))
     for (const f of manifest.database.files) assignCopy(safeJoin(srcDir, f.file), join(dbDir, f.file))
 
     // 2) 替换单元：notes/uploads 目录、主库 + 备份内含的 sidecar；备份未含的旧 sidecar 视为“替换为空”
@@ -310,9 +311,9 @@ async function applyRestore(srcDir, manifest) {
     ]
     for (const f of manifest.database.files) units.push({ from: join(dbDir, f.file), to: DB_FILE + baseSuffix(f.file) })
     for (const suf of DB_SUFFIXES) {
-      if (suf !== '' && !present.has(dbBase + suf)) units.push({ from: null, to: DB_FILE + suf })
+      if (suf !== '' && ![dbBase + suf, 'tagtime.db' + suf].some((name) => present.has(name))) units.push({ from: null, to: DB_FILE + suf })
     }
-    for (const u of units) { u.hadOriginal = existsSync(u.to); u.park = u.to + '.tagt-restore-park'; u.placed = false }
+    for (const u of units) { u.hadOriginal = existsSync(u.to); u.park = u.to + '.ittime-restore-park'; u.placed = false }
 
     try {
       // 3) Phase A：把现有目标移入同卷 park，保留原数据
@@ -390,7 +391,7 @@ async function doRestore(srcRaw, { force }) {
 
 // ---------- CLI 解析 ----------
 function usage() {
-  console.log(`TagTime 离线备份/恢复 CLI
+  console.log(`ITtime 离线备份/恢复 CLI
 
 用法：
   backup-restore-cli.mjs backup [--dest <目录>]

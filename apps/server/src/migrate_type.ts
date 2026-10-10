@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient({
   datasources: {
     db: {
-      url: 'file:F:/projects/tagtime/data/tagtime.db',
+      url: 'file:F:/projects/ittime/data/ittime.db',
     },
   },
 })

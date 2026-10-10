@@ -244,7 +244,7 @@ export default function TimerPage() {
       <section className="timer-welcome rounded-3xl px-5 py-5 sm:px-7 sm:py-6 text-white shadow-lg">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-white/70">TAGTIME · FOCUS</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-white/70">ITTIME · FOCUS</p>
             <h1 className="mt-2 text-2xl sm:text-3xl font-semibold">让每段时间都有记录</h1>
             <p className="mt-2 text-sm text-white/75">点选标签开始计时，再点一次结束；不同项目可以同时计时。</p>
           </div>

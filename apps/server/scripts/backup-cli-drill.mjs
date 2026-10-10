@@ -32,7 +32,7 @@ function makeEnv(tmpRoot, port) {
   const uploads = join(data, 'uploads')
   mkdirSync(notes, { recursive: true })
   mkdirSync(uploads, { recursive: true })
-  const db = join(data, 'tagtime.db')
+  const db = join(data, 'ittime.db')
   writeFileSync(db, Buffer.from('SQLite-format-3\0drill-seed'))
   return {
     envObj: {
@@ -66,7 +66,7 @@ try {
     report(r.code === 0, 'S1 备份命令退出码 0', r.stderr.trim() || r.stdout.split('\n').pop())
     const manifest = existsSync(join(dest, 'manifest.json')) ? JSON.parse(readFileSync(join(dest, 'manifest.json'), 'utf8')) : null
     report(!!manifest, 'S1 生成 manifest.json')
-    report(manifest?.database?.files?.length >= 1 && existsSync(join(dest, 'tagtime.db')), 'S1 主库已备份')
+    report(manifest?.database?.files?.length >= 1 && existsSync(join(dest, 'ittime.db')), 'S1 主库已备份')
     report(manifest?.notes?.count === 2 && existsSync(join(dest, 'notes', 'a.md')), 'S1 notes 已备份')
     report(existsSync(join(dest, 'notes', '工作', '项目', 'nested.md')), 'S1 子目录 notes 保留目录结构')
     report(manifest?.uploads?.count === 1 && existsSync(join(dest, 'uploads', 'pic.bin')), 'S1 uploads 已备份')
@@ -158,8 +158,8 @@ try {
     const seedUp = readFileSync(join(E.uploads, 'pic.bin'))
     const seedDb = readFileSync(E.db)
     const baseManifest = () => ({
-      tool: 'tagtime-backup', kind: 'backup', version: 1, createdAt: new Date().toISOString(),
-      database: { file: 'tagtime.db', suffixes: [''], files: [{ file: 'tagtime.db', size: seedDb.length, sha256: '0'.repeat(64) }] },
+      tool: 'ittime-backup', kind: 'backup', version: 1, createdAt: new Date().toISOString(),
+      database: { file: 'ittime.db', suffixes: [''], files: [{ file: 'ittime.db', size: seedDb.length, sha256: '0'.repeat(64) }] },
       notes: { baseDir: 'x', count: 1, files: [{ rel: 'a.md', size: '# hello backup'.length, sha256: '0'.repeat(64) }] },
       uploads: { baseDir: 'x', count: 1, files: [{ rel: 'pic.bin', size: seedUp.length, sha256: '0'.repeat(64) }] },
       dataDir: 'x',
@@ -168,7 +168,7 @@ try {
       const src = join(t, 'bak-' + label)
       mkdirSync(src, { recursive: true })
       mkdirSync(join(src, 'notes'), { recursive: true }); mkdirSync(join(src, 'uploads'), { recursive: true })
-      writeFileSync(join(src, 'tagtime.db'), seedDb, 'utf8'); writeFileSync(join(src, 'notes', 'a.md'), '# hello backup', 'utf8'); writeFileSync(join(src, 'uploads', 'pic.bin'), seedUp)
+      writeFileSync(join(src, 'ittime.db'), seedDb, 'utf8'); writeFileSync(join(src, 'notes', 'a.md'), '# hello backup', 'utf8'); writeFileSync(join(src, 'uploads', 'pic.bin'), seedUp)
       const m = baseManifest(); mutate(m)
       writeFileSync(join(src, 'manifest.json'), JSON.stringify(m), 'utf8')
       const r = await runCLI(['restore', src, '--force'], E.envObj)
@@ -180,7 +180,7 @@ try {
     await tamper('notes-..', (m) => { m.notes.files[0].rel = '../evil.md' })
     await tamper('uploads-abs', (m) => { m.uploads.files = [{ rel: 'C:/evil.bin', size: 1, sha256: '0'.repeat(64) }] })
     await tamper('db-escape', (m) => { m.database.files[0].file = 'backup-sneaky.db' })
-    await tamper('db-dup', (m) => { m.database.files.push({ file: 'tagtime.db', size: seedDb.length, sha256: '0'.repeat(64) }) })
+    await tamper('db-dup', (m) => { m.database.files.push({ file: 'ittime.db', size: seedDb.length, sha256: '0'.repeat(64) }) })
     await tamper('size-neg', (m) => { m.notes.files[0].size = -5 })
     rmSync(t, { recursive: true, force: true })
   }
@@ -199,7 +199,7 @@ try {
     if (!altVol) {
       report(true, 'S8 无第二卷，跳过默认同卷跨卷恢复（单卷环境）')
     } else {
-      const t = join(altVol, '.tagtime-exdev-' + Date.now())
+      const t = join(altVol, '.ittime-exdev-' + Date.now())
       const E = makeEnv(t, basePort + 8)
       seedData(join(E.notes, 'a.md'), join(E.uploads, 'pic.bin'))
       const dest = join(t, 'backups', 'out')
@@ -243,7 +243,7 @@ try {
     writeFileSync(join(E.notes, 'a.md'), '# current-local', 'utf8')
     writeFileSync(join(E.uploads, 'pic.bin'), Buffer.from('local-up'))
     writeFileSync(E.db, Buffer.from('local-db'))
-    const envF = { ...E.envObj, TAGTIME_TEST_RUNNER: '1', BACKUP_RESTORE_TEST_FAILPOINT: 'after_notes' }
+    const envF = { ...E.envObj, ITTIME_TEST_RUNNER: '1', BACKUP_RESTORE_TEST_FAILPOINT: 'after_notes' }
     const r = await runCLI(['restore', dest, '--force'], envF)
     const out = r.stdout + r.stderr
     report(r.code !== 0, 'S10 中途替换失败命令失败（故障注入）')
@@ -265,7 +265,7 @@ try {
     writeFileSync(join(E.uploads, 'pic.bin'), Buffer.from('up-current'))
     writeFileSync(E.db, Buffer.from('db-current'))
     writeFileSync(E.db + '-wal', Buffer.from('wal-current'))
-    const envF = { ...E.envObj, TAGTIME_TEST_RUNNER: '1', BACKUP_RESTORE_TEST_FAILPOINT: 'after_park_1' }
+    const envF = { ...E.envObj, ITTIME_TEST_RUNNER: '1', BACKUP_RESTORE_TEST_FAILPOINT: 'after_park_1' }
     const r = await runCLI(['restore', dest, '--force'], envF)
     report(r.code !== 0, 'S11 Phase A park 中途失败命令失败（故障注入）')
     report(readFileSync(join(E.notes, 'a.md'), 'utf8') === '# local-current', 'S11 回滚后 notes 还原为本地当前内容')
@@ -284,7 +284,7 @@ try {
     await runCLI(['backup', '--dest', dest], E.envObj)
     // 改动目标以证明"恢复已提交"（数据被替换为备份内容）
     writeFileSync(join(E.notes, 'a.md'), '# local', 'utf8')
-    const envF = { ...E.envObj, TAGTIME_TEST_RUNNER: '1', BACKUP_RESTORE_TEST_FAILPOINT: 'cleanup_fail' }
+    const envF = { ...E.envObj, ITTIME_TEST_RUNNER: '1', BACKUP_RESTORE_TEST_FAILPOINT: 'cleanup_fail' }
     const r = await runCLI(['restore', dest, '--force'], envF)
     const out = r.stdout + r.stderr
     report(r.code === 0, 'S12 Phase C 清理失败仍标记恢复成功（已提交）', (r.stderr.trim() || r.stdout.split('\n').pop()) || null)

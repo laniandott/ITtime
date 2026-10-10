@@ -167,13 +167,13 @@ body.fullscreen-clock-active header {
   --atomic-editor-accent-soft: #8b7cf6;
   --atomic-editor-code-bg: rgb(17 24 39);
 }
-.tagtime-atomic-math {
+.ittime-atomic-math {
   display: inline-block;
   max-width: 100%;
   overflow-x: auto;
   vertical-align: middle;
 }
-.tagtime-atomic-math-display {
+.ittime-atomic-math-display {
   display: block;
   padding: 0.25em 0;
   text-align: center;
@@ -182,68 +182,68 @@ body.fullscreen-clock-active header {
 /* ══════════════ CodeMirror 6 Markdown Live Preview ══════════════ */
 
 /* 编辑器容器与整体外观 */
-.tagtime-editor {
+.ittime-editor {
   min-height: 48vh;
   font-size: 0.9rem;
   overflow: hidden;
 }
 @media (min-width: 768px) {
-  .tagtime-editor {
+  .ittime-editor {
     min-height: 60vh;
   }
 }
-.tagtime-editor .cm-editor {
+.ittime-editor .cm-editor {
   height: 100%;
 }
-.tagtime-editor .cm-editor.cm-focused {
+.ittime-editor .cm-editor.cm-focused {
   outline: none;
 }
-.tagtime-editor .cm-scroller {
+.ittime-editor .cm-scroller {
   font-family: inherit;
   line-height: 1.7;
   overflow-x: auto;
 }
-.tagtime-editor .cm-content {
+.ittime-editor .cm-content {
   max-width: 100%;
   caret-color: currentColor;
   padding: 0.5rem 0.25rem;
 }
 
 /* 行级块样式：标题 / 引用 / 代码块 */
-.tagtime-editor .cm-line.cm-heading-1 { font-size: 1.4rem; font-weight: 700; }
-.tagtime-editor .cm-line.cm-heading-2 { font-size: 1.2rem; font-weight: 700; }
-.tagtime-editor .cm-line.cm-heading-3 { font-size: 1.05rem; font-weight: 700; }
-.tagtime-editor .cm-line.cm-heading-4,
-.tagtime-editor .cm-line.cm-heading-5,
-.tagtime-editor .cm-line.cm-heading-6 { font-weight: 700; }
-.tagtime-editor .cm-line.cm-blockquote {
+.ittime-editor .cm-line.cm-heading-1 { font-size: 1.4rem; font-weight: 700; }
+.ittime-editor .cm-line.cm-heading-2 { font-size: 1.2rem; font-weight: 700; }
+.ittime-editor .cm-line.cm-heading-3 { font-size: 1.05rem; font-weight: 700; }
+.ittime-editor .cm-line.cm-heading-4,
+.ittime-editor .cm-line.cm-heading-5,
+.ittime-editor .cm-line.cm-heading-6 { font-weight: 700; }
+.ittime-editor .cm-line.cm-blockquote {
   border-left: 3px solid rgb(167 139 250);
   padding-left: 0.6em;
   color: rgb(107 114 128);
 }
-.dark .tagtime-editor .cm-line.cm-blockquote { color: rgb(156 163 175); }
-.tagtime-editor .cm-line.cm-code-block {
+.dark .ittime-editor .cm-line.cm-blockquote { color: rgb(156 163 175); }
+.ittime-editor .cm-line.cm-code-block {
   background: rgb(249 250 251);
   padding: 0.1em 0.4em;
 }
-.dark .tagtime-editor .cm-line.cm-code-block { background: rgb(17 24 39); }
+.dark .ittime-editor .cm-line.cm-code-block { background: rgb(17 24 39); }
 
 /* 列表行：标记替换为圆点后保持悬挂缩进 */
-.tagtime-editor .cm-line.cm-list {
+.ittime-editor .cm-line.cm-list {
   padding-left: 1.1em;
   text-indent: -1.1em;
 }
-.tagtime-editor .cm-list-marker {
+.ittime-editor .cm-list-marker {
   display: inline-block;
   width: 1.1em;
   text-align: right;
   margin-right: 0.35em;
   color: rgb(156 163 175);
 }
-.tagtime-editor .cm-list-marker-ordered {
+.ittime-editor .cm-list-marker-ordered {
   font-variant-numeric: tabular-nums;
 }
-.tagtime-editor .cm-task-marker {
+.ittime-editor .cm-task-marker {
   display: inline-block;
   width: 1.1em;
   margin-right: 0.35em;
@@ -253,33 +253,33 @@ body.fullscreen-clock-active header {
   user-select: none;
 }
 
-.tagtime-editor .cm-table {
+.ittime-editor .cm-table {
   display: block;
   max-width: 100%;
   margin: 0.7em 0;
   overflow-x: auto;
 }
-.tagtime-editor .cm-table table {
+.ittime-editor .cm-table table {
   min-width: 100%;
   border-collapse: collapse;
   font-size: 0.95em;
 }
-.tagtime-editor .cm-table th,
-.tagtime-editor .cm-table td {
+.ittime-editor .cm-table th,
+.ittime-editor .cm-table td {
   border: 1px solid rgb(229 231 235);
   padding: 0.35em 0.65em;
   vertical-align: top;
   white-space: nowrap;
 }
-.tagtime-editor .cm-table th {
+.ittime-editor .cm-table th {
   background: rgb(249 250 251);
   font-weight: 700;
 }
-.dark .tagtime-editor .cm-table th,
-.dark .tagtime-editor .cm-table td { border-color: rgb(55 65 81); }
-.dark .tagtime-editor .cm-table th { background: rgb(31 41 55); }
+.dark .ittime-editor .cm-table th,
+.dark .ittime-editor .cm-table td { border-color: rgb(55 65 81); }
+.dark .ittime-editor .cm-table th { background: rgb(31 41 55); }
 
-.tagtime-editor .cm-code-block-widget {
+.ittime-editor .cm-code-block-widget {
   display: block;
   max-width: 100%;
   margin: 0.7em 0;
@@ -289,59 +289,59 @@ body.fullscreen-clock-active header {
   background: rgb(249 250 251);
   white-space: pre;
 }
-.tagtime-editor .cm-code-block-widget code {
+.ittime-editor .cm-code-block-widget code {
   font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
   font-size: 0.9em;
 }
-.tagtime-editor .cm-code-line {
+.ittime-editor .cm-code-line {
   display: inline;
 }
-.dark .tagtime-editor .cm-code-block-widget { background: rgb(17 24 39); }
+.dark .ittime-editor .cm-code-block-widget { background: rgb(17 24 39); }
 
 /* 行内强调 / 代码 / 链接 / wiki 链接 */
-.tagtime-editor .cm-strong { font-weight: 800; }
-.tagtime-editor .cm-em { font-style: italic; }
-.tagtime-editor .cm-strike { text-decoration: line-through; color: rgb(107 114 128); }
-.tagtime-editor .cm-inline-code {
+.ittime-editor .cm-strong { font-weight: 800; }
+.ittime-editor .cm-em { font-style: italic; }
+.ittime-editor .cm-strike { text-decoration: line-through; color: rgb(107 114 128); }
+.ittime-editor .cm-inline-code {
   font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
   font-size: 0.9em;
   background: rgb(243 244 246);
   padding: 0.05em 0.3em;
   border-radius: 0.3em;
 }
-.dark .tagtime-editor .cm-inline-code { background: rgb(31 41 55); }
-.tagtime-editor .cm-link,
-.tagtime-editor .cm-wikilink {
+.dark .ittime-editor .cm-inline-code { background: rgb(31 41 55); }
+.ittime-editor .cm-link,
+.ittime-editor .cm-wikilink {
   color: #6d5efc;
   text-decoration: underline;
 }
 
 /* KaTeX 公式 widget */
-.tagtime-editor .cm-math { color: inherit; }
-.tagtime-editor .cm-math-display {
+.ittime-editor .cm-math { color: inherit; }
+.ittime-editor .cm-math-display {
   display: block;
   max-width: 100%;
   margin: 0.5em 0;
   overflow-x: auto;
   overflow-y: hidden;
 }
-.tagtime-editor .cm-math-display .katex-display { margin: 0; }
-.tagtime-editor .cm-math-inline { display: inline; }
+.ittime-editor .cm-math-display .katex-display { margin: 0; }
+.ittime-editor .cm-math-inline { display: inline; }
 
 /* 图片 widget */
-.tagtime-editor .cm-image img {
+.ittime-editor .cm-image img {
   max-width: 100%;
   border-radius: 0.5em;
   display: block;
 }
 
 /* 分隔线：保留可点击的源码定位锚点 */
-.tagtime-editor .cm-line.cm-hr {
+.ittime-editor .cm-line.cm-hr {
   margin: 0;
   padding: 0;
   min-height: 1px;
 }
-.tagtime-editor .cm-hr-widget {
+.ittime-editor .cm-hr-widget {
   display: inline-block;
   width: 100%;
   height: 1px;
@@ -349,4 +349,4 @@ body.fullscreen-clock-active header {
   border-top: 1px solid rgb(229 231 235);
   cursor: text;
 }
-.dark .tagtime-editor .cm-hr-widget { border-color: rgb(55 65 81); }
+.dark .ittime-editor .cm-hr-widget { border-color: rgb(55 65 81); }

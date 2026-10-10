@@ -68,7 +68,7 @@ export default function NoteEditorPage() {
   const stateRef = useRef({ note, content, dirty, id })
   stateRef.current = { note, content, dirty, id }
 
-  // 关联的 TagTime 实体
+  // 关联的 ITtime 实体
   const [entities, setEntities] = useState<RelatedEntities | null>(null)
 
   const previewHtml = useMemo(() => renderMarkdown(content), [content])
@@ -105,7 +105,7 @@ export default function NoteEditorPage() {
       .then((result) => { if (sequence === folderRequest.current) setFolders(result.folders) })
       .catch(() => { if (sequence === folderRequest.current) setFolders([]) })
   }, [id])
-  // 加载关联的 TagTime 实体
+  // 加载关联的 ITtime 实体
   const reloadEntities = () => {
     if (!id) return
     const sequence = ++entitiesRequest.current
@@ -303,7 +303,7 @@ export default function NoteEditorPage() {
     runTool((view) => cmInsertText(view, `[[${type}:${entityKey}]]`))
   }
 
-  // 跳转到 TagTime 现有页面
+  // 跳转到 ITtime 现有页面
   const goEntity = (e: { type: EntityLinkType; entityKey: string }) => {
     if (e.type === 'tag') navigate('/tags')
     else if (e.type === 'todo') navigate('/todos')
@@ -552,7 +552,7 @@ export default function NoteEditorPage() {
       {entities && (
         <div className="rounded-xl border border-gray-100 dark:border-gray-800 p-3">
           <div className="flex items-center justify-between mb-2">
-            <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">关联的 TagTime</div>
+            <div className="text-xs font-semibold text-gray-500 dark:text-gray-400">关联的 ITtime</div>
             <div className="flex gap-1 text-xs">
               <button onClick={() => insertEntityLink('tag')} className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-brand/10" title="插入 [[tag:]]">+标签</button>
               <button onClick={() => insertEntityLink('todo')} className="px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 hover:bg-brand/10" title="插入 [[todo:]]">+待办</button>

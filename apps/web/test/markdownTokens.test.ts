@@ -11,11 +11,11 @@ test('normalizeMathExpression 还原转义下划线', () => {
 
 test('Markdown 预处理占位符不会覆盖用户同名文本', () => {
   const used = new Set<string>()
-  const source = '正文 TAGTIMEMATH0X 与 TAGTIMETABLEMATH0X'
-  const math = createUniquePlaceholder('TAGTIMEMATH', source, used)
-  const table = createUniquePlaceholder('TAGTIMETABLEMATH', source, used)
-  assert.notEqual(math, 'TAGTIMEMATH0X')
-  assert.notEqual(table, 'TAGTIMETABLEMATH0X')
+  const source = '正文 ITTIMEMATH0X 与 ITTIMETABLEMATH0X'
+  const math = createUniquePlaceholder('ITTIMEMATH', source, used)
+  const table = createUniquePlaceholder('ITTIMETABLEMATH', source, used)
+  assert.notEqual(math, 'ITTIMEMATH0X')
+  assert.notEqual(table, 'ITTIMETABLEMATH0X')
   assert.notEqual(math, table)
 })
 

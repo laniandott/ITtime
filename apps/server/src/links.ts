@@ -5,7 +5,7 @@ export interface ParsedLink {
   targetKey: string
 }
 
-// TagTime 深度关联的特殊链接：[[tag:工作]] / [[todo:购买设备]] / [[date:2026-08-31]] / [[memo:<id>]]
+// ITtime 深度关联的特殊链接：[[tag:工作]] / [[todo:购买设备]] / [[date:2026-08-31]] / [[memo:<id>]]
 export type EntityLinkType = 'tag' | 'todo' | 'date' | 'memo'
 export const ENTITY_PREFIXES: Record<string, EntityLinkType> = {
   tag: 'tag',
@@ -20,7 +20,7 @@ export interface ParsedEntityLink {
   linkText: string
 }
 
-// 判断某个规范化后的目标键是否命中 TagTime 特殊链接前缀（避免同时污染普通 NoteLink）
+// 判断某个规范化后的目标键是否命中 ITtime 特殊链接前缀（避免同时污染普通 NoteLink）
 export function isEntityLinkKey(targetKey: string): boolean {
   const i = targetKey.indexOf(':')
   if (i <= 0) return false
