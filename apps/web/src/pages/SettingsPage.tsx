@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import TagsPage from './TagsPage'
 import { getSyncStatus, SYNC_SETTINGS_KEY, subscribeSyncStatus, testConnection, startSync, stopSync, type SyncConfig, type SyncMode } from '../couchSync'
 import { importLegacyServerData } from '../legacyMigration'
+import { applyFontSizePreference, FONT_SIZE_KEY, readFontSizePreference, type FontSizePreference } from '../fontSettings'
 
 function load(): SyncConfig { try { return { couchUrl: '', couchDatabase: 'ittime', couchUsername: '', couchPassword: '', ...JSON.parse(localStorage.getItem(SYNC_SETTINGS_KEY) ?? '{}') } } catch { return { couchUrl: '', couchDatabase: 'ittime', couchUsername: '', couchPassword: '' } } }
 export default function SettingsPage() {
@@ -11,8 +12,14 @@ export default function SettingsPage() {
   const [message, setMessage] = useState(getSyncStatus)
   const [busy, setBusy] = useState(false)
   const [migrationMessage, setMigrationMessage] = useState('')
+  const [fontSize, setFontSize] = useState<FontSizePreference>(readFontSizePreference)
   useEffect(() => subscribeSyncStatus(setMessage), [])
   const update = (field: keyof SyncConfig, value: string) => setSettings(current => ({ ...current, [field]: value }))
+  const updateFontSize = (value: FontSizePreference) => {
+    setFontSize(value)
+    localStorage.setItem(FONT_SIZE_KEY, value)
+    applyFontSizePreference(value)
+  }
   const connect = async (test: boolean) => { setBusy(true); try { setMessage('正在连接…'); if (test) { const status = await testConnection(settings); setMessage(status.guidance) } else { localStorage.setItem(SYNC_SETTINGS_KEY, JSON.stringify(settings)); await startSync(settings, setMessage, settings.syncMode ?? 'live') } } catch (error) { setMessage(error instanceof Error ? error.message : String(error)) } finally { setBusy(false) } }
   const saveSettings = async () => {
     localStorage.setItem(SYNC_SETTINGS_KEY, JSON.stringify(settings))
@@ -38,7 +45,18 @@ export default function SettingsPage() {
       <button type="button" disabled={busy} onClick={() => void migrate()} className="rounded-md bg-brand px-4 py-2 text-sm text-white disabled:opacity-50">{busy ? '正在处理…' : '扫描并导入旧数据'}</button>
       {migrationMessage && <p role="status" className="text-sm">{migrationMessage}</p>}
     </section>}
-    {page === 'general' && <div className="space-y-4"><p className="text-sm">设备时区：{Intl.DateTimeFormat().resolvedOptions().timeZone}</p><Link className="text-brand" to="/calendar">日历</Link></div>}
+    {page === 'general' && <div className="max-w-xl space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div><label htmlFor="font-size" className="text-sm font-medium">界面字体大小</label><p className="mt-1 text-xs text-gray-500">紧凑模式也会适当压缩界面间距，适合小屏幕。</p></div>
+        <select id="font-size" className="input w-auto min-w-32" value={fontSize} onChange={event => updateFontSize(event.target.value as FontSizePreference)}>
+          <option value="compact">紧凑（14 px）</option>
+          <option value="standard">标准（15 px）</option>
+          <option value="comfortable">舒适（16 px）</option>
+        </select>
+      </div>
+      <p className="text-sm">设备时区：{Intl.DateTimeFormat().resolvedOptions().timeZone}</p>
+      <Link className="text-brand" to="/calendar">日历</Link>
+    </div>}
     {page === 'sync' && <form onSubmit={event => { event.preventDefault(); void saveSettings() }} className="space-y-5 max-w-xl">
       <h2 className="font-semibold">CouchDB 连接</h2>
       <label className="block text-sm">地址<input className="input mt-2" type="url" value={settings.couchUrl} onChange={event => update('couchUrl', event.target.value)} placeholder="https://db.example.com" required /></label>

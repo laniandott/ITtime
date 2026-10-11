@@ -4,6 +4,7 @@ import Layout from './components/Layout'
 import { useStore } from './store'
 import { syncNativeStatusBarTheme } from './nativeStatusBar'
 import { autoStartConfiguredSync } from './couchSync'
+import { applyFontSizePreference } from './fontSettings'
 
 const TimerPage = lazy(() => import('./pages/TimerPage'))
 const TodosPage = lazy(() => import('./pages/TodosPage'))
@@ -66,6 +67,7 @@ export default function App() {
   const loadAll = useStore((s) => s.loadAll)
 
   useEffect(() => {
+    applyFontSizePreference()
     const media = window.matchMedia('(prefers-color-scheme: dark)')
     const applyTheme = () => {
       const isDark = media.matches
