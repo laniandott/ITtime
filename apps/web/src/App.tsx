@@ -3,6 +3,7 @@ import { Navigate, Routes, Route } from 'react-router-dom'
 import Layout from './components/Layout'
 import { useStore } from './store'
 import { syncNativeStatusBarTheme } from './nativeStatusBar'
+import { autoStartConfiguredSync } from './couchSync'
 
 const TimerPage = lazy(() => import('./pages/TimerPage'))
 const TodosPage = lazy(() => import('./pages/TodosPage'))
@@ -81,6 +82,10 @@ export default function App() {
   useEffect(() => {
     loadAll()
   }, [loadAll])
+
+  useEffect(() => {
+    void autoStartConfiguredSync()
+  }, [])
 
   return (
     <ErrorBoundary>

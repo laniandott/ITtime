@@ -1,19 +1,31 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import TagsPage from './TagsPage'
-import { testConnection, startSync, stopSync, type SyncConfig } from '../couchSync'
+import { getSyncStatus, SYNC_SETTINGS_KEY, subscribeSyncStatus, testConnection, startSync, stopSync, type SyncConfig, type SyncMode } from '../couchSync'
 import { importLegacyServerData } from '../legacyMigration'
 
-const key = 'ittime-couchdb-settings'
-function load(): SyncConfig { try { return { couchUrl: '', couchDatabase: 'ittime', couchUsername: '', couchPassword: '', ...JSON.parse(localStorage.getItem(key) ?? '{}') } } catch { return { couchUrl: '', couchDatabase: 'ittime', couchUsername: '', couchPassword: '' } } }
+function load(): SyncConfig { try { return { couchUrl: '', couchDatabase: 'ittime', couchUsername: '', couchPassword: '', ...JSON.parse(localStorage.getItem(SYNC_SETTINGS_KEY) ?? '{}') } } catch { return { couchUrl: '', couchDatabase: 'ittime', couchUsername: '', couchPassword: '' } } }
 export default function SettingsPage() {
   const [page, setPage] = useState('tags')
   const [settings, setSettings] = useState<SyncConfig>(load)
-  const [message, setMessage] = useState('同步未启动')
+  const [message, setMessage] = useState(getSyncStatus)
   const [busy, setBusy] = useState(false)
   const [migrationMessage, setMigrationMessage] = useState('')
+  useEffect(() => subscribeSyncStatus(setMessage), [])
   const update = (field: keyof SyncConfig, value: string) => setSettings(current => ({ ...current, [field]: value }))
-  const connect = async (test: boolean) => { setBusy(true); try { setMessage('正在连接…'); if (test) { const status = await testConnection(settings); setMessage(status.guidance) } else { await startSync(settings, setMessage) } } catch (error) { setMessage(error instanceof Error ? error.message : String(error)) } finally { setBusy(false) } }
+  const connect = async (test: boolean) => { setBusy(true); try { setMessage('正在连接…'); if (test) { const status = await testConnection(settings); setMessage(status.guidance) } else { localStorage.setItem(SYNC_SETTINGS_KEY, JSON.stringify(settings)); await startSync(settings, setMessage, settings.syncMode ?? 'live') } } catch (error) { setMessage(error instanceof Error ? error.message : String(error)) } finally { setBusy(false) } }
+  const saveSettings = async () => {
+    localStorage.setItem(SYNC_SETTINGS_KEY, JSON.stringify(settings))
+    if ((settings.syncMode ?? 'live') === 'manual') {
+      await stopSync()
+      setMessage('配置已保存；手动同步模式已启用')
+    } else if (settings.couchUrl.trim() && settings.couchDatabase.trim()) {
+      setBusy(true)
+      try { await startSync(settings, setMessage, 'live') }
+      catch (error) { setMessage(error instanceof Error ? error.message : String(error)) }
+      finally { setBusy(false) }
+    } else setMessage('配置已保存到本机；填写服务器信息后即可开启实时同步')
+  }
   const migrate = async () => { setBusy(true); setMigrationMessage('正在读取旧服务器数据…'); try { const result = await importLegacyServerData(); setMigrationMessage(`导入完成：新增 ${result.imported} 条，跳过 ${result.skipped} 条（共 ${result.total} 条）`) } catch (error) { setMigrationMessage(error instanceof Error ? error.message : String(error)) } finally { setBusy(false) } }
   return <div className="space-y-6">
     <h1 className="text-2xl font-semibold">设置</h1>
@@ -27,13 +39,24 @@ export default function SettingsPage() {
       {migrationMessage && <p role="status" className="text-sm">{migrationMessage}</p>}
     </section>}
     {page === 'general' && <div className="space-y-4"><p className="text-sm">设备时区：{Intl.DateTimeFormat().resolvedOptions().timeZone}</p><Link className="text-brand" to="/calendar">日历</Link></div>}
-    {page === 'sync' && <form onSubmit={event => { event.preventDefault(); localStorage.setItem(key, JSON.stringify(settings)); setMessage('配置已保存到本机') }} className="space-y-5 max-w-xl">
+    {page === 'sync' && <form onSubmit={event => { event.preventDefault(); void saveSettings() }} className="space-y-5 max-w-xl">
       <h2 className="font-semibold">CouchDB 连接</h2>
       <label className="block text-sm">地址<input className="input mt-2" type="url" value={settings.couchUrl} onChange={event => update('couchUrl', event.target.value)} placeholder="https://db.example.com" required /></label>
       <label className="block text-sm">数据库名称<input className="input mt-2" value={settings.couchDatabase} onChange={event => update('couchDatabase', event.target.value)} required /></label>
       <label className="block text-sm">用户名<input className="input mt-2" value={settings.couchUsername} onChange={event => update('couchUsername', event.target.value)} autoComplete="username" /></label>
       <label className="block text-sm">密码<input className="input mt-2" type="password" value={settings.couchPassword} onChange={event => update('couchPassword', event.target.value)} autoComplete="current-password" /></label>
-      <div className="flex flex-wrap gap-3"><button className="px-4 py-2 rounded-lg bg-brand text-white text-sm">保存配置</button><button disabled={busy} type="button" onClick={() => void connect(true)} className="text-brand text-sm">测试连接</button><button disabled={busy} type="button" onClick={() => void connect(false)} className="text-brand text-sm">开始同步</button><button type="button" onClick={() => void stopSync().then(() => setMessage('同步已停止'))} className="text-gray-500 text-sm">停止同步</button></div>
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium">同步方式</legend>
+        <div className="inline-flex rounded-lg border border-gray-200 p-1 dark:border-gray-700" role="radiogroup" aria-label="CouchDB 同步方式">
+          {([['live', '实时同步'], ['manual', '手动同步']] as [SyncMode, string][]).map(([mode, label]) => (
+            <button key={mode} type="button" role="radio" aria-checked={(settings.syncMode ?? 'live') === mode} onClick={() => update('syncMode', mode)} className={`rounded-md px-3 py-2 text-sm ${(settings.syncMode ?? 'live') === mode ? 'bg-brand text-white' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <p className="text-xs text-gray-500">{(settings.syncMode ?? 'live') === 'live' ? '本机与 CouchDB 保持连接，数据变更后自动双向同步。' : '只在点击“立即同步”时双向复制，完成后停止。'}</p>
+      </fieldset>
+      <div className="flex flex-wrap gap-3"><button className="px-4 py-2 rounded-lg bg-brand text-white text-sm">保存配置</button><button disabled={busy} type="button" onClick={() => void connect(true)} className="text-brand text-sm">测试连接</button><button disabled={busy} type="button" onClick={() => void connect(false)} className="rounded-lg bg-brand px-4 py-2 text-sm text-white">{(settings.syncMode ?? 'live') === 'live' ? '立即连接并开启实时同步' : '立即同步'}</button><button type="button" onClick={() => void stopSync().then(() => setMessage('同步已停止'))} className="text-gray-500 text-sm">停止同步</button></div>
       <p role="status" className="text-sm">{message}</p>
       <p className="text-xs text-gray-500">判断方式：仅本机为空、CouchDB 有文档时，用同步从云端恢复本机；两边都有数据时会合并，删除标记也会同步。若要开始一个全新的空数据集，请使用新的数据库，并确保本机也为空。应用内删除不是重置操作，不能靠重新同步恢复已删除记录。</p>
       <p className="text-xs text-gray-500">密码保存在当前浏览器。CouchDB 数据库须预先建立，跨域连接须配置 CORS；生产环境使用 HTTPS。</p>
