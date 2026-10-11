@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useStore } from '../store'
 import { api } from '../api'
 import type { Category, Tag, Goal } from '../types'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { GripVertical } from 'lucide-react'
 
 const COLORS = ['#6d5efc', '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#8b5cf6', '#14b8a6', '#64748b']
 
@@ -15,19 +15,27 @@ export default function TagsPage() {
   const [goals, setGoals] = useState<Goal[]>([])
   const [editingGoal, setEditingGoal] = useState<{ goal: Goal | null; tag: Tag } | null>(null)
   const [error, setError] = useState('')
+  const [draggedId, setDraggedId] = useState<string | null>(null)
 
   const orderedCategories = [...categories].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name))
   const orderedTags = [...tags].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name))
-  const move = async <T extends { id: string; sortOrder: number }>(items: T[], index: number, direction: -1 | 1, update: (id: string, sortOrder: number) => Promise<unknown>) => {
-    const target = index + direction
-    if (target < 0 || target >= items.length) return
-    const reordered = [...items]
-    const [moved] = reordered.splice(index, 1)
-    reordered.splice(target, 0, moved)
+  const persistOrder = async <T extends { id: string }>(items: T[], update: (id: string, sortOrder: number) => Promise<unknown>) => {
     try {
-      await Promise.all(reordered.map((item, order) => update(item.id, order * 10)))
+      await Promise.all(items.map((item, order) => update(item.id, order * 10)))
       await loadAll()
     } catch (e) { setError(e instanceof Error ? e.message : '调整顺序失败') }
+  }
+
+  const dropInOrder = <T extends { id: string }>(items: T[], sourceId: string, targetId: string, update: (id: string, sortOrder: number) => Promise<unknown>) => {
+    if (!sourceId || sourceId === targetId) return
+    const from = items.findIndex((item) => item.id === sourceId)
+    const to = items.findIndex((item) => item.id === targetId)
+    if (from < 0 || to < 0) return
+    const reordered = [...items]
+    const [moved] = reordered.splice(from, 1)
+    reordered.splice(to, 0, moved)
+    setDraggedId(null)
+    void persistOrder(reordered, update)
   }
 
   const loadGoals = async () => {
@@ -63,19 +71,23 @@ export default function TagsPage() {
           {categories.length === 0 && (
             <div className="text-sm text-gray-400 py-2">还没有分类，创建一个（如：日常、工作、宝宝）</div>
           )}
-          {orderedCategories.map((cat, index) => (
+          {orderedCategories.map((cat) => (
             <div
               key={cat.id}
-              className="flex items-center justify-between rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 px-4 py-2.5"
+              draggable
+              onDragStart={(event) => { event.dataTransfer.setData('text/plain', cat.id); event.dataTransfer.effectAllowed = 'move'; setDraggedId(cat.id) }}
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={(event) => { event.preventDefault(); dropInOrder(orderedCategories, event.dataTransfer.getData('text/plain'), cat.id, (id, sortOrder) => api.categories.update(id, { sortOrder })) }}
+              onDragEnd={() => setDraggedId(null)}
+              className={`flex items-center justify-between rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 px-4 py-2.5 ${draggedId === cat.id ? 'opacity-40' : ''}`}
             >
               <div className="flex items-center gap-3">
+                <GripVertical className="h-4 w-4 cursor-grab text-gray-400 active:cursor-grabbing" aria-label="拖动排序" />
                 <span className="w-3 h-3 rounded-full" style={{ background: cat.color }} />
                 <span className="font-medium">{cat.name}</span>
                 <span className="text-xs text-gray-400">{cat._count?.tags ?? 0} 个标签</span>
               </div>
               <div className="flex items-center gap-2">
-                <button type="button" disabled={index === 0} onClick={() => void move(orderedCategories, index, -1, (id, sortOrder) => api.categories.update(id, { sortOrder }))} className="grid h-8 w-8 place-items-center rounded text-gray-400 hover:bg-gray-100 hover:text-brand disabled:opacity-25 dark:hover:bg-gray-800" aria-label={`分类${cat.name}上移`}><ChevronUp className="h-4 w-4" /></button>
-                <button type="button" disabled={index === orderedCategories.length - 1} onClick={() => void move(orderedCategories, index, 1, (id, sortOrder) => api.categories.update(id, { sortOrder }))} className="grid h-8 w-8 place-items-center rounded text-gray-400 hover:bg-gray-100 hover:text-brand disabled:opacity-25 dark:hover:bg-gray-800" aria-label={`分类${cat.name}下移`}><ChevronDown className="h-4 w-4" /></button>
                 <button
                   onClick={() => { setEditingCat(cat); setShowCatForm(true) }}
                   className="text-sm text-gray-400 hover:text-brand"
@@ -115,14 +127,18 @@ export default function TagsPage() {
         </div>
         <div className="space-y-2">
           {orderedTags.map((tag) => {
-            const siblings = orderedTags.filter((item) => item.categoryId === tag.categoryId && item.parentId === tag.parentId)
-            const siblingIndex = siblings.findIndex((item) => item.id === tag.id)
             return (
             <div
               key={tag.id}
-              className="flex items-center justify-between rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 px-4 py-2.5"
+              draggable
+              onDragStart={(event) => { event.dataTransfer.setData('text/plain', tag.id); event.dataTransfer.effectAllowed = 'move'; setDraggedId(tag.id) }}
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={(event) => { event.preventDefault(); dropInOrder(orderedTags, event.dataTransfer.getData('text/plain'), tag.id, (id, sortOrder) => api.tags.update(id, { sortOrder })) }}
+              onDragEnd={() => setDraggedId(null)}
+              className={`flex items-center justify-between rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 px-4 py-2.5 ${draggedId === tag.id ? 'opacity-40' : ''}`}
             >
               <div className="flex items-center gap-3">
+                <GripVertical className="h-4 w-4 cursor-grab text-gray-400 active:cursor-grabbing" aria-label="拖动排序" />
                 <span className="w-3 h-3 rounded-full" style={{ background: tag.color }} />
                 <span className="font-medium">
                   {tag.parentId ? '↳ ' : ''}{tag.icon ? `${tag.icon} ` : ''}{tag.name}
@@ -144,8 +160,6 @@ export default function TagsPage() {
                 )}
               </div>
               <div className="flex items-center gap-2">
-                <button type="button" disabled={siblingIndex === 0} onClick={() => void move(siblings, siblingIndex, -1, (id, sortOrder) => api.tags.update(id, { sortOrder }))} className="grid h-8 w-8 place-items-center rounded text-gray-400 hover:bg-gray-100 hover:text-brand disabled:opacity-25 dark:hover:bg-gray-800" aria-label={`标签${tag.name}上移`}><ChevronUp className="h-4 w-4" /></button>
-                <button type="button" disabled={siblingIndex === siblings.length - 1} onClick={() => void move(siblings, siblingIndex, 1, (id, sortOrder) => api.tags.update(id, { sortOrder }))} className="grid h-8 w-8 place-items-center rounded text-gray-400 hover:bg-gray-100 hover:text-brand disabled:opacity-25 dark:hover:bg-gray-800" aria-label={`标签${tag.name}下移`}><ChevronDown className="h-4 w-4" /></button>
                 {goals.filter((g) => g.tagId === tag.id).length === 0 && (
                   <button
                     onClick={() => setEditingGoal({ goal: null, tag })}
@@ -561,10 +575,6 @@ function GoalForm({ goal, tag, onClose, onSaved }: {
       return
     }
     if (kind === 'activity') {
-      if (!tag.parentId) {
-        setError('活动目标必须建立在二级标签下')
-        return
-      }
       if (period !== 'once' && period !== 'workday' && period !== 'daily' && period !== 'weekly' && period !== 'monthly') {
         setError('活动目标只支持一次性、每日、每周或每月')
         return
@@ -621,15 +631,14 @@ function GoalForm({ goal, tag, onClose, onSaved }: {
             >
               统计目标
             </button>
-            {tag.parentId && (
-              <button
-                onClick={() => { setKind('activity'); setType('count'); setTarget(1) }}
-                className={`px-4 py-2 rounded-lg text-sm border ${kind === 'activity' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 border-current font-medium' : 'text-gray-400 border-gray-300 dark:border-gray-700'}`}
-              >
-                活动目标
-              </button>
-            )}
+            <button
+              onClick={() => { setKind('activity'); setType('count'); setTarget(1) }}
+              className={`px-4 py-2 rounded-lg text-sm border ${kind === 'activity' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 border-current font-medium' : 'text-gray-400 border-gray-300 dark:border-gray-700'}`}
+            >
+              活动目标
+            </button>
           </div>
+          <p className="mt-1.5 text-xs text-gray-500">统计目标按打卡记录累计；活动目标会在待办中生成可勾选的任务。</p>
         </Field>
         {kind === 'tracking' && <Field label="目标类型">
           <div className="flex gap-2">

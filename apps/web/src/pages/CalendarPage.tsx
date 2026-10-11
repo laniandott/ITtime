@@ -14,6 +14,8 @@ import { readCalendarEventSnapshot, saveCalendarEventSnapshot } from '../calenda
 function getLunarText(d: Date): string {
   const solar = Solar.fromDate(d)
   const lunar = solar.getLunar()
+  const jieQi = lunar.getJieQi()
+  if (jieQi) return jieQi
   // 初一显示月份，否则显示日期
   if (lunar.getDay() === 1) {
     return lunar.getMonth() > 0 ? `${lunar.getMonth()}月` : `闰${-lunar.getMonth()}月`
@@ -230,7 +232,7 @@ const HOUR_HEIGHT_WEEK = 48
 export default function CalendarPage() {
   const { categories } = useStore()
   const [searchParams] = useSearchParams()
-  const [view, setView] = useState<'day' | 'week' | 'month'>('month')
+  const [view, setView] = useState<'month' | 'week' | 'four'>('month')
   const [currentDate, setCurrentDate] = useState(new Date())
   const [entries, setEntries] = useState<TimeEntry[]>([])
   const [memos, setMemos] = useState<Memo[]>([])
@@ -243,7 +245,6 @@ export default function CalendarPage() {
   const [externalEvents, setExternalEvents] = useState<CalendarEvent[]>([])
   const [activities, setActivities] = useState<Todo[]>([])
   const [calendarFilter, setCalendarFilter] = useState<'all' | 'timer' | 'activity'>('all')
-  const [dayDetailDate, setDayDetailDate] = useState<Date | null>(null) // 月视图点击日期弹窗
   const [now, setNow] = useState(new Date())
   const [calendarLoading, setCalendarLoading] = useState(false)
   const [calendarError, setCalendarError] = useState('')
@@ -252,10 +253,10 @@ export default function CalendarPage() {
   const dayNotesRequest = useRef(0)
   const goNote = useNavigate()
 
-  // 日视图回显关联笔记 [[date:YYYY-MM-DD]]
+  // 月视图右侧日详情回显关联笔记 [[date:YYYY-MM-DD]]
   useEffect(() => {
     const sequence = ++dayNotesRequest.current
-    if (view !== 'day') { setDayLinkedNotes([]); return }
+    if (view !== 'month') { setDayLinkedNotes([]); return }
     const iso = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`
     api.notes.linked('date', iso)
       .then((notes) => { if (sequence === dayNotesRequest.current) setDayLinkedNotes(notes) })
@@ -267,13 +268,12 @@ export default function CalendarPage() {
     return () => clearInterval(t)
   }, [])
 
-  // 支持从笔记 [[date:YYYY-MM-DD]] 跳转：定位到指定日期（日视图）
+  // 支持从笔记 [[date:YYYY-MM-DD]] 跳转：定位到月视图中的指定日期
   useEffect(() => {
     const d = searchParams.get('date')
     if (d && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
       const parts = d.split('-').map(Number)
       setCurrentDate(new Date(parts[0], parts[1] - 1, parts[2]))
-      setView('day')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams])
@@ -281,10 +281,13 @@ export default function CalendarPage() {
   // 计算日期范围
   const range = useMemo(() => {
     switch (view) {
-      case 'day':
-        return { from: startOfDay(currentDate), to: endOfDay(currentDate) }
       case 'week':
         return { from: startOfWeek(currentDate), to: endOfWeek(currentDate) }
+      case 'four': {
+        const to = startOfDay(currentDate)
+        to.setDate(to.getDate() + 3)
+        return { from: startOfDay(currentDate), to: endOfDay(to) }
+      }
       case 'month':
         return {
           from: startOfWeek(startOfMonth(currentDate)),
@@ -364,8 +367,8 @@ export default function CalendarPage() {
   const navigate = (dir: number) => {
     const d = new Date(currentDate)
     switch (view) {
-      case 'day': d.setDate(d.getDate() + dir); break
       case 'week': d.setDate(d.getDate() + dir * 7); break
+      case 'four': d.setDate(d.getDate() + dir * 4); break
       case 'month': d.setMonth(d.getMonth() + dir); break
     }
     setCurrentDate(d)
@@ -434,10 +437,13 @@ export default function CalendarPage() {
   // 标题
   const title = useMemo(() => {
     switch (view) {
-      case 'day':
-        return `${currentDate.getFullYear()}年${currentDate.getMonth() + 1}月${currentDate.getDate()}日`
       case 'week':
         return formatDateRange(startOfWeek(currentDate), endOfWeek(currentDate))
+      case 'four': {
+        const to = new Date(currentDate)
+        to.setDate(to.getDate() + 3)
+        return formatDateRange(currentDate, to)
+      }
       case 'month':
         return `${currentDate.getFullYear()}年${currentDate.getMonth() + 1}月`
     }
@@ -554,7 +560,7 @@ export default function CalendarPage() {
             )}
           </div>
           <div className="flex shrink-0 bg-gray-100 dark:bg-gray-800 rounded-full p-0.5">
-            {(['day', 'week', 'month'] as const).map((v) => (
+            {(['month', 'week', 'four'] as const).map((v) => (
               <button
                 key={v}
                 onClick={() => setView(v)}
@@ -564,7 +570,7 @@ export default function CalendarPage() {
                     : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                 }`}
               >
-                {v === 'day' ? '日' : v === 'week' ? '周' : '月'}
+                {v === 'month' ? '月' : v === 'week' ? '周' : '4天'}
               </button>
             ))}
           </div>
@@ -601,29 +607,20 @@ export default function CalendarPage() {
         </div>
       )}
       {calendarError && <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-600 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300">{calendarError}</div>}
-      {calendarLoading && !hasCalendarContent ? (
+      {calendarLoading && !hasCalendarContent && view !== 'month' ? (
         <div className="rounded-2xl border border-gray-200 dark:border-gray-800 p-12 text-center text-gray-400">加载日历中...</div>
-      ) : !hasCalendarContent ? (
+      ) : !hasCalendarContent && view !== 'month' ? (
         <div className="rounded-2xl border-2 border-dashed border-gray-300 dark:border-gray-700 p-12 text-center text-gray-400">
           <div className="text-4xl mb-2">📅</div>
           <div>该时段暂无时间记录</div>
         </div>
-      ) : view === 'day' ? (
-        <DayView
-          date={currentDate}
-          entries={visibleEntries}
-          activities={visibleActivities}
-          dayMemos={memosByDay.get(startOfDay(currentDate).toISOString()) ?? []}
-          externalEvents={externalEvents}
-          now={now}
-          onEntryClick={setSelectedEntry}
-          onCreate={(start, end) => setQuickCreateForDate(start, start, end)}
-          linkedNotes={dayLinkedNotes}
-          onOpenNote={(id) => goNote(`/notes/${id}`)}
-        />
-      ) : view === 'week' ? (
+      ) : view === 'week' || view === 'four' ? (
         <WeekView
-          weekStart={startOfWeek(currentDate)}
+          days={view === 'week' ? getWeekDays(currentDate) : Array.from({ length: 4 }, (_, index) => {
+            const day = startOfDay(currentDate)
+            day.setDate(day.getDate() + index)
+            return day
+          })}
           selectedDate={currentDate}
           entries={visibleEntries}
           activities={visibleActivities}
@@ -634,15 +631,37 @@ export default function CalendarPage() {
           onEntryClick={setSelectedEntry}
         />
       ) : (
-        <MonthView
-          date={currentDate}
-           entriesByDay={entriesByDay}
-           activities={visibleActivities}
-           memosByDay={memosByDay}
-          externalEvents={externalEvents}
-          dayTotal={dayTotal}
-          onDayClick={(d) => setDayDetailDate(d)}
-        />
+        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.4fr)_minmax(360px,1fr)] gap-3 items-start">
+          <MonthView
+            date={currentDate}
+            selectedDate={currentDate}
+            entriesByDay={entriesByDay}
+            activities={visibleActivities}
+            memosByDay={memosByDay}
+            externalEvents={externalEvents}
+            onDayClick={setCurrentDate}
+          />
+          <section className="min-w-0">
+            <div className="mb-2 flex items-baseline justify-between gap-2">
+              <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                {currentDate.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}
+              </h2>
+              <span className="text-xs text-gray-400">{getLunarText(currentDate)}</span>
+            </div>
+            <DayView
+              date={currentDate}
+              entries={visibleEntries}
+              activities={visibleActivities}
+              dayMemos={memosByDay.get(startOfDay(currentDate).toISOString()) ?? []}
+              externalEvents={externalEvents}
+              now={now}
+              onEntryClick={setSelectedEntry}
+              onCreate={(start, end) => setQuickCreateForDate(start, start, end)}
+              linkedNotes={dayLinkedNotes}
+              onOpenNote={(id) => goNote(`/notes/${id}`)}
+            />
+          </section>
+        </div>
       )}
 
       {/* 条目详情弹窗 */}
@@ -688,19 +707,6 @@ export default function CalendarPage() {
           .catch((err) => setCalendarError(err instanceof Error ? err.message : '刷新外部日历失败'))
       }} />}
 
-      {/* 月视图点击日期详情弹窗 */}
-      {dayDetailDate && (
-        <DayDetailPopup
-          date={dayDetailDate}
-          entries={visibleEntries}
-          activities={visibleActivities}
-          dayMemos={memosByDay.get(startOfDay(dayDetailDate).toISOString()) ?? []}
-          externalEvents={externalEvents}
-          onClose={() => setDayDetailDate(null)}
-          onEntryClick={(e) => { setDayDetailDate(null); setSelectedEntry(e) }}
-        />
-      )}
-
     </div>
   )
 }
@@ -732,18 +738,19 @@ function DayView({ date, entries, activities, dayMemos, externalEvents, now, onE
   useEffect(() => {
     if (!scrollRef.current) return
     const nowMinutes = minutesFromStartOfDay(new Date())
-    const scrollTop = Math.max(0, (nowMinutes / 60) * HOUR_HEIGHT_DAY - 200)
+    const reverseMinutes = 24 * 60 - nowMinutes
+    const scrollTop = Math.max(0, (reverseMinutes / 60) * HOUR_HEIGHT_DAY - 200)
     scrollRef.current.scrollTop = scrollTop
-  }, [])
+  }, [date])
 
-  const nowTop = isToday(date) ? (minutesFromStartOfDay(now) / 60) * HOUR_HEIGHT_DAY : -1
+  const nowTop = isToday(date) ? ((24 * 60 - minutesFromStartOfDay(now)) / 60) * HOUR_HEIGHT_DAY : -1
 
   const handleTimelineDoubleClick = (event: React.MouseEvent<HTMLDivElement>) => {
     if ((event.target as HTMLElement).closest('button')) return
     const rect = event.currentTarget.getBoundingClientRect()
     const scrollTop = scrollRef.current?.scrollTop ?? 0
     const rawMinutes = ((event.clientY - rect.top + scrollTop) / HOUR_HEIGHT_DAY) * 60
-    const minutes = Math.min(23 * 60 + 45, Math.max(0, Math.round(rawMinutes / 15) * 15))
+    const minutes = Math.min(23 * 60 + 45, Math.max(0, 24 * 60 - Math.round(rawMinutes / 15) * 15))
     const start = new Date(date)
     start.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0)
     const end = new Date(start)
@@ -816,7 +823,7 @@ function DayView({ date, entries, activities, dayMemos, externalEvents, now, onE
               className="text-xs text-gray-400 text-right pr-2 border-t border-gray-100 dark:border-gray-800"
               style={{ height: HOUR_HEIGHT_DAY, lineHeight: `${HOUR_HEIGHT_DAY}px` }}
             >
-              {h === 0 ? '' : `${String(h).padStart(2, '0')}:00`}
+              {h === 0 ? '24:00' : `${String(24 - h).padStart(2, '0')}:00`}
             </div>
           ))}
         </div>
@@ -828,7 +835,7 @@ function DayView({ date, entries, activities, dayMemos, externalEvents, now, onE
           ))}
           {/* 条目块 */}
           {layout.map(({ entry, start, end, col, cols }) => {
-            const topMin = (start - dayStart) / 60000
+            const topMin = (dayEnd - end) / 60000
             const heightMin = (end - start) / 60000
             const top = (topMin / 60) * HOUR_HEIGHT_DAY
             const height = Math.max((heightMin / 60) * HOUR_HEIGHT_DAY, 20)
@@ -900,8 +907,8 @@ function DayView({ date, entries, activities, dayMemos, externalEvents, now, onE
 
 // ===== 周视图 =====
 
-function WeekView({ weekStart, selectedDate, entries, activities, memosByDay, externalEvents, now, dayTotal, onEntryClick }: {
-  weekStart: Date
+function WeekView({ days, selectedDate, entries, activities, memosByDay, externalEvents, now, dayTotal, onEntryClick }: {
+  days: Date[]
   selectedDate: Date
   entries: TimeEntry[]
   activities: Todo[]
@@ -912,13 +919,12 @@ function WeekView({ weekStart, selectedDate, entries, activities, memosByDay, ex
   onEntryClick: (e: TimeEntry) => void
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
-  const days = getWeekDays(weekStart)
-  const nowTop = (minutesFromStartOfDay(now) / 60) * HOUR_HEIGHT_WEEK
+  const nowTop = ((24 * 60 - minutesFromStartOfDay(now)) / 60) * HOUR_HEIGHT_WEEK
 
   useEffect(() => {
     if (!scrollRef.current) return
     const nowMinutes = minutesFromStartOfDay(new Date())
-    const scrollTop = Math.max(0, (nowMinutes / 60) * HOUR_HEIGHT_WEEK - 200)
+    const scrollTop = Math.max(0, ((24 * 60 - nowMinutes) / 60) * HOUR_HEIGHT_WEEK - 200)
     scrollRef.current.scrollTop = scrollTop
   }, [])
 
@@ -1020,7 +1026,7 @@ function WeekView({ weekStart, selectedDate, entries, activities, memosByDay, ex
               className="text-[10px] text-gray-400 text-right pr-1 border-t border-gray-100 dark:border-gray-800"
               style={{ height: HOUR_HEIGHT_WEEK, lineHeight: `${HOUR_HEIGHT_WEEK}px` }}
             >
-              {h === 0 ? '' : `${h}`}
+              {h === 0 ? '24' : `${24 - h}`}
             </div>
           ))}
         </div>
@@ -1048,7 +1054,7 @@ function WeekView({ weekStart, selectedDate, entries, activities, memosByDay, ex
               ))}
               {/* 条目块 */}
               {layout.map(({ entry, start, end, col, cols }) => {
-                const topMin = (start - dayStart) / 60000
+                const topMin = (dayEnd - end) / 60000
                 const heightMin = (end - start) / 60000
                 const top = (topMin / 60) * HOUR_HEIGHT_WEEK
                 const height = Math.max((heightMin / 60) * HOUR_HEIGHT_WEEK, 16)
@@ -1108,13 +1114,13 @@ function WeekView({ weekStart, selectedDate, entries, activities, memosByDay, ex
 
 // ===== 月视图 =====
 
-function MonthView({ date, entriesByDay, activities, memosByDay, externalEvents, dayTotal, onDayClick }: {
+function MonthView({ date, selectedDate, entriesByDay, activities, memosByDay, externalEvents, onDayClick }: {
   date: Date
+  selectedDate: Date
   entriesByDay: Map<string, TimeEntry[]>
   activities: Todo[]
   memosByDay: Map<string, Memo[]>
   externalEvents: CalendarEvent[]
-  dayTotal: (d: Date) => number
   onDayClick: (d: Date) => void
 }) {
   const days = getMonthGrid(date)
@@ -1141,45 +1147,39 @@ function MonthView({ date, entriesByDay, activities, memosByDay, externalEvents,
           const key = startOfDay(d).toISOString()
           const dayEntries = entriesByDay.get(key) ?? []
           const dayActivities = activities.filter((todo) => activityIsOnDay(todo, d))
-          const total = dayTotal(d)
           const dayMemos = memosByDay.get(key) ?? []
           const inMonth = isSameMonth(d, date)
           const today = isToday(d)
+          const selected = isSameDay(d, selectedDate)
           const uniqueColors = getUniqueColors(dayEntries)
 
           return (
             <button
               key={d.toISOString()}
               onClick={() => onDayClick(d)}
-              className={`min-h-[78px] sm:min-h-[92px] border-r border-b border-gray-100 dark:border-gray-800 p-1.5 text-left hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group ${!inMonth ? 'opacity-30' : ''}`}
+              aria-pressed={selected}
+              className={`min-h-[78px] sm:min-h-[92px] border-r border-b border-gray-100 dark:border-gray-800 p-1.5 text-left transition-colors group ${selected ? 'bg-brand/10 ring-2 ring-inset ring-brand' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'} ${!inMonth ? 'opacity-30' : ''}`}
             >
               <div className="flex items-center justify-between mb-0.5">
                 <div className="flex items-center gap-1">
-                  <span className={`text-xs font-semibold w-6 h-6 flex items-center justify-center rounded-full transition-colors ${
-                    today
+                  <span className={`text-sm font-semibold w-8 h-8 flex items-center justify-center rounded-full transition-colors ${
+                    selected
+                      ? 'bg-brand text-white'
+                      : today
                       ? 'bg-brand text-white'
                       : 'text-gray-600 dark:text-gray-400 group-hover:bg-gray-200 dark:group-hover:bg-gray-700'
                   }`}>
                     {d.getDate()}
                   </span>
-                  <span className="text-[9px] text-gray-400">{getLunarText(d)}</span>
+                  <span className={`text-[11px] ${getLunarText(d) === Solar.fromDate(d).getLunar().getJieQi() ? 'font-medium text-amber-600 dark:text-amber-400' : 'text-gray-400'}`}>{getLunarText(d)}</span>
                 </div>
-                {total > 0 && (
-                  <span className="text-[10px] text-gray-400 font-mono">{formatDuration(total)}</span>
-                )}
               </div>
-              <div className="mt-2 flex min-h-5 items-center gap-1.5">
-                {uniqueColors.slice(0, 5).map((c, i) => <span key={i} className="h-2 w-2 rounded-full" style={{ backgroundColor: c }} />)}
-                {dayActivities.length > 0 && <span className="h-2 w-2 rounded-full bg-amber-400" title="有活动" />}
-                {externalEvents.some((ev) => externalEventOverlapsDay(ev, startOfDay(d).getTime(), endOfDay(d).getTime())) && <span className="h-2 w-2 rounded-full bg-emerald-500" title="有外部日历事件" />}
-                {dayMemos.length > 0 && <span className="text-[10px] text-gray-400">备忘 {dayMemos.length}</span>}
+              <div className="mt-3 flex min-h-5 items-center gap-1.5" aria-label="当天日历内容">
+                {uniqueColors.slice(0, 5).map((c, i) => <span key={i} className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: c }} title="计时记录" />)}
+                {dayActivities.length > 0 && <span className="h-2.5 w-2.5 rounded-full bg-amber-400" title="活动" />}
+                {externalEvents.some((ev) => externalEventOverlapsDay(ev, startOfDay(d).getTime(), endOfDay(d).getTime())) && <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" title="外部日历" />}
+                {dayMemos.length > 0 && <span className="h-2.5 w-2.5 rounded-full bg-gray-400" title="备忘" />}
               </div>
-              {(dayEntries.length > 0 || dayActivities.length > 0 || total > 0) && (
-                <div className="mt-1 flex items-center gap-1 text-[10px] text-gray-500 dark:text-gray-400">
-                  {dayEntries.length > 0 && <span>{dayEntries.length} 条记录</span>}
-                  {dayActivities.length > 0 && <span>{dayActivities.length} 项活动</span>}
-                </div>
-              )}
             </button>
           )
         })}

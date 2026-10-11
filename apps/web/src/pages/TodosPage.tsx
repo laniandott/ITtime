@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../api'
 import { useStore } from '../store'
-import type { Todo } from '../types'
+import type { Goal, Todo } from '../types'
 import DiaryPanel from '../components/DiaryPanel'
 
 const PRIORITY = [
@@ -100,6 +100,7 @@ function sortActivityItems(items: Todo[]): Todo[] {
 export default function TodosPage() {
   const { tags, categories, running, start } = useStore()
   const [todos, setTodos] = useState<Todo[]>([])
+  const [goals, setGoals] = useState<Goal[]>([])
   const [activeTab, setActiveTab] = useState<'todo' | 'diary'>('todo')
   const [activityView, setActivityView] = useState<ActivityView>('current')
   const [filterCat, setFilterCat] = useState('')
@@ -128,6 +129,13 @@ export default function TodosPage() {
   }
 
   useEffect(() => { void load() }, [])
+
+  useEffect(() => {
+    const loadGoals = () => { void api.goals.list().then(setGoals).catch(() => setGoals([])) }
+    loadGoals()
+    window.addEventListener('ittime-data-changed', loadGoals)
+    return () => window.removeEventListener('ittime-data-changed', loadGoals)
+  }, [])
 
   const quickAdd = async () => {
     if (!quickTitle.trim()) return
@@ -255,6 +263,24 @@ export default function TodosPage() {
               </div>
               <span className="rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200 px-3 py-1 text-xs font-medium">只显示待完成</span>
             </div>
+            {goals.filter((goal) => goal.kind === 'tracking').length > 0 && (
+              <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3" aria-label="标签目标进度">
+                {goals.filter((goal) => goal.kind === 'tracking').map((goal) => {
+                  const current = goal.current ?? 0
+                  const unit = goal.type === 'count' ? '次' : '分钟'
+                  const percent = Math.min(100, goal.target > 0 ? current / goal.target * 100 : 0)
+                  return (
+                    <article key={goal.id} className="rounded-lg border border-gray-200 bg-white px-3 py-2 dark:border-gray-800 dark:bg-gray-900">
+                      <div className="flex items-center justify-between gap-2 text-xs">
+                        <span className="truncate font-medium" style={{ color: goal.tag?.color }}>{goal.title}</span>
+                        <span className="shrink-0 text-gray-500">{current} / {goal.target} {unit}</span>
+                      </div>
+                      <progress className="mt-1.5 h-1.5 w-full" style={{ accentColor: goal.tag?.color ?? '#0f766e' }} value={percent} max="100" aria-label={`${goal.title}目标进度`} />
+                    </article>
+                  )
+                })}
+              </div>
+            )}
             <div className="flex items-center gap-2 flex-wrap mt-4">
               <div className="flex items-center gap-1 overflow-x-auto pb-1">
                 {([

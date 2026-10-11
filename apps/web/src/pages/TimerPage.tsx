@@ -4,7 +4,7 @@ import { api, resolveUploadUrl } from '../api'
 import type { TimeEntry, Tag, Todo, Memo, LinkedNoteEntry } from '../types'
 import { DateTimeSecondPicker } from '../components/DateTimeSecondPicker'
 import { syncNativeStatusBarTheme } from '../nativeStatusBar'
-import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react'
+import { GripVertical, ArrowUpDown } from 'lucide-react'
 
 // 辅助函数：格式化时间为 YYYY/MM/DD HH:mm:ss
 const formatDateTimeWithSeconds = (isoStr: string) => {
@@ -75,10 +75,14 @@ export default function TimerPage() {
   const [recentError, setRecentError] = useState('')
   const [feedback, setFeedback] = useState('')
   const [sortingQuickStart, setSortingQuickStart] = useState(false)
+  const [draggedQuickStartId, setDraggedQuickStartId] = useState<string | null>(null)
   const loadRecentSequence = useRef(0)
   const startingTagIds = useRef(new Set<string>())
 
-  const saveOrder = async <T extends { id: string }>(items: T[], from: number, to: number, save: (id: string, sortOrder: number) => Promise<unknown>) => {
+  const saveOrder = async <T extends { id: string }>(items: T[], draggedId: string, targetId: string, save: (id: string, sortOrder: number) => Promise<unknown>) => {
+    const from = items.findIndex((item) => item.id === draggedId)
+    const to = items.findIndex((item) => item.id === targetId)
+    if (from < 0 || to < 0 || from === to) return
     if (to < 0 || to >= items.length) return
     const reordered = [...items]
     const [moved] = reordered.splice(from, 1)
@@ -90,6 +94,7 @@ export default function TimerPage() {
     } catch (error) {
       setFeedback(error instanceof Error ? error.message : '保存顺序失败')
     }
+    setDraggedQuickStartId(null)
   }
 
   const loadTodos = async () => {
@@ -406,7 +411,7 @@ export default function TimerPage() {
           <div className="space-y-4">
             {tagsByCategory.map(({ category, tags: ts }) =>
               ts.length === 0 ? null : (
-                <div key={category.id} className="timer-category rounded-2xl border p-4 sm:p-5" style={{ borderColor: `${category.color}45`, background: `linear-gradient(135deg, ${category.color}12, ${category.color}04 75%)` }}>
+                <div key={category.id} draggable={sortingQuickStart} onDragStart={(event) => { event.dataTransfer.setData('text/plain', category.id); event.dataTransfer.effectAllowed = 'move'; setDraggedQuickStartId(category.id) }} onDragOver={(event) => { if (sortingQuickStart) event.preventDefault() }} onDrop={(event) => { event.preventDefault(); const sourceId = event.dataTransfer.getData('text/plain'); if (sourceId) void saveOrder(orderedCategories, sourceId, category.id, (id, sortOrder) => api.categories.update(id, { sortOrder })) }} onDragEnd={() => setDraggedQuickStartId(null)} className={`timer-category rounded-2xl border p-4 sm:p-5 ${draggedQuickStartId === category.id ? 'opacity-40' : ''}`} style={{ borderColor: `${category.color}45`, background: `linear-gradient(135deg, ${category.color}12, ${category.color}04 75%)` }}>
                   <div className="flex items-center gap-2 mb-3">
                     <span
                       className="w-3 h-3 rounded-full ring-4"
@@ -415,15 +420,12 @@ export default function TimerPage() {
                     <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
                       {category.name}
                     </span>
-                    {sortingQuickStart && <div className="ml-2 flex items-center gap-1">
-                      <button type="button" disabled={orderedCategories.indexOf(category) === 0} onClick={() => void saveOrder(orderedCategories, orderedCategories.indexOf(category), orderedCategories.indexOf(category) - 1, (id, sortOrder) => api.categories.update(id, { sortOrder }))} className="grid h-7 w-7 place-items-center rounded text-gray-500 hover:bg-white/70 disabled:opacity-25" aria-label={`${category.name}分类上移`}><ArrowUp className="h-4 w-4" /></button>
-                      <button type="button" disabled={orderedCategories.indexOf(category) === orderedCategories.length - 1} onClick={() => void saveOrder(orderedCategories, orderedCategories.indexOf(category), orderedCategories.indexOf(category) + 1, (id, sortOrder) => api.categories.update(id, { sortOrder }))} className="grid h-7 w-7 place-items-center rounded text-gray-500 hover:bg-white/70 disabled:opacity-25" aria-label={`${category.name}分类下移`}><ArrowDown className="h-4 w-4" /></button>
-                    </div>}
+                    {sortingQuickStart && <GripVertical className="ml-2 h-4 w-4 cursor-grab text-gray-500 active:cursor-grabbing" aria-label="拖动分类排序" />}
                     <span className="ml-auto text-xs text-gray-500 dark:text-gray-400">{ts.length} 个标签</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {ts.map((tag, index) => (
-                      <div key={tag.id} className="flex items-center gap-0.5">
+                    {ts.map((tag) => (
+                      <div key={tag.id} draggable={sortingQuickStart} onDragStart={(event) => { event.stopPropagation(); event.dataTransfer.setData('text/plain', tag.id); event.dataTransfer.effectAllowed = 'move'; setDraggedQuickStartId(tag.id) }} onDragOver={(event) => { if (sortingQuickStart) event.preventDefault() }} onDrop={(event) => { event.preventDefault(); event.stopPropagation(); const sourceId = event.dataTransfer.getData('text/plain'); if (sourceId) void saveOrder(ts, sourceId, tag.id, (id, sortOrder) => api.tags.update(id, { sortOrder })) }} onDragEnd={() => setDraggedQuickStartId(null)} className={`flex items-center gap-0.5 ${draggedQuickStartId === tag.id ? 'opacity-40' : ''}`}>
                       <button
                         onClick={() => handleStart(tag.id)}
                         aria-pressed={running.some(entry => entry.tagId === tag.id)}
@@ -434,10 +436,7 @@ export default function TimerPage() {
                         {running.some(entry => entry.tagId === tag.id) && <span className="ml-1 text-[11px] font-semibold">· 停止</span>}
                         {tag.trackType === 'count' && <span className="ml-1 text-xs opacity-60">✓</span>}
                       </button>
-                      {sortingQuickStart && <div className="flex flex-col">
-                        <button type="button" disabled={index === 0} onClick={() => void saveOrder(ts, index, index - 1, (id, sortOrder) => api.tags.update(id, { sortOrder }))} className="grid h-5 w-5 place-items-center text-gray-400 hover:text-brand disabled:opacity-20" aria-label={`${tag.name}上移`}><ArrowUp className="h-3 w-3" /></button>
-                        <button type="button" disabled={index === ts.length - 1} onClick={() => void saveOrder(ts, index, index + 1, (id, sortOrder) => api.tags.update(id, { sortOrder }))} className="grid h-5 w-5 place-items-center text-gray-400 hover:text-brand disabled:opacity-20" aria-label={`${tag.name}下移`}><ArrowDown className="h-3 w-3" /></button>
-                      </div>}
+                      {sortingQuickStart && <GripVertical className="h-4 w-4 cursor-grab text-gray-400 active:cursor-grabbing" aria-label="拖动标签排序" />}
                       </div>
                     ))}
                   </div>
@@ -448,8 +447,8 @@ export default function TimerPage() {
               <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/50 p-4 sm:p-5">
                 <div className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-3">未分类 <span className="font-normal text-gray-400">· {uncategorized.length} 个标签</span></div>
                 <div className="flex flex-wrap gap-2">
-                  {uncategorized.map((tag, index) => (
-                    <div key={tag.id} className="flex items-center gap-0.5">
+                  {uncategorized.map((tag) => (
+                    <div key={tag.id} draggable={sortingQuickStart} onDragStart={(event) => { event.dataTransfer.setData('text/plain', tag.id); event.dataTransfer.effectAllowed = 'move'; setDraggedQuickStartId(tag.id) }} onDragOver={(event) => { if (sortingQuickStart) event.preventDefault() }} onDrop={(event) => { event.preventDefault(); const sourceId = event.dataTransfer.getData('text/plain'); if (sourceId) void saveOrder(uncategorized, sourceId, tag.id, (id, sortOrder) => api.tags.update(id, { sortOrder })) }} onDragEnd={() => setDraggedQuickStartId(null)} className={`flex items-center gap-0.5 ${draggedQuickStartId === tag.id ? 'opacity-40' : ''}`}>
                     <button
                       onClick={() => handleStart(tag.id)}
                         className={`timer-tag px-4 py-2.5 border font-medium text-sm transition-colors ${tag.trackType === 'count' ? 'border-dashed' : ''}`}
@@ -459,10 +458,7 @@ export default function TimerPage() {
                         {running.some(entry => entry.tagId === tag.id) && <span className="ml-1 text-[11px] font-semibold">· 停止</span>}
                       {tag.trackType === 'count' && <span className="ml-1 text-xs opacity-60">✓</span>}
                     </button>
-                    {sortingQuickStart && <div className="flex flex-col">
-                      <button type="button" disabled={index === 0} onClick={() => void saveOrder(uncategorized, index, index - 1, (id, sortOrder) => api.tags.update(id, { sortOrder }))} className="grid h-5 w-5 place-items-center text-gray-400 hover:text-brand disabled:opacity-20" aria-label={`${tag.name}上移`}><ArrowUp className="h-3 w-3" /></button>
-                      <button type="button" disabled={index === uncategorized.length - 1} onClick={() => void saveOrder(uncategorized, index, index + 1, (id, sortOrder) => api.tags.update(id, { sortOrder }))} className="grid h-5 w-5 place-items-center text-gray-400 hover:text-brand disabled:opacity-20" aria-label={`${tag.name}下移`}><ArrowDown className="h-3 w-3" /></button>
-                    </div>}
+                    {sortingQuickStart && <GripVertical className="h-4 w-4 cursor-grab text-gray-400 active:cursor-grabbing" aria-label="拖动标签排序" />}
                     </div>
                   ))}
                 </div>
@@ -959,12 +955,12 @@ function RunningTimer({ entry, stopping, todos, onStop, onTodoChange, onTerminat
   }
 
   return (
-    <div className="rounded-2xl border-2 border-brand-300 dark:border-brand-700 bg-brand-50 dark:bg-brand-900/20 p-6 text-center relative">
-      <div className="text-sm text-gray-500 dark:text-gray-400 mb-2 flex items-center justify-center gap-2">
+    <div className="rounded-xl border border-brand-300 dark:border-brand-700 bg-brand-50 dark:bg-brand-900/20 p-3 sm:p-4 text-center relative">
+      <div className="text-xs text-gray-500 dark:text-gray-400 mb-1 flex items-center justify-center gap-2">
         <span>正在计时</span>
         {entry.tag?.category && (
           <span
-            className="text-xs px-2.5 py-0.5 rounded-full font-medium border"
+            className="text-[10px] px-2 py-0.5 rounded-full font-medium border"
             style={{
               backgroundColor: `${entry.tag.category.color}18`,
               color: entry.tag.category.color,
@@ -976,48 +972,48 @@ function RunningTimer({ entry, stopping, todos, onStop, onTodoChange, onTerminat
           </span>
         )}
       </div>
-      <div className="text-3xl font-bold mb-2" style={{ color: entry.tag?.color }}>
+      <div className="text-lg font-bold leading-tight" style={{ color: entry.tag?.color }}>
         {entry.tag?.name}
       </div>
-      <div className="text-5xl font-mono font-bold tabular-nums text-brand my-4">
+      <div className="text-2xl sm:text-3xl font-mono font-bold tabular-nums text-brand my-1.5">
         {formatClock(elapsed)}
       </div>
-      <div className="text-xs text-gray-400 mb-4">
+      <div className="text-[10px] text-gray-400 mb-2">
         开始于 {formatTimeWithSeconds(entry.startTime)}
       </div>
-      <div className="flex items-center justify-center gap-2 mb-4">
-        <span className="text-xs text-gray-500 dark:text-gray-400">待办</span>
+      <div className="flex items-center justify-center gap-2 mb-2">
+        <span className="text-[10px] text-gray-500 dark:text-gray-400">待办</span>
         <select
           value={entry.todoId ?? ''}
           disabled={todoSaving}
           onChange={(e) => void changeTodo(e.target.value)}
-          className="max-w-[min(22rem,80vw)] input !w-auto !py-1.5 text-xs"
+          className="max-w-[min(22rem,80vw)] input !w-auto !py-1 text-[11px]"
         >
           <option value="">不关联待办</option>
           {todos.map((todo) => <option key={todo.id} value={todo.id}>{todo.title}</option>)}
         </select>
       </div>
       {/* 备注编辑 */}
-      <div className="flex gap-2 mb-4 max-w-sm mx-auto">
+      <div className="flex gap-2 mb-2 max-w-sm mx-auto">
         <input
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder="添加简单备注…"
-          className="input !py-1.5 text-sm"
+          className="input !py-1 text-xs"
         />
         <button
           onClick={saveNote}
-          className="px-3 py-1.5 rounded-lg text-sm bg-brand-200 dark:bg-brand-800 text-brand-700 dark:text-brand-200 hover:bg-brand-300 whitespace-nowrap"
+          className="px-2.5 py-1 rounded-lg text-xs bg-brand-200 dark:bg-brand-800 text-brand-700 dark:text-brand-200 hover:bg-brand-300 whitespace-nowrap"
         >
           {noteSaved ? '✓ 已存' : '存备注'}
         </button>
       </div>
       {/* 按钮行：点记录 / 记日记 / 停止 */}
-      <div className="flex justify-center items-center gap-3 flex-wrap">
+      <div className="flex justify-center items-center gap-2 flex-wrap">
         <button
           type="button"
           onClick={onAddPointRecord}
-          className="px-4 py-2.5 rounded-xl border border-blue-300 dark:border-blue-700 text-blue-600 dark:text-blue-400 font-medium hover:bg-blue-50 dark:hover:bg-blue-900/40 text-sm transition-colors flex items-center gap-1.5"
+          className="px-3 py-1.5 rounded-lg border border-blue-300 dark:border-blue-700 text-blue-600 dark:text-blue-400 font-medium hover:bg-blue-50 dark:hover:bg-blue-900/40 text-xs transition-colors flex items-center gap-1.5"
         >
           📍 点记录
         </button>
@@ -1025,7 +1021,7 @@ function RunningTimer({ entry, stopping, todos, onStop, onTodoChange, onTerminat
         <button
           type="button"
           onClick={onAddMemo}
-          className="px-4 py-2.5 rounded-xl border border-brand-300 dark:border-brand-700 text-brand font-medium hover:bg-brand-100 dark:hover:bg-brand-900/40 text-sm transition-colors flex items-center gap-1.5"
+          className="px-3 py-1.5 rounded-lg border border-brand-300 dark:border-brand-700 text-brand font-medium hover:bg-brand-100 dark:hover:bg-brand-900/40 text-xs transition-colors flex items-center gap-1.5"
         >
           📝 记日记
         </button>
@@ -1033,7 +1029,7 @@ function RunningTimer({ entry, stopping, todos, onStop, onTodoChange, onTerminat
         <button
           onClick={() => onStop(note)}
           disabled={stopping}
-          className="px-8 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white font-semibold disabled:opacity-50 transition-colors flex items-center gap-1.5"
+          className="px-5 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white text-xs font-semibold disabled:opacity-50 transition-colors flex items-center gap-1.5"
         >
           {stopping ? '停止中…' : '⏹ 停止'}
         </button>

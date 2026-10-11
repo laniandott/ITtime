@@ -53,10 +53,8 @@ function activityDeadline(
   deadlineTime: unknown,
   deadlineDay: unknown,
   deadlineAt: unknown,
-  parentId: string | null,
 ): { deadlineTime: string | null; deadlineDay: number | null; deadlineAt: Date | null; error?: string } {
   if (kind !== 'activity') return { deadlineTime: null, deadlineDay: null, deadlineAt: null }
-  if (!parentId) return { deadlineTime: null, deadlineDay: null, deadlineAt: null, error: '活动目标必须挂在二级标签下' }
   if (!ACTIVITY_PERIODS.has(period)) return { deadlineTime: null, deadlineDay: null, deadlineAt: null, error: '活动目标只支持一次性、工作日、每日、每周或每月周期' }
 
   if (period === 'once') {
@@ -200,7 +198,7 @@ export default async function goalRoutes(app: FastifyInstance) {
     }
     const tag = await prisma.tag.findUnique({ where: { id: tagId }, select: { id: true, categoryId: true, parentId: true } })
     if (!tag) return reply.code(404).send({ error: '标签不存在' })
-    const deadline = activityDeadline(goalKind, goalPeriod, deadlineTime, deadlineDay, deadlineAt, tag.parentId)
+    const deadline = activityDeadline(goalKind, goalPeriod, deadlineTime, deadlineDay, deadlineAt)
     if (deadline.error) return reply.code(400).send({ error: deadline.error })
 
     const created = await prisma.$transaction(async (tx) => {
@@ -254,7 +252,7 @@ export default async function goalRoutes(app: FastifyInstance) {
     const nextDeadlineTime = deadlineTime !== undefined ? deadlineTime : existing.deadlineTime
     const nextDeadlineDay = deadlineDay !== undefined ? deadlineDay : existing.deadlineDay
     const nextDeadlineAt = deadlineAt !== undefined ? deadlineAt : existing.deadlineAt?.toISOString() ?? null
-    const deadline = activityDeadline(nextKind, nextPeriod, nextDeadlineTime, nextDeadlineDay, nextDeadlineAt, existing.tag.parentId)
+    const deadline = activityDeadline(nextKind, nextPeriod, nextDeadlineTime, nextDeadlineDay, nextDeadlineAt)
     if (deadline.error) return reply.code(400).send({ error: deadline.error })
 
     const data: Record<string, unknown> = {
