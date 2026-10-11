@@ -4,6 +4,7 @@ import { api, resolveUploadUrl } from '../api'
 import type { TimeEntry, Tag, Todo, Memo, LinkedNoteEntry } from '../types'
 import { DateTimeSecondPicker } from '../components/DateTimeSecondPicker'
 import { syncNativeStatusBarTheme } from '../nativeStatusBar'
+import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react'
 
 // 辅助函数：格式化时间为 YYYY/MM/DD HH:mm:ss
 const formatDateTimeWithSeconds = (isoStr: string) => {
@@ -73,8 +74,23 @@ export default function TimerPage() {
   const [customTo, setCustomTo] = useState('')
   const [recentError, setRecentError] = useState('')
   const [feedback, setFeedback] = useState('')
+  const [sortingQuickStart, setSortingQuickStart] = useState(false)
   const loadRecentSequence = useRef(0)
   const startingTagIds = useRef(new Set<string>())
+
+  const saveOrder = async <T extends { id: string }>(items: T[], from: number, to: number, save: (id: string, sortOrder: number) => Promise<unknown>) => {
+    if (to < 0 || to >= items.length) return
+    const reordered = [...items]
+    const [moved] = reordered.splice(from, 1)
+    reordered.splice(to, 0, moved)
+    try {
+      await Promise.all(reordered.map((item, index) => save(item.id, index * 10)))
+      await useStore.getState().loadAll()
+      setFeedback('快速开始顺序已保存')
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : '保存顺序失败')
+    }
+  }
 
   const loadTodos = async () => {
     try {
@@ -211,11 +227,13 @@ export default function TimerPage() {
   }
 
   // 按分类分组标签
-  const tagsByCategory = categories.map((cat) => ({
+  const orderedCategories = [...categories].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name))
+  const orderedTags = (items: Tag[]) => [...items].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name))
+  const tagsByCategory = orderedCategories.map((cat) => ({
     category: cat,
-    tags: tags.filter((t) => t.categoryId === cat.id && !t.parentId),
+    tags: orderedTags(tags.filter((t) => t.categoryId === cat.id && !t.parentId)),
   }))
-  const uncategorized = tags.filter((t) => !t.categoryId && !t.parentId)
+  const uncategorized = orderedTags(tags.filter((t) => !t.categoryId && !t.parentId))
 
   // 按结束时间倒序排序（进行中的在最上方，即 endTime 为 null 当作无穷大，已结束的按 endTime 倒序）
   const sortedRecent = useMemo(() => [...recent]
@@ -360,12 +378,12 @@ export default function TimerPage() {
           <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
             快速开始
           </h2>
-          <button
-            onClick={() => setShowManual(true)}
-            className="text-sm text-brand hover:underline"
-          >
-            + 补录
-          </button>
+          <div className="flex items-center gap-3">
+            <button type="button" onClick={() => setSortingQuickStart(value => !value)} aria-pressed={sortingQuickStart} title={sortingQuickStart ? '完成排序' : '调整分类和标签顺序'} className={`grid h-9 w-9 place-items-center rounded-lg ${sortingQuickStart ? 'bg-brand/10 text-brand' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+              <ArrowUpDown className="h-4 w-4" aria-hidden="true" />
+            </button>
+            <button onClick={() => setShowManual(true)} className="text-sm text-brand hover:underline">+ 补录</button>
+          </div>
         </div>
         {todos.length > 0 && (
           <div className="mb-3 flex items-center gap-2 text-sm">
@@ -397,12 +415,16 @@ export default function TimerPage() {
                     <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
                       {category.name}
                     </span>
+                    {sortingQuickStart && <div className="ml-2 flex items-center gap-1">
+                      <button type="button" disabled={orderedCategories.indexOf(category) === 0} onClick={() => void saveOrder(orderedCategories, orderedCategories.indexOf(category), orderedCategories.indexOf(category) - 1, (id, sortOrder) => api.categories.update(id, { sortOrder }))} className="grid h-7 w-7 place-items-center rounded text-gray-500 hover:bg-white/70 disabled:opacity-25" aria-label={`${category.name}分类上移`}><ArrowUp className="h-4 w-4" /></button>
+                      <button type="button" disabled={orderedCategories.indexOf(category) === orderedCategories.length - 1} onClick={() => void saveOrder(orderedCategories, orderedCategories.indexOf(category), orderedCategories.indexOf(category) + 1, (id, sortOrder) => api.categories.update(id, { sortOrder }))} className="grid h-7 w-7 place-items-center rounded text-gray-500 hover:bg-white/70 disabled:opacity-25" aria-label={`${category.name}分类下移`}><ArrowDown className="h-4 w-4" /></button>
+                    </div>}
                     <span className="ml-auto text-xs text-gray-500 dark:text-gray-400">{ts.length} 个标签</span>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {ts.map((tag) => (
+                    {ts.map((tag, index) => (
+                      <div key={tag.id} className="flex items-center gap-0.5">
                       <button
-                        key={tag.id}
                         onClick={() => handleStart(tag.id)}
                         aria-pressed={running.some(entry => entry.tagId === tag.id)}
                         className={`timer-tag px-4 py-2.5 border font-medium text-sm transition-all hover:-translate-y-0.5 ${tag.trackType === 'count' ? 'border-dashed' : ''}`}
@@ -412,6 +434,11 @@ export default function TimerPage() {
                         {running.some(entry => entry.tagId === tag.id) && <span className="ml-1 text-[11px] font-semibold">· 停止</span>}
                         {tag.trackType === 'count' && <span className="ml-1 text-xs opacity-60">✓</span>}
                       </button>
+                      {sortingQuickStart && <div className="flex flex-col">
+                        <button type="button" disabled={index === 0} onClick={() => void saveOrder(ts, index, index - 1, (id, sortOrder) => api.tags.update(id, { sortOrder }))} className="grid h-5 w-5 place-items-center text-gray-400 hover:text-brand disabled:opacity-20" aria-label={`${tag.name}上移`}><ArrowUp className="h-3 w-3" /></button>
+                        <button type="button" disabled={index === ts.length - 1} onClick={() => void saveOrder(ts, index, index + 1, (id, sortOrder) => api.tags.update(id, { sortOrder }))} className="grid h-5 w-5 place-items-center text-gray-400 hover:text-brand disabled:opacity-20" aria-label={`${tag.name}下移`}><ArrowDown className="h-3 w-3" /></button>
+                      </div>}
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -421,9 +448,9 @@ export default function TimerPage() {
               <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/50 p-4 sm:p-5">
                 <div className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-3">未分类 <span className="font-normal text-gray-400">· {uncategorized.length} 个标签</span></div>
                 <div className="flex flex-wrap gap-2">
-                  {uncategorized.map((tag) => (
+                  {uncategorized.map((tag, index) => (
+                    <div key={tag.id} className="flex items-center gap-0.5">
                     <button
-                      key={tag.id}
                       onClick={() => handleStart(tag.id)}
                         className={`timer-tag px-4 py-2.5 border font-medium text-sm transition-colors ${tag.trackType === 'count' ? 'border-dashed' : ''}`}
                         style={{ borderColor: tag.color, color: tag.color, backgroundColor: `${tag.color}18`, boxShadow: running.some(entry => entry.tagId === tag.id) ? `inset 0 0 0 2px ${tag.color}` : undefined }}
@@ -432,6 +459,11 @@ export default function TimerPage() {
                         {running.some(entry => entry.tagId === tag.id) && <span className="ml-1 text-[11px] font-semibold">· 停止</span>}
                       {tag.trackType === 'count' && <span className="ml-1 text-xs opacity-60">✓</span>}
                     </button>
+                    {sortingQuickStart && <div className="flex flex-col">
+                      <button type="button" disabled={index === 0} onClick={() => void saveOrder(uncategorized, index, index - 1, (id, sortOrder) => api.tags.update(id, { sortOrder }))} className="grid h-5 w-5 place-items-center text-gray-400 hover:text-brand disabled:opacity-20" aria-label={`${tag.name}上移`}><ArrowUp className="h-3 w-3" /></button>
+                      <button type="button" disabled={index === uncategorized.length - 1} onClick={() => void saveOrder(uncategorized, index, index + 1, (id, sortOrder) => api.tags.update(id, { sortOrder }))} className="grid h-5 w-5 place-items-center text-gray-400 hover:text-brand disabled:opacity-20" aria-label={`${tag.name}下移`}><ArrowDown className="h-3 w-3" /></button>
+                    </div>}
+                    </div>
                   ))}
                 </div>
               </div>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useStore } from '../store'
 import { api } from '../api'
 import type { Category, Tag, Goal } from '../types'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 
 const COLORS = ['#6d5efc', '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#8b5cf6', '#14b8a6', '#64748b']
 
@@ -14,6 +15,20 @@ export default function TagsPage() {
   const [goals, setGoals] = useState<Goal[]>([])
   const [editingGoal, setEditingGoal] = useState<{ goal: Goal | null; tag: Tag } | null>(null)
   const [error, setError] = useState('')
+
+  const orderedCategories = [...categories].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name))
+  const orderedTags = [...tags].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name))
+  const move = async <T extends { id: string; sortOrder: number }>(items: T[], index: number, direction: -1 | 1, update: (id: string, sortOrder: number) => Promise<unknown>) => {
+    const target = index + direction
+    if (target < 0 || target >= items.length) return
+    const reordered = [...items]
+    const [moved] = reordered.splice(index, 1)
+    reordered.splice(target, 0, moved)
+    try {
+      await Promise.all(reordered.map((item, order) => update(item.id, order * 10)))
+      await loadAll()
+    } catch (e) { setError(e instanceof Error ? e.message : '调整顺序失败') }
+  }
 
   const loadGoals = async () => {
     try {
@@ -48,7 +63,7 @@ export default function TagsPage() {
           {categories.length === 0 && (
             <div className="text-sm text-gray-400 py-2">还没有分类，创建一个（如：日常、工作、宝宝）</div>
           )}
-          {categories.map((cat) => (
+          {orderedCategories.map((cat, index) => (
             <div
               key={cat.id}
               className="flex items-center justify-between rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 px-4 py-2.5"
@@ -58,7 +73,9 @@ export default function TagsPage() {
                 <span className="font-medium">{cat.name}</span>
                 <span className="text-xs text-gray-400">{cat._count?.tags ?? 0} 个标签</span>
               </div>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
+                <button type="button" disabled={index === 0} onClick={() => void move(orderedCategories, index, -1, (id, sortOrder) => api.categories.update(id, { sortOrder }))} className="grid h-8 w-8 place-items-center rounded text-gray-400 hover:bg-gray-100 hover:text-brand disabled:opacity-25 dark:hover:bg-gray-800" aria-label={`分类${cat.name}上移`}><ChevronUp className="h-4 w-4" /></button>
+                <button type="button" disabled={index === orderedCategories.length - 1} onClick={() => void move(orderedCategories, index, 1, (id, sortOrder) => api.categories.update(id, { sortOrder }))} className="grid h-8 w-8 place-items-center rounded text-gray-400 hover:bg-gray-100 hover:text-brand disabled:opacity-25 dark:hover:bg-gray-800" aria-label={`分类${cat.name}下移`}><ChevronDown className="h-4 w-4" /></button>
                 <button
                   onClick={() => { setEditingCat(cat); setShowCatForm(true) }}
                   className="text-sm text-gray-400 hover:text-brand"
@@ -97,7 +114,10 @@ export default function TagsPage() {
           </button>
         </div>
         <div className="space-y-2">
-          {tags.map((tag) => (
+          {orderedTags.map((tag) => {
+            const siblings = orderedTags.filter((item) => item.categoryId === tag.categoryId && item.parentId === tag.parentId)
+            const siblingIndex = siblings.findIndex((item) => item.id === tag.id)
+            return (
             <div
               key={tag.id}
               className="flex items-center justify-between rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 px-4 py-2.5"
@@ -123,7 +143,9 @@ export default function TagsPage() {
                   </span>
                 )}
               </div>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
+                <button type="button" disabled={siblingIndex === 0} onClick={() => void move(siblings, siblingIndex, -1, (id, sortOrder) => api.tags.update(id, { sortOrder }))} className="grid h-8 w-8 place-items-center rounded text-gray-400 hover:bg-gray-100 hover:text-brand disabled:opacity-25 dark:hover:bg-gray-800" aria-label={`标签${tag.name}上移`}><ChevronUp className="h-4 w-4" /></button>
+                <button type="button" disabled={siblingIndex === siblings.length - 1} onClick={() => void move(siblings, siblingIndex, 1, (id, sortOrder) => api.tags.update(id, { sortOrder }))} className="grid h-8 w-8 place-items-center rounded text-gray-400 hover:bg-gray-100 hover:text-brand disabled:opacity-25 dark:hover:bg-gray-800" aria-label={`标签${tag.name}下移`}><ChevronDown className="h-4 w-4" /></button>
                 {goals.filter((g) => g.tagId === tag.id).length === 0 && (
                   <button
                     onClick={() => setEditingGoal({ goal: null, tag })}
@@ -154,7 +176,8 @@ export default function TagsPage() {
                 </button>
               </div>
             </div>
-          ))}
+            )
+          })}
         </div>
       </section>
 

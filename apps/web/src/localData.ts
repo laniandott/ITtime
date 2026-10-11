@@ -15,7 +15,14 @@ export function localDatabase() {
 }
 async function readyDatabase() { const db = localDatabase(); await migration; return db }
 export async function prepareLocalDatabase() { return readyDatabase() }
-async function list(entity: string) { const result = await (await readyDatabase()).allDocs({ include_docs: true, startkey: `${entity}:`, endkey: `${entity}:\uffff` }); return result.rows.flatMap(row => row.doc && !row.doc.deletedAt ? [row.doc.value] : []) }
+async function list(entity: string) {
+  const result = await (await readyDatabase()).allDocs({ include_docs: true, startkey: `${entity}:`, endkey: `${entity}:\uffff` })
+  const values = result.rows.flatMap(row => row.doc && !row.doc.deletedAt ? [row.doc.value] : [])
+  if (entity === 'categories' || entity === 'tags') {
+    return values.sort((a, b) => Number(a.sortOrder ?? 0) - Number(b.sortOrder ?? 0) || String(a.createdAt ?? '').localeCompare(String(b.createdAt ?? '')) || String(a.name ?? '').localeCompare(String(b.name ?? '')))
+  }
+  return values
+}
 async function get(entity: string, id: string) {
   const doc = await (await readyDatabase()).get(`${entity}:${id}`)
   if (doc.deletedAt) throw Object.assign(new Error('记录不存在'), { status: 404 })
