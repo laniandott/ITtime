@@ -137,6 +137,13 @@ function formatExternalEventLabel(event: CalendarEvent): string {
   return `${startText}-${endText} ${event.summary}`
 }
 
+function externalEventKind(event: CalendarEvent): 'holiday' | 'workday' | 'other' {
+  const text = `${event.summary} ${event.description ?? ''}`
+  if (/(补班|调休|上班|工作日|上班日)/.test(text)) return 'workday'
+  if (/(节|假|休|放假|假期|清明|劳动|端午|中秋|国庆|春节|元旦)/.test(text)) return 'holiday'
+  return 'other'
+}
+
 function activityDate(todo: Todo): Date | null {
   const value = todo.completedAt ?? todo.dueDate
   if (!value) return null
@@ -640,6 +647,11 @@ export default function CalendarPage() {
             memosByDay={memosByDay}
             externalEvents={externalEvents}
             onDayClick={setCurrentDate}
+            onNavigate={(direction) => {
+              const next = new Date(currentDate)
+              next.setMonth(next.getMonth() + direction)
+              setCurrentDate(next)
+            }}
           />
           <section className="min-w-0">
             <div className="mb-2 flex items-baseline justify-between gap-2">
@@ -1114,7 +1126,7 @@ function WeekView({ days, selectedDate, entries, activities, memosByDay, externa
 
 // ===== 月视图 =====
 
-function MonthView({ date, selectedDate, entriesByDay, activities, memosByDay, externalEvents, onDayClick }: {
+function MonthView({ date, selectedDate, entriesByDay, activities, memosByDay, externalEvents, onDayClick, onNavigate }: {
   date: Date
   selectedDate: Date
   entriesByDay: Map<string, TimeEntry[]>
@@ -1122,6 +1134,7 @@ function MonthView({ date, selectedDate, entriesByDay, activities, memosByDay, e
   memosByDay: Map<string, Memo[]>
   externalEvents: CalendarEvent[]
   onDayClick: (d: Date) => void
+  onNavigate: (direction: -1 | 1) => void
 }) {
   const days = getMonthGrid(date)
 
@@ -1136,13 +1149,23 @@ function MonthView({ date, selectedDate, entriesByDay, activities, memosByDay, e
   }
 
   return (
-    <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
-      <div className="grid grid-cols-7 border-b border-gray-200 dark:border-gray-800">
-        {WEEKDAYS_FULL.map((w) => (
-          <div key={w} className="text-center py-2 text-xs text-gray-400 font-medium">{w}</div>
+    <div className="rounded-2xl bg-white p-2 dark:bg-gray-900 sm:p-4">
+      <div className="mb-5 flex items-center justify-between px-1 sm:px-3">
+        <button type="button" onClick={() => onNavigate(-1)} className="grid h-9 w-9 place-items-center rounded-full text-2xl text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800" aria-label="上个月">‹</button>
+        <div className="flex items-center gap-2 text-xl font-bold text-gray-800 dark:text-gray-100 sm:text-2xl">
+          <span className="rounded-md border border-gray-200 px-4 py-1 dark:border-gray-700">{date.getFullYear()}</span>
+          <span>年</span>
+          <span className="rounded-md border border-gray-200 px-4 py-1 dark:border-gray-700">{date.getMonth() + 1}</span>
+          <span>月</span>
+        </div>
+        <button type="button" onClick={() => onNavigate(1)} className="grid h-9 w-9 place-items-center rounded-full text-2xl text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800" aria-label="下个月">›</button>
+      </div>
+      <div className="grid grid-cols-7 mb-1">
+        {WEEKDAYS_FULL.map((w, index) => (
+          <div key={w} className={`text-center py-2 text-sm font-medium ${index >= 5 ? 'text-gray-700 dark:text-gray-200' : 'text-gray-500 dark:text-gray-400'}`}>{w.replace('周', '')}</div>
         ))}
       </div>
-      <div className="grid grid-cols-7">
+      <div className="grid grid-cols-7 gap-1 sm:gap-2">
         {days.map((d) => {
           const key = startOfDay(d).toISOString()
           const dayEntries = entriesByDay.get(key) ?? []
@@ -1152,32 +1175,50 @@ function MonthView({ date, selectedDate, entriesByDay, activities, memosByDay, e
           const today = isToday(d)
           const selected = isSameDay(d, selectedDate)
           const uniqueColors = getUniqueColors(dayEntries)
+          const dayExternalEvents = externalEvents.filter((ev) => externalEventOverlapsDay(ev, startOfDay(d).getTime(), endOfDay(d).getTime()))
+          const allDayLabels = dayExternalEvents
+            .filter((ev) => ev.allday)
+            .filter((ev, index, list) => list.findIndex((item) => item.summary === ev.summary) === index)
+            .slice(0, 2)
+          const hasOtherExternal = dayExternalEvents.some((ev) => !ev.allday)
+          const holidayEvent = dayExternalEvents.find((ev) => externalEventKind(ev) === 'holiday')
+          const workdayEvent = dayExternalEvents.find((ev) => externalEventKind(ev) === 'workday')
+          const weekend = d.getDay() === 0 || d.getDay() === 6
 
           return (
             <button
               key={d.toISOString()}
               onClick={() => onDayClick(d)}
               aria-pressed={selected}
-              className={`min-h-[78px] sm:min-h-[92px] border-r border-b border-gray-100 dark:border-gray-800 p-1.5 text-left transition-colors group ${selected ? 'bg-brand/10 ring-2 ring-inset ring-brand' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'} ${!inMonth ? 'opacity-30' : ''}`}
+              className={`relative min-h-[92px] rounded-xl p-2 text-left transition-colors group sm:min-h-[112px] sm:p-3 ${selected ? 'bg-brand-500 text-white shadow-md' : holidayEvent ? 'bg-red-50 dark:bg-red-950/20' : 'hover:bg-gray-50 dark:hover:bg-gray-800/60'} ${!inMonth ? 'opacity-30' : ''}`}
             >
-              <div className="flex items-center justify-between mb-0.5">
-                <div className="flex items-center gap-1">
-                  <span className={`text-sm font-semibold w-8 h-8 flex items-center justify-center rounded-full transition-colors ${
-                    selected
-                      ? 'bg-brand text-white'
-                      : today
-                      ? 'bg-brand text-white'
-                      : 'text-gray-600 dark:text-gray-400 group-hover:bg-gray-200 dark:group-hover:bg-gray-700'
-                  }`}>
+              {holidayEvent && <span className="absolute right-1.5 top-1.5 rounded bg-red-500 px-1 text-[10px] font-bold text-white">休</span>}
+              {workdayEvent && !holidayEvent && <span className="absolute right-1.5 top-1.5 rounded bg-slate-500 px-1 text-[10px] font-bold text-white">班</span>}
+              <div className="flex items-start justify-between gap-1">
+                <div className="flex flex-col gap-0.5">
+                  <span className={`text-2xl font-semibold leading-none sm:text-3xl ${selected ? 'text-white' : weekend || holidayEvent ? 'text-red-500' : 'text-gray-800 dark:text-gray-100'}`}>
                     {d.getDate()}
                   </span>
-                  <span className={`text-[11px] ${getLunarText(d) === Solar.fromDate(d).getLunar().getJieQi() ? 'font-medium text-amber-600 dark:text-amber-400' : 'text-gray-400'}`}>{getLunarText(d)}</span>
+                  <span className={`text-[11px] ${selected ? 'text-white/80' : getLunarText(d) === Solar.fromDate(d).getLunar().getJieQi() ? 'font-medium text-amber-600 dark:text-amber-400' : 'text-gray-400'}`}>{getLunarText(d)}</span>
                 </div>
               </div>
-              <div className="mt-3 flex min-h-5 items-center gap-1.5" aria-label="当天日历内容">
+              {allDayLabels.length > 0 && (
+                <div className="mt-2 space-y-0.5" aria-label="全天外部日历">
+                  {allDayLabels.map((event) => {
+                    const kind = externalEventKind(event)
+                    const color = kind === 'workday' ? '#2563eb' : kind === 'holiday' ? '#d97706' : (event.subscription?.color ?? '#059669')
+                    return (
+                        <div key={event.id} className={`truncate rounded px-1 py-0.5 text-[10px] font-medium leading-tight ${selected ? 'bg-white/20 text-white' : ''}`} style={selected ? undefined : { color, backgroundColor: `${color}15` }} title={event.summary}>
+                        {event.summary}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+              <div className={`mt-2 flex min-h-5 items-center gap-1.5 ${selected ? 'text-white' : ''}`} aria-label="当天日历内容">
                 {uniqueColors.slice(0, 5).map((c, i) => <span key={i} className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: c }} title="计时记录" />)}
                 {dayActivities.length > 0 && <span className="h-2.5 w-2.5 rounded-full bg-amber-400" title="活动" />}
-                {externalEvents.some((ev) => externalEventOverlapsDay(ev, startOfDay(d).getTime(), endOfDay(d).getTime())) && <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" title="外部日历" />}
+                {(hasOtherExternal || allDayLabels.length > 0) && <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" title="外部日历" />}
                 {dayMemos.length > 0 && <span className="h-2.5 w-2.5 rounded-full bg-gray-400" title="备忘" />}
               </div>
             </button>
