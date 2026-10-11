@@ -138,9 +138,16 @@ function formatExternalEventLabel(event: CalendarEvent): string {
 }
 
 function externalEventKind(event: CalendarEvent): 'holiday' | 'workday' | 'other' {
-  const text = `${event.summary} ${event.description ?? ''}`
-  if (/(补班|调休|上班|工作日|上班日)/.test(text)) return 'workday'
-  if (/(节|假|休|放假|假期|清明|劳动|端午|中秋|国庆|春节|元旦)/.test(text)) return 'holiday'
+  // 节假日源的说明通常也会写“调休/上班”，不能用整段说明文字
+  // 优先判断类型，否则“仅放假”订阅会被误显示成“班”。标题在这类
+  // 订阅中明确区分了“假期”和“补班”，只有标题没有类型时才回退到说明。
+  const summary = event.summary || ''
+  if (/(补班|上班日|工作日)/.test(summary)) return 'workday'
+  if (/(节|假|休|放假|假期|清明|劳动|端午|中秋|国庆|春节|元旦)/.test(summary)) return 'holiday'
+
+  const description = event.description ?? ''
+  if (/(节|假|休|放假|假期|清明|劳动|端午|中秋|国庆|春节|元旦)/.test(description)) return 'holiday'
+  if (/(补班|调休|上班|上班日|工作日)/.test(description)) return 'workday'
   return 'other'
 }
 
