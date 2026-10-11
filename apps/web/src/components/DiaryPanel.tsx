@@ -45,6 +45,7 @@ export default function DiaryPanel() {
   const filteredMemos = useMemo(() => {
     const diaryOnlyMemos = memos
       .filter((m) => m.type !== 'point')
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
       .filter((memo) => {
         if (!filterCat) return true
         const categoryId = memo.tag?.categoryId ?? memo.timeEntry?.tag?.categoryId

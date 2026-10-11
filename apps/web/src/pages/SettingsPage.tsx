@@ -4,6 +4,7 @@ import TagsPage from './TagsPage'
 import { getSyncStatus, SYNC_SETTINGS_KEY, subscribeSyncStatus, testConnection, startSync, stopSync, type SyncConfig, type SyncMode } from '../couchSync'
 import { importLegacyServerData } from '../legacyMigration'
 import { applyFontSizePreference, FONT_SIZE_KEY, readFontSizePreference, type FontSizePreference } from '../fontSettings'
+import GalleryPanel from '../components/GalleryPanel'
 
 function load(): SyncConfig { try { return { couchUrl: '', couchDatabase: 'ittime', couchUsername: '', couchPassword: '', ...JSON.parse(localStorage.getItem(SYNC_SETTINGS_KEY) ?? '{}') } } catch { return { couchUrl: '', couchDatabase: 'ittime', couchUsername: '', couchPassword: '' } } }
 export default function SettingsPage() {
@@ -45,7 +46,7 @@ export default function SettingsPage() {
       <button type="button" disabled={busy} onClick={() => void migrate()} className="rounded-md bg-brand px-4 py-2 text-sm text-white disabled:opacity-50">{busy ? '正在处理…' : '扫描并导入旧数据'}</button>
       {migrationMessage && <p role="status" className="text-sm">{migrationMessage}</p>}
     </section>}
-    {page === 'general' && <div className="max-w-xl space-y-5">
+    {page === 'general' && <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div><label htmlFor="font-size" className="text-sm font-medium">界面字体大小</label><p className="mt-1 text-xs text-gray-500">紧凑模式也会适当压缩界面间距，适合小屏幕。</p></div>
         <select id="font-size" className="input w-auto min-w-32" value={fontSize} onChange={event => updateFontSize(event.target.value as FontSizePreference)}>
@@ -56,6 +57,7 @@ export default function SettingsPage() {
       </div>
       <p className="text-sm">设备时区：{Intl.DateTimeFormat().resolvedOptions().timeZone}</p>
       <Link className="text-brand" to="/calendar">日历</Link>
+      <div className="border-t border-gray-200 pt-5 dark:border-gray-800"><GalleryPanel /></div>
     </div>}
     {page === 'sync' && <form onSubmit={event => { event.preventDefault(); void saveSettings() }} className="space-y-5 max-w-xl">
       <h2 className="font-semibold">CouchDB 连接</h2>
