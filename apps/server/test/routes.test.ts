@@ -936,6 +936,34 @@ test('活动目标：每日截止时间和每月截止日会生成对应活动�
   await prisma.category.delete({ where: { id: category.id } })
 })
 
+test('完成子活动待办时，只写入正在进行的父活动点记录', async () => {
+  const category = await prisma.category.create({ data: { name: `父活动点记录分类-${Date.now()}` } })
+  const parentTag = await prisma.tag.create({ data: { name: `父活动点记录-${Date.now()}`, categoryId: category.id } })
+  const childTag = await prisma.tag.create({ data: { name: `子活动点记录-${Date.now()}`, categoryId: category.id, parentId: parentTag.id } })
+  const todo = await prisma.todo.create({
+    data: { title: '完成子活动', categoryId: category.id, tagId: childTag.id },
+  })
+  const endedEntry = await prisma.timeEntry.create({
+    data: {
+      tagId: parentTag.id,
+      startTime: new Date(Date.now() - 10 * 60_000),
+      endTime: new Date(Date.now() - 60_000),
+    },
+  })
+  const runningEntry = await prisma.timeEntry.create({
+    data: { tagId: parentTag.id, startTime: new Date(Date.now() - 5 * 60_000) },
+  })
+
+  const response = await app.inject({ method: 'PATCH', url: `/api/todos/${todo.id}/toggle`, payload: {} })
+  assert.equal(response.statusCode, 200)
+  assert.equal(response.json().status, 'done')
+
+  const points = await prisma.memo.findMany({ where: { type: 'point', content: '完成子活动' } })
+  assert.equal(points.length, 1)
+  assert.equal(points[0].timeEntryId, runningEntry.id)
+  assert.notEqual(points[0].timeEntryId, endedEntry.id)
+})
+
 test('标签层级：只能把一级标签设为上级，二级标签不能直接计时', async () => {
   const category = await prisma.category.create({ data: { name: `层级分类-${Date.now()}` } })
   const root = await app.inject({

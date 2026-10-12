@@ -111,8 +111,10 @@ async function recordCompletionInTimeEntry(todo: Pick<TodoRecord, 'title' | 'tag
     where: {
       tagId: activityTag.parentId,
       dismissed: false,
+      // 只记录到完成瞬间仍在运行的父活动计时中。
+      // 已结束的历史计时不应被回填为当前活动的点记录。
+      endTime: null,
       startTime: { lte: completedAt },
-      OR: [{ endTime: null }, { endTime: { gte: completedAt } }],
     },
     orderBy: { startTime: 'desc' },
   })
