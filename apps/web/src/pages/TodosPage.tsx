@@ -11,6 +11,7 @@ const PRIORITY = [
 ]
 
 type ActivityView = 'current' | 'all'
+type TodoStatusView = 'pending' | 'done'
 type ActivityCycle = 'workday' | 'daily' | 'weekly' | 'monthly'
 
 const ACTIVITY_NOTIFICATION_START = 2000
@@ -102,6 +103,7 @@ export default function TodosPage() {
   const [todos, setTodos] = useState<Todo[]>([])
   const [goals, setGoals] = useState<Goal[]>([])
   const [activeTab, setActiveTab] = useState<'todo' | 'diary'>('todo')
+  const [statusView, setStatusView] = useState<TodoStatusView>('pending')
   const [activityView, setActivityView] = useState<ActivityView>('current')
   const [filterCat, setFilterCat] = useState('')
   const [oneTimeCollapsed, setOneTimeCollapsed] = useState(false)
@@ -207,15 +209,15 @@ export default function TodosPage() {
   }
 
   const categoryFiltered = useMemo(() => {
-    const pending = todos.filter(todo => todo.status === 'pending')
-    if (!filterCat) return pending
-    if (filterCat === 'none') return pending.filter((todo) => !todo.categoryId)
-    return pending.filter((todo) => todo.categoryId === filterCat)
-  }, [todos, filterCat])
+    const filtered = todos.filter(todo => todo.status === statusView)
+    if (!filterCat) return filtered
+    if (filterCat === 'none') return filtered.filter((todo) => !todo.categoryId)
+    return filtered.filter((todo) => todo.categoryId === filterCat)
+  }, [todos, filterCat, statusView])
 
   const cycleItems = (cycle: ActivityCycle) => sortActivityItems(categoryFiltered.filter((todo) => {
     if (todo.repeatType !== cycle) return false
-    if (activityView === 'current') return isInCurrentCycle(todo, cycle)
+    if (statusView === 'pending' && activityView === 'current') return isInCurrentCycle(todo, cycle)
     return true
   }))
 
@@ -258,12 +260,28 @@ export default function TodosPage() {
         <section className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-900/40 p-4 sm:p-5">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div>
-                <h1 className="text-xl font-semibold">未完成活动</h1>
-                <p className="text-xs text-gray-500 mt-1">完成记录会收进「习惯」页面的结果里</p>
+                <h1 className="text-xl font-semibold">{statusView === 'pending' ? '未完成活动' : '已完成活动'}</h1>
+                <p className="text-xs text-gray-500 mt-1">{statusView === 'pending' ? '完成记录会收进「习惯」页面的结果里' : '点击左侧勾选框可恢复为未完成，并填写恢复原因'}</p>
               </div>
-              <span className="rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200 px-3 py-1 text-xs font-medium">只显示待完成</span>
+              <div className="flex items-center gap-1 rounded-full bg-gray-100 p-1 dark:bg-gray-800" role="tablist" aria-label="待办状态">
+                {([['pending', '未完成'], ['done', '已完成']] as const).map(([value, label]) => (
+                  <button
+                    key={value}
+                    type="button"
+                    role="tab"
+                    aria-selected={statusView === value}
+                    onClick={() => {
+                      setStatusView(value)
+                      if (value === 'done') setActivityView('all')
+                    }}
+                    className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${statusView === value ? 'bg-white text-brand shadow-sm dark:bg-gray-700 dark:text-brand-300' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
-            {goals.filter((goal) => goal.kind === 'tracking').length > 0 && (
+            {statusView === 'pending' && goals.filter((goal) => goal.kind === 'tracking').length > 0 && (
               <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3" aria-label="标签目标进度">
                 {goals.filter((goal) => goal.kind === 'tracking').map((goal) => {
                   const current = goal.current ?? 0
@@ -282,25 +300,27 @@ export default function TodosPage() {
               </div>
             )}
             <div className="flex items-center gap-2 flex-wrap mt-4">
-              <div className="flex items-center gap-1 overflow-x-auto pb-1">
-                {([
-                  ['current', '当前周期'],
-                  ['all', '全部'],
-                ] as const).map(([value, label]) => (
-                  <button
-                    key={value}
-                    type="button"
-                    onClick={() => setActivityView(value)}
-                    className={`px-3 py-1 rounded-full text-sm whitespace-nowrap transition-colors ${
-                      activityView === value
-                        ? 'bg-brand text-white'
-                        : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
+              {statusView === 'pending' && (
+                <div className="flex items-center gap-1 overflow-x-auto pb-1">
+                  {([
+                    ['current', '当前周期'],
+                    ['all', '全部'],
+                  ] as const).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setActivityView(value)}
+                      className={`px-3 py-1 rounded-full text-sm whitespace-nowrap transition-colors ${
+                        activityView === value
+                          ? 'bg-brand text-white'
+                          : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              )}
               <select
                 value={filterCat}
                 onChange={(event) => setFilterCat(event.target.value)}
@@ -312,12 +332,14 @@ export default function TodosPage() {
                 ))}
                 <option value="none">未分类</option>
               </select>
-              <button type="button" onClick={() => setShowQuickAdd(!showQuickAdd)} className="ml-auto text-sm text-brand hover:underline whitespace-nowrap">
-                {showQuickAdd ? '取消' : '+ 新建一次性活动'}
-              </button>
+              {statusView === 'pending' && (
+                <button type="button" onClick={() => setShowQuickAdd(!showQuickAdd)} className="ml-auto text-sm text-brand hover:underline whitespace-nowrap">
+                  {showQuickAdd ? '取消' : '+ 新建一次性活动'}
+                </button>
+              )}
             </div>
 
-            {showQuickAdd && (
+            {statusView === 'pending' && showQuickAdd && (
               <div className="rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-3 flex gap-2 mt-3">
                 <input
                   value={quickTitle}
