@@ -134,9 +134,11 @@ model Goal {
   target      Int      @default(1)        // 目标值（次数 或 分钟数）
   period      String   @default("daily")  // workday | daily | weekly | monthly | custom
   periodDays  Int?                         // 自定义周期天数
+  weekDay     Int?                         // 周目标周期边界/活动截止星期，0=周日 ... 6=周六
   deadlineTime String?                      // 活动截止时间，HH:mm
   deadlineDay  Int?                         // 月度活动截止日，1-31
   deadlineAt   DateTime?                    // 一次性活动的指定截止时间
+  sortOrder   Int      @default(0)
   active      Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

@@ -22,16 +22,17 @@ function overlapDurationMs(start: Date, end: Date | null, rangeStart: Date, rang
   return Math.max(0, overlapEnd - overlapStart)
 }
 
-function periodStart(period: string, periodDays?: number | null): Date {
+function periodStart(period: string, periodDays?: number | null, weekDay?: number | null): Date {
   const now = new Date()
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   switch (period) {
     case 'daily':
       return todayStart
     case 'weekly': {
-      const dayOfWeek = now.getDay() || 7
       const start = new Date(todayStart)
-      start.setDate(start.getDate() - (dayOfWeek - 1))
+      const selectedWeekDay = Number.isInteger(weekDay) && weekDay! >= 0 && weekDay! <= 6 ? weekDay! : 1
+      const daysSinceSelected = (start.getDay() - selectedWeekDay + 7) % 7
+      start.setDate(start.getDate() - daysSinceSelected)
       return start
     }
     case 'monthly':
@@ -89,6 +90,7 @@ type ActivityGoal = {
   title: string
   tagId: string
   period: string
+  weekDay: number | null
   deadlineTime: string | null
   deadlineDay: number | null
   deadlineAt: Date | null
@@ -115,13 +117,13 @@ export default async function goalRoutes(app: FastifyInstance) {
     const goals = await prisma.goal.findMany({
       where: { active: true },
       include: { tag: { include: { category: true } } },
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
     })
     if (goals.length === 0) return []
 
     const now = new Date()
     const earliest = goals
-      .map((g) => periodStart(g.period, g.periodDays))
+      .map((g) => periodStart(g.period, g.periodDays, g.weekDay))
       .reduce((min, s) => (s < min ? s : min))
     const tagIds = [...new Set(goals.map((g) => g.tagId))]
     const allEntries = await prisma.timeEntry.findMany({
@@ -142,7 +144,7 @@ export default async function goalRoutes(app: FastifyInstance) {
       })
 
     return goals.map((goal) => {
-      const start = periodStart(goal.period, goal.periodDays)
+      const start = periodStart(goal.period, goal.periodDays, goal.weekDay)
       const entries = allEntries.filter((e) => e.tagId === goal.tagId)
       let current: number
       if (goal.kind === 'activity') {
@@ -166,7 +168,7 @@ export default async function goalRoutes(app: FastifyInstance) {
   })
 
   app.post('/', async (req, reply) => {
-    const { tagId, title, kind, type, target, period, periodDays, deadlineTime, deadlineDay, deadlineAt } = (req.body ?? {}) as {
+    const { tagId, title, kind, type, target, period, periodDays, weekDay, sortOrder, deadlineTime, deadlineDay, deadlineAt } = (req.body ?? {}) as {
       tagId: string
       title: string
       kind?: string
@@ -174,6 +176,8 @@ export default async function goalRoutes(app: FastifyInstance) {
       target?: number
       period?: string
       periodDays?: number
+      weekDay?: number | null
+      sortOrder?: number
       deadlineTime?: string | null
       deadlineDay?: number | null
       deadlineAt?: string | null
@@ -190,6 +194,8 @@ export default async function goalRoutes(app: FastifyInstance) {
     if (!GOAL_KINDS.has(goalKind)) return reply.code(400).send({ error: 'kind 只能是 tracking 或 activity' })
     if (!GOAL_TYPES.has(goalType)) return reply.code(400).send({ error: 'type 只能是 time 或 count' })
     if (!GOAL_PERIODS.has(goalPeriod)) return reply.code(400).send({ error: 'period 无效' })
+    if (weekDay !== undefined && weekDay !== null && (!Number.isInteger(weekDay) || weekDay < 0 || weekDay > 6)) return reply.code(400).send({ error: 'weekDay 必须是 0 到 6 的整数' })
+    if (sortOrder !== undefined && (!Number.isInteger(sortOrder) || sortOrder < -100000 || sortOrder > 100000)) return reply.code(400).send({ error: 'sortOrder 无效' })
     if (positiveInteger(goalTarget, MAX_GOAL_TARGET) === null) return reply.code(400).send({ error: `target 必须是 1 到 ${MAX_GOAL_TARGET} 的整数` })
 
     const customDays = goalPeriod === 'custom' ? (periodDays ?? 7) : null
@@ -201,6 +207,7 @@ export default async function goalRoutes(app: FastifyInstance) {
     const deadline = activityDeadline(goalKind, goalPeriod, deadlineTime, deadlineDay, deadlineAt)
     if (deadline.error) return reply.code(400).send({ error: deadline.error })
 
+    const existingOrder = await prisma.goal.aggregate({ _max: { sortOrder: true } })
     const created = await prisma.$transaction(async (tx) => {
       const goal = await tx.goal.create({
         data: {
@@ -211,6 +218,8 @@ export default async function goalRoutes(app: FastifyInstance) {
           target: goalTarget,
           period: goalPeriod,
           periodDays: goalKind === 'tracking' ? customDays : null,
+          weekDay: goalPeriod === 'weekly' ? (weekDay ?? (goalKind === 'activity' ? 0 : 1)) : null,
+          sortOrder: sortOrder ?? ((existingOrder._max.sortOrder ?? -10) + 10),
           deadlineTime: deadline.deadlineTime,
           deadlineDay: deadline.deadlineDay,
           deadlineAt: deadline.deadlineAt,
@@ -224,13 +233,15 @@ export default async function goalRoutes(app: FastifyInstance) {
 
   app.put('/:id', async (req, reply) => {
     const { id } = req.params as { id: string }
-    const { title, kind, type, target, period, periodDays, deadlineTime, deadlineDay, deadlineAt, active } = (req.body ?? {}) as {
+    const { title, kind, type, target, period, periodDays, weekDay, sortOrder, deadlineTime, deadlineDay, deadlineAt, active } = (req.body ?? {}) as {
       title?: string
       kind?: string
       type?: string
       target?: number
       period?: string
       periodDays?: number | null
+      weekDay?: number | null
+      sortOrder?: number
       deadlineTime?: string | null
       deadlineDay?: number | null
       deadlineAt?: string | null
@@ -245,6 +256,8 @@ export default async function goalRoutes(app: FastifyInstance) {
     if (period !== undefined && !GOAL_PERIODS.has(period)) return reply.code(400).send({ error: 'period 无效' })
     if (target !== undefined && positiveInteger(target, MAX_GOAL_TARGET) === null) return reply.code(400).send({ error: `target 必须是 1 到 ${MAX_GOAL_TARGET} 的整数` })
     if (periodDays !== undefined && periodDays !== null && positiveInteger(periodDays, MAX_PERIOD_DAYS) === null) return reply.code(400).send({ error: `periodDays 必须是 1 到 ${MAX_PERIOD_DAYS} 的整数` })
+    if (weekDay !== undefined && weekDay !== null && (!Number.isInteger(weekDay) || weekDay < 0 || weekDay > 6)) return reply.code(400).send({ error: 'weekDay 必须是 0 到 6 的整数' })
+    if (sortOrder !== undefined && (!Number.isInteger(sortOrder) || sortOrder < -100000 || sortOrder > 100000)) return reply.code(400).send({ error: 'sortOrder 无效' })
     if (active !== undefined && typeof active !== 'boolean') return reply.code(400).send({ error: 'active 必须是布尔值' })
 
     const nextKind = kind ?? existing.kind
@@ -261,6 +274,8 @@ export default async function goalRoutes(app: FastifyInstance) {
       type: nextKind === 'activity' ? 'count' : (type ?? existing.type),
       target: nextKind === 'activity' ? 1 : (target ?? existing.target),
       ...(period !== undefined ? { period } : {}),
+      ...(weekDay !== undefined ? { weekDay: nextPeriod === 'weekly' ? weekDay : null } : period !== undefined ? { weekDay: nextPeriod === 'weekly' ? (existing.weekDay ?? (nextKind === 'activity' ? 0 : 1)) : null } : {}),
+      ...(sortOrder !== undefined ? { sortOrder } : {}),
       deadlineTime: deadline.deadlineTime,
       deadlineDay: deadline.deadlineDay,
       deadlineAt: deadline.deadlineAt,

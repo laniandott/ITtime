@@ -5,6 +5,16 @@ import type { Category, Tag, Goal } from '../types'
 import { GripVertical } from 'lucide-react'
 
 const COLORS = ['#6d5efc', '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#8b5cf6', '#14b8a6', '#64748b']
+const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
+
+function defaultGoalTitle(tagName: string, kind: 'tracking' | 'activity', period: string, weekDay: number, periodDays: number): string {
+  if (kind === 'activity') {
+    const prefix = period === 'once' ? '一次性' : period === 'workday' ? '工作日' : period === 'weekly' ? `每${WEEKDAYS[weekDay]}` : period === 'monthly' ? '每月' : '每日'
+    return `${prefix}${tagName}`
+  }
+  const prefix = period === 'workday' ? '工作日' : period === 'weekly' ? `每${WEEKDAYS[weekDay]}` : period === 'monthly' ? '每月' : period === 'custom' ? `每${periodDays}天` : '每日'
+  return `${prefix}${tagName}`
+}
 
 export default function TagsPage() {
   const { categories, tags, loadAll } = useStore()
@@ -16,6 +26,7 @@ export default function TagsPage() {
   const [editingGoal, setEditingGoal] = useState<{ goal: Goal | null; tag: Tag } | null>(null)
   const [error, setError] = useState('')
   const [draggedId, setDraggedId] = useState<string | null>(null)
+  const [draggedGoalId, setDraggedGoalId] = useState<string | null>(null)
 
   const orderedCategories = [...categories].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name))
   const orderedTags = [...tags].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name))
@@ -36,6 +47,21 @@ export default function TagsPage() {
     reordered.splice(to, 0, moved)
     setDraggedId(null)
     void persistOrder(reordered, update)
+  }
+
+  const dropGoalInOrder = (sourceId: string, targetId: string) => {
+    if (!sourceId || sourceId === targetId) return
+    const from = goals.findIndex((goal) => goal.id === sourceId)
+    const to = goals.findIndex((goal) => goal.id === targetId)
+    if (from < 0 || to < 0) return
+    const reordered = [...goals]
+    const [moved] = reordered.splice(from, 1)
+    reordered.splice(to, 0, moved)
+    setGoals(reordered)
+    setDraggedGoalId(null)
+    void Promise.all(reordered.map((goal, index) => api.goals.update(goal.id, { sortOrder: index * 10 })))
+      .then(loadGoals)
+      .catch((e) => { setError(e instanceof Error ? e.message : '调整目标顺序失败'); void loadGoals() })
   }
 
   const loadGoals = async () => {
@@ -204,18 +230,30 @@ export default function TagsPage() {
           <div className="space-y-2">
             {goals.map((goal) => {
               const tag = tags.find((t) => t.id === goal.tagId)
+              const displayTitle = goal.kind === 'activity' && tag && goal.title === `每日${tag.name}`
+                ? defaultGoalTitle(tag.name, 'activity', goal.period, goal.weekDay ?? 0, goal.periodDays ?? 7)
+                : goal.title
               return (
-                <div key={goal.id} className="flex items-center justify-between rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 px-4 py-2.5">
+                <div
+                  key={goal.id}
+                  draggable
+                  onDragStart={(event) => { event.dataTransfer.setData('text/plain', goal.id); event.dataTransfer.effectAllowed = 'move'; setDraggedGoalId(goal.id) }}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={(event) => { event.preventDefault(); dropGoalInOrder(event.dataTransfer.getData('text/plain'), goal.id) }}
+                  onDragEnd={() => setDraggedGoalId(null)}
+                  className={`flex items-center justify-between rounded-lg border border-gray-200 bg-white px-4 py-2.5 dark:border-gray-800 dark:bg-gray-900 ${draggedGoalId === goal.id ? 'opacity-40' : ''}`}
+                >
                   <div className="flex items-center gap-3 min-w-0">
+                    <GripVertical className="h-4 w-4 shrink-0 cursor-grab text-gray-400 active:cursor-grabbing" aria-label="拖动目标排序" />
                     <span className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: tag?.color ?? '#999' }} />
                     <div className="min-w-0">
-                      <div className="font-medium text-sm truncate">{goal.title}</div>
+                      <div className="font-medium text-sm truncate">{displayTitle}</div>
                       <div className="text-xs text-gray-400">
                         {goal.kind === 'activity'
                           ? goal.period === 'once'
                             ? `一次性活动 · ${goal.deadlineAt ? formatGoalDeadline(goal.deadlineAt) : '未设置截止时间'}`
-                            : `${goal.period === 'workday' ? '工作日' : goal.period === 'daily' ? '每日' : goal.period === 'weekly' ? '每周' : '每月'}活动 · ${goal.period === 'workday' ? `工作日 ${goal.deadlineTime} 前` : goal.period === 'daily' ? `每天 ${goal.deadlineTime} 前` : goal.period === 'weekly' ? `每周日 ${goal.deadlineTime} 前` : `每月 ${goal.deadlineDay} 日 ${goal.deadlineTime} 前`}`
-                          : `${goal.type === 'count' ? '次数' : '时长(分)'} · ${goal.period === 'workday' ? '每工作日' : goal.period === 'daily' ? '每日' : goal.period === 'weekly' ? '每周' : goal.period === 'monthly' ? '每月' : `每${goal.periodDays}天`} · 目标 ${goal.target}${goal.type === 'count' ? '次' : '分钟'}`}
+                            : `${goal.period === 'workday' ? '工作日' : goal.period === 'daily' ? '每日' : goal.period === 'weekly' ? `每${WEEKDAYS[goal.weekDay ?? 0]}截止` : '每月'}活动 · ${goal.period === 'workday' ? `工作日 ${goal.deadlineTime} 前` : goal.period === 'daily' ? `每天 ${goal.deadlineTime} 前` : goal.period === 'weekly' ? `${WEEKDAYS[goal.weekDay ?? 0]} ${goal.deadlineTime} 前` : `每月 ${goal.deadlineDay} 日 ${goal.deadlineTime} 前`}`
+                          : `${goal.type === 'count' ? '只计次数' : '时长(分)'} · ${goal.period === 'workday' ? '每工作日' : goal.period === 'daily' ? '每日' : goal.period === 'weekly' ? `每周从${WEEKDAYS[goal.weekDay ?? 1]}开始` : goal.period === 'monthly' ? '每月' : `每${goal.periodDays}天`} · 目标 ${goal.target}${goal.type === 'count' ? '次，不记时长' : '分钟'}`}
                         {goal.current !== undefined && (
                           <span className={goal.current >= goal.target ? ' text-green-500 ml-1' : ' ml-1'}>
                             {' · '}已完成 {goal.current}
@@ -550,12 +588,18 @@ function GoalForm({ goal, tag, onClose, onSaved }: {
   onClose: () => void
   onSaved: () => void
 }) {
-  const [title, setTitle] = useState(goal?.title ?? `每日${tag.name}`)
+  const initialKind = goal?.kind ?? (tag.parentId ? 'activity' : 'tracking')
+  const initialPeriod = goal?.period ?? 'daily'
+  const initialWeekDay = goal?.weekDay ?? (initialKind === 'activity' ? 0 : 1)
+  const [kind, setKind] = useState<'tracking' | 'activity'>(initialKind)
+  const [period, setPeriod] = useState<'once' | 'workday' | 'daily' | 'weekly' | 'monthly' | 'custom'>(initialPeriod)
+  const [weekDay, setWeekDay] = useState(initialWeekDay)
+  const legacyGeneratedTitle = Boolean(goal && goal.kind === 'activity' && goal.title === `每日${tag.name}`)
+  const [title, setTitle] = useState(goal && !legacyGeneratedTitle ? goal.title : defaultGoalTitle(tag.name, initialKind, initialPeriod, initialWeekDay, goal?.periodDays ?? 7))
+  const [customTitle, setCustomTitle] = useState(Boolean(goal && !legacyGeneratedTitle))
   const [type, setType] = useState<'count' | 'time'>(goal?.type ?? (tag.trackType === 'count' ? 'count' : 'time'))
   const [target, setTarget] = useState(goal?.target ?? 1)
-  const [period, setPeriod] = useState<'once' | 'workday' | 'daily' | 'weekly' | 'monthly' | 'custom'>(goal?.period ?? 'daily')
   const [periodDays, setPeriodDays] = useState(goal?.periodDays ?? 7)
-  const [kind, setKind] = useState<'tracking' | 'activity'>(goal?.kind ?? (tag.parentId ? 'activity' : 'tracking'))
   const [deadlineTime, setDeadlineTime] = useState(goal?.deadlineTime ?? (tag.parentId ? '08:00' : ''))
   const [deadlineDay, setDeadlineDay] = useState(goal?.deadlineDay ?? 15)
   const [deadlineAt, setDeadlineAt] = useState(goal?.deadlineAt ? toDateTimeLocal(goal.deadlineAt) : '')
@@ -599,6 +643,7 @@ function GoalForm({ goal, tag, onClose, onSaved }: {
       target: kind === 'activity' ? 1 : target,
       period,
       periodDays: kind === 'tracking' && period === 'custom' ? periodDays : null,
+      weekDay: period === 'weekly' ? weekDay : null,
       deadlineTime: kind === 'activity' && period !== 'once' ? deadlineTime : null,
       deadlineDay: kind === 'activity' && period === 'monthly' ? deadlineDay : null,
       deadlineAt: kind === 'activity' && period === 'once' ? new Date(deadlineAt).toISOString() : null,
@@ -620,19 +665,29 @@ function GoalForm({ goal, tag, onClose, onSaved }: {
     <Modal onClose={onClose} title={goal ? '编辑目标' : `为目标标签：${tag.name}`}>
       <div className="space-y-4">
         <Field label="目标名称">
-          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="如：每天喝水8杯"
+          <input value={title} onChange={(e) => { setCustomTitle(true); setTitle(e.target.value) }} placeholder="根据用途和周期自动生成"
             className="input" autoFocus />
         </Field>
         <Field label="目标用途">
           <div className="flex gap-2">
             <button
-              onClick={() => setKind('tracking')}
+              onClick={() => {
+                setKind('tracking')
+                const nextWeekDay = period === 'weekly' ? 1 : weekDay
+                if (period === 'weekly') setWeekDay(nextWeekDay)
+                if (!customTitle) setTitle(defaultGoalTitle(tag.name, 'tracking', period, nextWeekDay, periodDays))
+              }}
               className={`px-4 py-2 rounded-lg text-sm border ${kind === 'tracking' ? 'bg-brand-100 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300 border-current font-medium' : 'text-gray-400 border-gray-300 dark:border-gray-700'}`}
             >
               统计目标
             </button>
             <button
-              onClick={() => { setKind('activity'); setType('count'); setTarget(1) }}
+              onClick={() => {
+                setKind('activity'); setType('count'); setTarget(1)
+                const nextWeekDay = period === 'weekly' ? 0 : weekDay
+                if (period === 'weekly') setWeekDay(nextWeekDay)
+                if (!customTitle) setTitle(defaultGoalTitle(tag.name, 'activity', period, nextWeekDay, periodDays))
+              }}
               className={`px-4 py-2 rounded-lg text-sm border ${kind === 'activity' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 border-current font-medium' : 'text-gray-400 border-gray-300 dark:border-gray-700'}`}
             >
               活动目标
@@ -646,7 +701,7 @@ function GoalForm({ goal, tag, onClose, onSaved }: {
               onClick={() => setType('count')}
               className={`px-4 py-2 rounded-lg text-sm border ${type === 'count' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 border-current font-medium' : 'text-gray-400 border-gray-300 dark:border-gray-700'}`}
             >
-              🔢 次数
+              🔢 只计次数
             </button>
             <button
               onClick={() => setType('time')}
@@ -655,6 +710,7 @@ function GoalForm({ goal, tag, onClose, onSaved }: {
               ⏱ 时长(分钟)
             </button>
           </div>
+          <p className="mt-1.5 text-xs text-gray-500">只统计完成了几次，不累计或显示专注时长。</p>
         </Field>}
         {kind === 'tracking' && <Field label={`目标${type === 'count' ? '次数' : '分钟数'}`}>
           <input
@@ -666,7 +722,11 @@ function GoalForm({ goal, tag, onClose, onSaved }: {
           />
         </Field>}
         <Field label={kind === 'activity' ? '重复周期' : '统计周期'}>
-          <select value={period} onChange={(e) => setPeriod(e.target.value as 'once' | 'workday' | 'daily' | 'weekly' | 'monthly' | 'custom')} className="input">
+          <select value={period} onChange={(e) => {
+            const next = e.target.value as 'once' | 'workday' | 'daily' | 'weekly' | 'monthly' | 'custom'
+            setPeriod(next)
+            if (!customTitle) setTitle(defaultGoalTitle(tag.name, kind, next, weekDay, periodDays))
+          }} className="input">
             {kind === 'activity' && <option value="once">一次性</option>}
             <option value="workday">工作日</option>
             <option value="daily">每日</option>
@@ -675,6 +735,17 @@ function GoalForm({ goal, tag, onClose, onSaved }: {
             {kind === 'tracking' && <option value="custom">自定义天数</option>}
           </select>
         </Field>
+        {period === 'weekly' && (
+          <Field label={kind === 'activity' ? '每周截止星期' : '每周周期起始日'}>
+            <select value={weekDay} onChange={(event) => {
+              const next = Number(event.target.value)
+              setWeekDay(next)
+              if (!customTitle) setTitle(defaultGoalTitle(tag.name, kind, period, next, periodDays))
+            }} className="input">
+              {WEEKDAYS.map((day, index) => <option key={day} value={index}>{day}</option>)}
+            </select>
+          </Field>
+        )}
         {kind === 'activity' && (
           <div className="flex gap-4">
             {period === 'once' ? (
@@ -689,7 +760,6 @@ function GoalForm({ goal, tag, onClose, onSaved }: {
             {period !== 'once' && (
               <Field label="截止时间">
                 <input type="time" value={deadlineTime} onChange={(e) => setDeadlineTime(e.target.value)} className="input" />
-                {period === 'weekly' && <p className="mt-1 text-xs text-gray-400">每周日截止</p>}
               </Field>
             )}
           </div>

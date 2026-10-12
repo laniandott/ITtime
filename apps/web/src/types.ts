@@ -125,10 +125,12 @@ export interface Goal {
   target: number
   period: 'once' | 'workday' | 'daily' | 'weekly' | 'monthly' | 'custom'
   periodDays: number | null
+  weekDay: number | null
   deadlineTime: string | null
   deadlineDay: number | null
   deadlineAt: string | null
   active: boolean
+  sortOrder: number
   createdAt: string
   updatedAt: string
   tag?: Tag | null

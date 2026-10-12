@@ -18,7 +18,7 @@ export async function prepareLocalDatabase() { return readyDatabase() }
 async function list(entity: string) {
   const result = await (await readyDatabase()).allDocs({ include_docs: true, startkey: `${entity}:`, endkey: `${entity}:\uffff` })
   const values = result.rows.flatMap(row => row.doc && !row.doc.deletedAt ? [row.doc.value] : [])
-  if (entity === 'categories' || entity === 'tags') {
+  if (entity === 'categories' || entity === 'tags' || entity === 'goals') {
     return values.sort((a, b) => Number(a.sortOrder ?? 0) - Number(b.sortOrder ?? 0) || String(a.createdAt ?? '').localeCompare(String(b.createdAt ?? '')) || String(a.name ?? '').localeCompare(String(b.name ?? '')))
   }
   return values
@@ -119,7 +119,7 @@ async function joined(entity: string, value: Record<string, any>): Promise<any> 
   if (entity === 'tags') return { ...value, category: await lookup('categories', value.categoryId), parent: await lookup('tags', value.parentId) }
   if (entity === 'timer') { const tag = await lookup('tags', value.tagId); return { ...value, tag: tag ? await joined('tags', tag) : null, todo: await lookup('todos', value.todoId), memos: (await list('memos')).filter(memo => memo.timeEntryId === value.id) } }
   if (entity === 'goals') {
-    const [start, end] = periodBounds(value.period, value.periodDays ?? 7)
+    const [start, end] = periodBounds(value.period, value.periodDays ?? 7, new Date(), value.weekDay ?? 1)
     const entries = (await list('timer')).filter(entry => entry.tagId === value.tagId && !entry.dismissed)
     const current = value.kind === 'activity'
       ? (await list('todos')).filter(todo => todo.goalId === value.id && todo.status === 'done' && (value.period === 'once' || (Date.parse(todo.completedAt) >= start && Date.parse(todo.completedAt) < end))).length
@@ -134,7 +134,7 @@ const defaults: Record<string, Record<string, any>> = {
   categories: { color: '#6d5efc', icon: null, sortOrder: 0 },
   tags: { color: '#6d5efc', icon: null, categoryId: null, parentId: null, trackType: 'time', mode: 'chaos', sortOrder: 0 },
   todos: { description: null, status: 'pending', priority: 0, dueDate: null, categoryId: null, tagId: null, goalId: null, repeatType: 'none', completedAt: null, lateReason: null, restoreReason: null },
-  goals: { kind: 'tracking', type: 'time', period: 'daily', active: true, periodDays: null, deadlineTime: null, deadlineDay: null, deadlineAt: null },
+  goals: { kind: 'tracking', type: 'time', period: 'daily', active: true, periodDays: null, weekDay: null, sortOrder: 0, deadlineTime: null, deadlineDay: null, deadlineAt: null },
   memos: { type: 'point', timeEntryId: null, tagId: null, attachments: [] },
 }
 export function isLocalPath(path: string) { return /^\/(categories|tags|todos|timer|goals|memos)(\/|\?|$)/.test(path) }
@@ -146,13 +146,20 @@ export async function localRequest<T>(path: string, options?: RequestInit): Prom
   const execute = async (): Promise<any> => {
     if (entity === 'todos' && method === 'GET' && !key) {
       for (const goal of (await list('goals')).filter(goal => goal.kind === 'activity' && goal.active)) {
-        const [start, end] = periodBounds(goal.period)
+        const [start, end] = periodBounds(goal.period, goal.periodDays ?? 7, new Date(), goal.weekDay ?? 0)
         if (goal.period === 'workday' && start === end) continue
         const activityId = `${goal.id}:${goal.period === 'once' ? 'once' : start}`
         try { await get('todos', activityId) } catch (error) {
           if ((error as { status?: number }).status !== 404) throw error
           const deadline = new Date(goal.period === 'daily' || goal.period === 'workday' ? start : end - 60000)
           if (goal.period === 'daily' || goal.period === 'workday') deadline.setHours(23, 59, 0, 0)
+          if (goal.period === 'weekly') {
+            const today = new Date()
+            today.setHours(0, 0, 0, 0)
+            const selectedWeekDay = goal.weekDay ?? 0
+            deadline.setTime(today.getTime())
+            deadline.setDate(deadline.getDate() + (selectedWeekDay - today.getDay() + 7) % 7)
+          }
           if (goal.period === 'monthly' && goal.deadlineDay) { deadline.setDate(Math.min(goal.deadlineDay, deadline.getDate())) }
           if (goal.deadlineTime) { const [hour, minute] = goal.deadlineTime.split(':').map(Number); deadline.setHours(hour, minute, 0, 0) }
           const due = goal.period === 'once' ? goal.deadlineAt : deadline.toISOString()

@@ -319,7 +319,7 @@ export const api = {
   },
   goals: {
     list: () => req<Goal[]>('/goals'),
-    create: (data: { tagId: string; title: string; kind?: string; type?: string; target?: number; period?: string; periodDays?: number | null; deadlineTime?: string | null; deadlineDay?: number | null; deadlineAt?: string | null }) =>
+    create: (data: { tagId: string; title: string; kind?: string; type?: string; target?: number; period?: string; periodDays?: number | null; weekDay?: number | null; sortOrder?: number; deadlineTime?: string | null; deadlineDay?: number | null; deadlineAt?: string | null }) =>
       req<Goal>('/goals', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: string, data: Partial<Goal>) =>
       req<Goal>(`/goals/${id}`, { method: 'PUT', body: JSON.stringify(data) }),

@@ -150,7 +150,7 @@ async function completeTodo(todo: TodoRecord, lateReason: string | null | undefi
   const activityGoal = updated.goalId
     ? await prisma.goal.findUnique({
       where: { id: updated.goalId },
-      select: { id: true, title: true, tagId: true, kind: true, period: true, deadlineTime: true, deadlineDay: true, deadlineAt: true, active: true },
+      select: { id: true, title: true, tagId: true, kind: true, period: true, weekDay: true, deadlineTime: true, deadlineDay: true, deadlineAt: true, active: true },
     })
     : null
   if (activityGoal?.kind === 'activity' && activityGoal.active && updated.dueDate) {

@@ -331,6 +331,41 @@ test('目标更新：只改标题不会清空自定义周期；非法目标值�
   await prisma.tag.delete({ where: { id: tag.id } })
 })
 
+test('周目标保存星期与顺序，计次目标只按打卡记录数统计', async () => {
+  const tag = await prisma.tag.create({ data: { name: `周目标-${Date.now()}` } })
+  const created = await app.inject({
+    method: 'POST',
+    url: '/api/goals',
+    payload: { tagId: tag.id, title: '每周打卡', type: 'count', target: 3, period: 'weekly', weekDay: 3, sortOrder: 20 },
+  })
+  assert.equal(created.statusCode, 200)
+  assert.equal(created.json().weekDay, 3)
+  assert.equal(created.json().sortOrder, 20)
+  const earlier = await app.inject({
+    method: 'POST', url: '/api/goals',
+    payload: { tagId: tag.id, title: '较靠前的目标', type: 'count', target: 1, period: 'daily', sortOrder: 10 },
+  })
+  assert.equal(earlier.statusCode, 200)
+  const orderedGoals = (await app.inject({ method: 'GET', url: '/api/goals' })).json()
+    .filter((item: { id: string }) => [created.json().id, earlier.json().id].includes(item.id))
+  assert.deepEqual(orderedGoals.map((item: { id: string }) => item.id), [earlier.json().id, created.json().id])
+
+  const invalidWeekDay = await app.inject({ method: 'PUT', url: `/api/goals/${created.json().id}`, payload: { weekDay: 7 } })
+  assert.equal(invalidWeekDay.statusCode, 400)
+
+  const entryStart = new Date()
+  entryStart.setHours(0, 0, 0, 0)
+  const entry = await prisma.timeEntry.create({ data: { tagId: tag.id, startTime: entryStart, endTime: new Date(entryStart.getTime() + 2 * 60 * 60 * 1000) } })
+  const goals = await app.inject({ method: 'GET', url: '/api/goals' })
+  const goal = goals.json().find((item: { id: string }) => item.id === created.json().id)
+  assert.equal(goal.current, 1)
+  assert.equal(new Date(goal.periodStart).getDay(), 3)
+
+  await prisma.timeEntry.delete({ where: { id: entry.id } })
+  await prisma.goal.deleteMany({ where: { id: { in: [created.json().id, earlier.json().id] } } })
+  await prisma.tag.delete({ where: { id: tag.id } })
+})
+
 test('标签：未分类同名标签也应被拒绝，避免实体链接歧义', async () => {
   const name = `重复未分类-${Date.now()}`
   const first = await app.inject({ method: 'POST', url: '/api/tags', payload: { name } })

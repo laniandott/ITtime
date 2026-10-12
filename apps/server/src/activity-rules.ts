@@ -2,6 +2,7 @@ export type ActivityRule = {
   period: string
   deadlineTime: string | null
   deadlineDay: number | null
+  weekDay?: number | null
   deadlineAt?: Date | null
 }
 
@@ -48,9 +49,12 @@ export function activityDueDate(rule: ActivityRule, anchor = new Date(), cycleOf
   }
 
   if (rule.period === 'weekly') {
-    const dayOfWeek = base.getDay() || 7
     base.setHours(0, 0, 0, 0)
-    base.setDate(base.getDate() - dayOfWeek + 1 + cycleOffset * 7 + 6)
+    const selectedWeekDay = Number.isInteger(rule.weekDay) && rule.weekDay! >= 0 && rule.weekDay! <= 6
+      ? rule.weekDay!
+      : 0
+    const daysUntilSelected = (selectedWeekDay - base.getDay() + 7) % 7
+    base.setDate(base.getDate() + daysUntilSelected + cycleOffset * 7)
     base.setHours(hour, minute, 0, 0)
     return base
   }
