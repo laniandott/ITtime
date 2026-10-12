@@ -661,6 +661,7 @@ export default function TimerPage() {
 
       {showActivityPicker && (
         <ActivityPickerDialog
+          categories={categories}
           tags={tags}
           todos={todos}
           interruptedFromId={showActivityPicker.interruptedFromId}
@@ -1982,15 +1983,26 @@ export function MemoEditModal({
 }
 
 // 暂停后选择下一活动
-function ActivityPickerDialog({ tags, todos, interruptedFromId, onClose, onStart }: {
+function ActivityPickerDialog({ categories, tags, todos, interruptedFromId, onClose, onStart }: {
+  categories: { id: string; name: string; sortOrder: number; color: string; icon: string | null }[]
   tags: Tag[]
   todos: Todo[]
   interruptedFromId?: string
   onClose: () => void
   onStart: (tagId: string, todoId?: string) => Promise<void>
 }) {
+  const orderedCategories = [...categories].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name))
+  const orderedTags = (items: Tag[]) => [...items].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name))
   const timeTags = tags.filter((tag) => tag.trackType === 'time' && !tag.parentId)
-  const [tagId, setTagId] = useState(timeTags[0]?.id ?? '')
+  const groupedTags = orderedCategories
+    .map((category) => ({
+      category,
+      tags: orderedTags(timeTags.filter((tag) => tag.categoryId === category.id)),
+    }))
+    .filter((group) => group.tags.length > 0)
+  const uncategorizedTags = orderedTags(timeTags.filter((tag) => !tag.categoryId))
+  const firstTag = groupedTags[0]?.tags[0] ?? uncategorizedTags[0]
+  const [tagId, setTagId] = useState(firstTag?.id ?? '')
   const [todoId, setTodoId] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -2022,9 +2034,20 @@ function ActivityPickerDialog({ tags, todos, interruptedFromId, onClose, onStart
           <label className="block text-sm text-gray-500 mb-1">活动</label>
           <select value={tagId} onChange={(e) => setTagId(e.target.value)} className="input">
             <option value="">请选择活动…</option>
-            {timeTags.map((tag) => (
-              <option key={tag.id} value={tag.id}>{tag.icon ? `${tag.icon} ` : ''}{tag.name}</option>
+            {groupedTags.map(({ category, tags: categoryTags }) => (
+              <optgroup key={category.id} label={`${category.icon ? `${category.icon} ` : ''}${category.name}`}>
+                {categoryTags.map((tag) => (
+                  <option key={tag.id} value={tag.id}>{tag.icon ? `${tag.icon} ` : ''}{tag.name}</option>
+                ))}
+              </optgroup>
             ))}
+            {uncategorizedTags.length > 0 && (
+              <optgroup label="未分类">
+                {uncategorizedTags.map((tag) => (
+                  <option key={tag.id} value={tag.id}>{tag.icon ? `${tag.icon} ` : ''}{tag.name}</option>
+                ))}
+              </optgroup>
+            )}
           </select>
         </div>
         {todos.length > 0 && (
