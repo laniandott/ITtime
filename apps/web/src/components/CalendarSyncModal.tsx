@@ -17,7 +17,7 @@ export function CalendarSyncModal({ onClose }: { onClose: () => void }) {
     if (typeof window !== 'undefined') {
       return `${window.location.protocol}//${window.location.host}`
     }
-    return 'http://[REDACTED_DOMAIN]:3000'
+    return ''
   }
 
   // 构建带过滤参数的查询串

@@ -48,7 +48,7 @@ export function getServerHost(): string {
       protocol === 'file:'
     )
     if (isNative) {
-      return 'http://[REDACTED_DOMAIN]:3000'
+      return ''
     }
   }
   return ''
