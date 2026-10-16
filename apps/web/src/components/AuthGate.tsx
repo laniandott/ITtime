@@ -74,18 +74,18 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   }
 
   if (mode === 'offline') return <Layout>{children}</Layout>
-  if (mode === 'checking') return <div className="grid min-h-screen place-items-center text-sm text-gray-500">正在检查登录状态…</div>
+  if (mode === 'checking') return <div className="grid min-h-screen place-items-center bg-gray-50 dark:bg-gray-950" role="status"><div className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-500 shadow-sm dark:border-gray-800 dark:bg-gray-900"><span className="h-4 w-4 animate-spin rounded-full border-2 border-gray-200 border-t-brand" />正在检查登录状态…</div></div>
   if (mode === 'app' && getAuthToken()) return <Layout username={username} onLogout={logout}>{children}</Layout>
 
   return (
-    <main className="grid min-h-screen place-items-center bg-gray-50 px-4 dark:bg-gray-950">
-      <form onSubmit={submit} className="w-full max-w-sm space-y-4 rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-        <div><h1 className="text-xl font-semibold">{mode === 'setup' ? '设置 ITtime 登录' : '登录 ITtime'}</h1><p className="mt-1 text-sm text-gray-500">{mode === 'setup' ? '创建本机账户以保护数据' : '登录后继续使用'}</p></div>
+    <main className="grid min-h-screen place-items-center bg-gray-50 px-4 py-8 dark:bg-gray-950">
+      <form onSubmit={submit} className="w-full max-w-sm space-y-5 rounded-2xl border border-gray-200 bg-white p-6 shadow-xl shadow-gray-900/5 dark:border-gray-800 dark:bg-gray-900 dark:shadow-black/20">
+        <div className="flex items-start gap-3"><img src="/favicon.png" alt="" className="h-10 w-10 rounded-xl shadow-sm" /><div><h1 className="text-xl font-semibold tracking-tight">{mode === 'setup' ? '设置 ITtime 登录' : '登录 ITtime'}</h1><p className="mt-1 text-sm text-gray-500">{mode === 'setup' ? '创建本机账户以保护数据' : '登录后继续使用你的工作区'}</p></div></div>
         <label className="block text-sm text-gray-600 dark:text-gray-300">用户名<input autoComplete="username" required minLength={2} maxLength={40} value={username} onChange={(event) => setUsername(event.target.value)} className="input mt-1 w-full" /></label>
         <label className="block text-sm text-gray-600 dark:text-gray-300">密码<input autoComplete={mode === 'setup' ? 'new-password' : 'current-password'} type="password" required minLength={mode === 'setup' ? 8 : 1} maxLength={200} value={password} onChange={(event) => setPassword(event.target.value)} className="input mt-1 w-full" /></label>
         {mode === 'login' && <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300"><input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} />记住登录状态</label>}
         {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
-        <button disabled={submitting} className="btn-primary w-full px-4 py-2.5 text-sm">{submitting ? '处理中…' : mode === 'setup' ? '创建账户并登录' : '登录'}</button>
+        <button disabled={submitting} className="btn-primary w-full bg-brand px-4 py-2.5 text-sm text-white shadow-sm hover:bg-brand-600">{submitting ? <span className="flex items-center gap-2"><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />处理中…</span> : mode === 'setup' ? '创建账户并登录' : '登录'}</button>
       </form>
     </main>
   )

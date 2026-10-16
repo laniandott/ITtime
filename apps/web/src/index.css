@@ -20,6 +20,24 @@ body {
   overscroll-behavior-y: none;
 }
 
+.app-shell {
+  background-image: linear-gradient(to bottom, rgb(248 250 252 / .72), transparent 22rem);
+}
+
+.dark .app-shell {
+  background-image: linear-gradient(to bottom, rgb(15 23 42 / .45), transparent 22rem);
+}
+
+.desktop-sidebar {
+  box-shadow: 10px 0 28px rgb(15 23 42 / .025);
+}
+
+[class~="fixed"][class~="z-50"] {
+  animation: overlay-in .2s var(--ui-ease) both;
+}
+
+@keyframes overlay-in { from { opacity: 0; } to { opacity: 1; } }
+
 * {
   -webkit-tap-highlight-color: transparent;
 }
