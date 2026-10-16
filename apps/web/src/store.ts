@@ -14,7 +14,7 @@ interface AppState {
   loadRunning: () => Promise<void>
   loadPending: () => Promise<void>
   // 计时操作
-  start: (tagId: string, note?: string, todoId?: string, interruptedFromId?: string) => Promise<void>
+  start: (params: { tagId: string; note?: string; todoId?: string; planId?: string; interruptedFromId?: string }) => Promise<void>
   stop: (id: string, note?: string, pendingResume?: boolean) => Promise<TimeEntry>
   stopAll: () => Promise<void>
   // 续接操作
@@ -23,7 +23,7 @@ interface AppState {
   finishPending: (id: string) => Promise<void>
   terminateChain: (id: string, reason: string) => Promise<{ count: number }>
   // 次数型打卡
-  quickCount: (tagId: string, note?: string, todoId?: string) => Promise<void>
+  quickCount: (tagId: string, note?: string, todoId?: string, planId?: string) => Promise<void>
 }
 
 let notificationListenerRegistered = false
@@ -162,8 +162,8 @@ export const useStore = create<AppState>((set, get) => ({
     }
   },
 
-  start: async (tagId, note, todoId, interruptedFromId) => {
-    const res = await api.timer.start({ tagId, note, todoId, interruptedFromId })
+  start: async ({ tagId, note, todoId, planId, interruptedFromId }) => {
+    const res = await api.timer.start({ tagId, note, todoId, planId, interruptedFromId })
     const { serverTime, ...entry } = res
     const clockOffset = Date.now() - new Date(serverTime).getTime()
     const newRunning = [...get().running, entry]
@@ -223,8 +223,8 @@ export const useStore = create<AppState>((set, get) => ({
     return result
   },
 
-  quickCount: async (tagId, note, todoId) => {
-    await api.timer.quick({ tagId, note, todoId })
+  quickCount: async (tagId, note, todoId, planId) => {
+    await api.timer.quick({ tagId, note, todoId, planId })
     await get().loadAll()
   },
 }))

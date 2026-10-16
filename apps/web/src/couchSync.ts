@@ -36,7 +36,7 @@ export function describeSyncState(local: SyncDocumentCounts, remote: SyncDocumen
 
 export async function countSyncDocuments(db: PouchDB.Database): Promise<SyncDocumentCounts> {
   const counts: SyncDocumentCounts = { active: 0, deleted: 0 }
-  const entities = new Set(['categories', 'tags', 'todos', 'timer', 'goals', 'memos'])
+  const entities = new Set(['categories', 'tags', 'todos', 'timer', 'goals', 'memos', 'plans'])
   let startkey: string | undefined
   while (true) {
     const result = await db.allDocs({ include_docs: true, limit: 500, ...(startkey ? { startkey, skip: 1 } : {}) })

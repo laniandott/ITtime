@@ -1,5 +1,6 @@
 import PouchDB from 'pouchdb-browser'
 import { periodBounds, elapsed } from './localStats'
+import { derivePlanExecution } from './planStats'
 
 export type LocalDoc = PouchDB.Core.IdMeta & Partial<PouchDB.Core.GetMeta> & { entity: string; value: Record<string, any>; updatedAt: string; deletedAt?: string; fieldClock?: Record<string, string> }
 let database: PouchDB.Database<LocalDoc> | undefined
@@ -21,6 +22,7 @@ async function list(entity: string) {
   if (entity === 'categories' || entity === 'tags' || entity === 'goals') {
     return values.sort((a, b) => Number(a.sortOrder ?? 0) - Number(b.sortOrder ?? 0) || String(a.createdAt ?? '').localeCompare(String(b.createdAt ?? '')) || String(a.name ?? '').localeCompare(String(b.name ?? '')))
   }
+  if (entity === 'plans') return values.sort((a, b) => String(a.date ?? '').localeCompare(String(b.date ?? '')) || Number(a.startMinute ?? 0) - Number(b.startMinute ?? 0) || String(a.createdAt ?? '').localeCompare(String(b.createdAt ?? '')))
   return values
 }
 async function get(entity: string, id: string) {
@@ -34,7 +36,7 @@ async function write(entity: string, value: Record<string, any>) {
   let existing: LocalDoc | undefined
   try { existing = await db.get(_id) } catch (error) { if ((error as { status?: number }).status !== 404) throw error }
   // Persist only source fields; relations are joined when reading.
-  const { tag, category, parent, todo, memos, _count, ...source } = value
+  const { tag, category, parent, todo, memos, _count, disposition, executionStatus, confirmed, actualMs, plannedMs, coverageRate, overlaps, linkedEntries, ...source } = value
   const updatedAt = new Date().toISOString()
   const fieldClock = { ...(existing?.fieldClock ?? {}) }
   const fields = new Set([...Object.keys(existing?.value ?? {}), ...Object.keys(source)])
@@ -128,6 +130,21 @@ async function joined(entity: string, value: Record<string, any>): Promise<any> 
         : Math.floor(elapsed(entries as any, start, end) / 60000)
     return { ...value, current, tag: await lookup('tags', value.tagId) }
   }
+  if (entity === 'plans') {
+    const [allPlans, entries] = await Promise.all([list('plans'), list('timer')])
+    const execution = derivePlanExecution(value as any, entries as any)
+    const successors = allPlans.filter(plan => plan.deferredFromId === value.id)
+    const sameDayOverlap = allPlans.some(plan => plan.id !== value.id && plan.date === value.date && plan.startMinute < value.endMinute && value.startMinute < plan.endMinute)
+    return {
+      ...value,
+      tag: await lookup('tags', value.tagId),
+      todo: await lookup('todos', value.todoId),
+      disposition: value.skippedAt ? 'skipped' : successors.length > 0 ? 'deferred' : 'planned',
+      confirmed: Boolean(value.confirmedAt),
+      overlaps: sameDayOverlap,
+      ...execution,
+    }
+  }
   return { ...value, tag: await lookup('tags', value.tagId), category: await lookup('categories', value.categoryId) }
 }
 const defaults: Record<string, Record<string, any>> = {
@@ -136,8 +153,27 @@ const defaults: Record<string, Record<string, any>> = {
   todos: { description: null, status: 'pending', priority: 0, dueDate: null, categoryId: null, tagId: null, goalId: null, repeatType: 'none', completedAt: null, lateReason: null, restoreReason: null },
   goals: { kind: 'tracking', type: 'time', period: 'daily', active: true, periodDays: null, weekDay: null, sortOrder: 0, deadlineTime: null, deadlineDay: null, deadlineAt: null },
   memos: { type: 'point', timeEntryId: null, tagId: null, attachments: [] },
+  plans: { content: '', tagId: null, todoId: null, skippedAt: null, confirmedAt: null, deferredFromId: null },
 }
-export function isLocalPath(path: string) { return /^\/(categories|tags|todos|timer|goals|memos)(\/|\?|$)/.test(path) }
+export function isLocalPath(path: string) { return /^\/(categories|tags|todos|timer|goals|memos|plans)(\/|\?|$)/.test(path) }
+
+function validatePlanInput(value: Record<string, any>, existing?: Record<string, any>) {
+  const content = value.content ?? existing?.content
+  if (typeof content !== 'string' || !content.trim()) throw new Error('计划内容不能为空')
+  if (content.length > 2_000) throw new Error('计划内容不能超过 2000 个字符')
+  const date = value.date ?? existing?.date
+  const parsedDate = typeof date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Date(`${date}T00:00:00`) : null
+  if (!parsedDate || !Number.isFinite(parsedDate.getTime()) || `${parsedDate.getFullYear()}-${String(parsedDate.getMonth() + 1).padStart(2, '0')}-${String(parsedDate.getDate()).padStart(2, '0')}` !== date) throw new Error('计划日期无效')
+  const startMinute = value.startMinute ?? existing?.startMinute
+  const endMinute = value.endMinute ?? existing?.endMinute
+  if (!Number.isInteger(startMinute) || startMinute < 0 || startMinute > 1439) throw new Error('计划开始分钟无效')
+  if (!Number.isInteger(endMinute) || endMinute <= startMinute || endMinute > 1440) throw new Error('计划结束分钟无效')
+}
+
+function planOverlaps(candidate: Record<string, any>, plans: Record<string, any>[]) {
+  return plans.some(plan => plan.id !== candidate.id && plan.date === candidate.date && plan.startMinute < candidate.endMinute && candidate.startMinute < plan.endMinute)
+}
+
 export async function localRequest<T>(path: string, options?: RequestInit): Promise<T> {
   await readyDatabase()
   const url = new URL(path, 'http://local'); const [entity, key, action] = url.pathname.split('/').slice(1)
@@ -174,6 +210,12 @@ export async function localRequest<T>(path: string, options?: RequestInit): Prom
       if (method === 'POST' && ['start', 'quick', 'manual'].includes(key)) {
         await get('tags', body.tagId)
         if (body.todoId !== undefined && body.todoId !== null) await get('todos', body.todoId)
+        if (body.planId !== undefined && body.planId !== null) {
+          const plan = await get('plans', body.planId)
+          if (plan.tagId && plan.tagId !== body.tagId) throw new Error('计时标签必须与计划标签一致')
+          const planTag = await get('tags', body.tagId)
+          if (planTag.trackType === 'count') throw new Error('计划只能关联时长型标签')
+        }
         if (key === 'manual') {
           if (typeof body.startTime !== 'string' || typeof body.endTime !== 'string' || !body.startTime.trim() || !body.endTime.trim()) throw new Error('tagId、startTime、endTime 为必填')
           const startMs = Date.parse(body.startTime)
@@ -182,8 +224,20 @@ export async function localRequest<T>(path: string, options?: RequestInit): Prom
           if (!Number.isFinite(endMs)) throw new Error('endTime 不是有效时间')
           if (endMs <= startMs) throw new Error('结束时间必须晚于开始时间')
         }
-        const entry = { id: crypto.randomUUID(), tagId: body.tagId, todoId: body.todoId ?? null, note: body.note ?? null, startTime: body.startTime ?? now, endTime: key === 'quick' ? now : key === 'manual' ? body.endTime : null, pendingResume: false, dismissed: false, dismissReason: null, resumedFromId: body.resumedFromId ?? null, interruptedFromId: body.interruptedFromId ?? null }
-        if (body.resumedFromId) { const previous = await get(entity, body.resumedFromId); if (!previous.pendingResume) throw new Error('原记录不在待续状态'); await write(entity, { ...previous, pendingResume: false }) }
+        let inheritedPlanId = body.planId ?? null
+        let inheritedTodoId = body.todoId ?? null
+        if (body.resumedFromId) {
+          const previous = await get(entity, body.resumedFromId)
+          if (!previous.pendingResume) throw new Error('原记录不在待续状态')
+          if (previous.tagId !== body.tagId) throw new Error('续接的 tagId 必须与原记录一致')
+          inheritedPlanId = body.planId ?? previous.planId ?? null
+          inheritedTodoId = body.todoId ?? previous.todoId ?? null
+          await write(entity, { ...previous, pendingResume: false })
+        }
+        if (body.interruptedFromId) {
+          await get(entity, body.interruptedFromId)
+        }
+        const entry = { id: crypto.randomUUID(), tagId: body.tagId, todoId: inheritedTodoId, planId: inheritedPlanId, note: body.note ?? null, startTime: body.startTime ?? now, endTime: key === 'quick' ? now : key === 'manual' ? body.endTime : null, pendingResume: false, dismissed: false, dismissReason: null, resumedFromId: body.resumedFromId ?? null, interruptedFromId: body.interruptedFromId ?? null }
         await write(entity, entry); return { ...await joined(entity, entry), serverTime: now }
       }
       if (method === 'POST' && key === 'stop') {
@@ -220,14 +274,53 @@ export async function localRequest<T>(path: string, options?: RequestInit): Prom
       }
       if (method === 'POST' && action) throw new Error('此活动链操作尚未迁移到本地存储')
     }
+    if (entity === 'plans') {
+      const plans = await list('plans')
+      if (method === 'POST' && key && ['skip', 'unskip', 'confirm', 'unconfirm'].includes(action ?? '')) {
+        const existing = await get('plans', key)
+        const value = action === 'skip'
+          ? { ...existing, skippedAt: now, updatedAt: now }
+          : action === 'unskip'
+            ? { ...existing, skippedAt: null, updatedAt: now }
+            : action === 'confirm'
+              ? { ...existing, confirmedAt: now, updatedAt: now }
+              : { ...existing, confirmedAt: null, updatedAt: now }
+        await write('plans', value)
+        return joined('plans', value)
+      }
+      if (method === 'POST' && key && action === 'defer') {
+        const source = await get('plans', key)
+        validatePlanInput({ ...source, ...body })
+        const candidate = { ...source, ...body, deferredFromId: source.id, skippedAt: null, confirmedAt: null }
+        const stableId = `deferred-${source.id}-${candidate.date}-${candidate.startMinute}-${candidate.endMinute}`
+        try { return joined('plans', await get('plans', stableId)) } catch (error) { if ((error as { status?: number }).status !== 404) throw error }
+        if (plans.some(plan => plan.deferredFromId === source.id)) throw new Error('这项计划已经推迟过；可推迟后继计划继续调整')
+        if (planOverlaps(candidate, plans)) throw new Error('推迟后的计划时间与已有计划重叠')
+        const value = { ...defaults.plans, ...candidate, id: stableId, createdAt: now, updatedAt: now }
+        await write('plans', value)
+        return joined('plans', value)
+      }
+      if (method === 'POST' && !key) {
+        validatePlanInput(body)
+        if (planOverlaps(body, plans)) throw new Error('计划时间与已有计划重叠')
+      }
+    }
     if (method === 'GET' && !key) {
       let values = await list(entity)
-      for (const field of ['status', 'categoryId', 'tagId', 'repeatType', 'timeEntryId', 'type']) if (url.searchParams.get(field)) values = values.filter(value => value[field] === url.searchParams.get(field))
+      for (const field of ['status', 'categoryId', 'tagId', 'repeatType', 'timeEntryId', 'type', 'date', 'deferredFromId']) if (url.searchParams.get(field)) values = values.filter(value => value[field] === url.searchParams.get(field))
+      if (entity === 'plans') return Promise.all(values.map(value => joined(entity, value)))
       if (entity === 'timer') values = values.filter(value => (!url.searchParams.get('from') || !value.endTime || value.endTime >= url.searchParams.get('from')!) && (!url.searchParams.get('to') || value.startTime <= url.searchParams.get('to')!)).sort((a, b) => b.startTime.localeCompare(a.startTime))
       return Promise.all(values.map(value => joined(entity, value)))
     }
     if (method === 'GET') return joined(entity, await get(entity, key))
     if (method === 'DELETE') {
+      if (entity === 'plans') {
+        const source = await get('plans', key)
+        const allPlans = await list('plans')
+        if (source.deferredFromId || allPlans.some(plan => plan.deferredFromId === key)) {
+          throw new Error('已有推迟链路的计划不能直接删除')
+        }
+      }
       const db = await readyDatabase(); const doc = await db.get(`${entity}:${key}`)
       if (doc.deletedAt) return { ok: true }
       const deletedAt = now
@@ -244,6 +337,13 @@ export async function localRequest<T>(path: string, options?: RequestInit): Prom
       const nextStart = body.startTime !== undefined ? Date.parse(body.startTime) : Date.parse(existing.startTime)
       const nextEnd = body.endTime === null ? null : body.endTime !== undefined ? Date.parse(body.endTime) : existing.endTime ? Date.parse(existing.endTime) : null
       if (nextEnd !== null && nextEnd < nextStart) throw new Error('结束时间不能早于开始时间')
+    }
+    if (entity === 'plans' && method === 'PUT') {
+      validatePlanInput({ ...existing, ...body }, existing)
+      const value = { ...existing, ...body, id: existing.id, updatedAt: now }
+      if (planOverlaps(value, await list('plans'))) throw new Error('计划时间与已有计划重叠')
+      await write(entity, value)
+      return joined(entity, value)
     }
     const value = action === 'toggle' ? { ...existing, status: existing.status === 'done' ? 'pending' : 'done', completedAt: existing.status === 'done' ? null : now, updatedAt: now } : { ...existing, ...body, id: existing.id, updatedAt: now }
     await write(entity, value); return joined(entity, value)

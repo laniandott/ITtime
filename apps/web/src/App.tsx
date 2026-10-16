@@ -11,6 +11,7 @@ const TodosPage = lazy(() => import('./pages/TodosPage'))
 const StatsPage = lazy(() => import('./pages/StatsPage'))
 const TagsPage = lazy(() => import('./pages/TagsPage'))
 const CalendarPage = lazy(() => import('./pages/CalendarPage'))
+const PlansPage = lazy(() => import('./pages/PlansPage'))
 const SettingsPage = lazy(() => import('./pages/SettingsPage'))
 const HabitsPage = lazy(() => import('./pages/GoalsPage'))
 
@@ -97,6 +98,7 @@ export default function App() {
             <Route path="/" element={<TimerPage />} />
             <Route path="/todos" element={<TodosPage />} />
             <Route path="/calendar" element={<CalendarPage />} />
+            <Route path="/plans" element={<PlansPage />} />
             <Route path="/stats" element={<StatsPage />} />
             <Route path="/tags" element={<TagsPage />} />
             <Route path="/habits" element={<HabitsPage />} />

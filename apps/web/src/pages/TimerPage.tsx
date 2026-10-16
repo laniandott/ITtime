@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo, useRef } from 'react'
 import { useStore, formatClock, formatDuration, toIsoSafe } from '../store'
 import { api, resolveUploadUrl } from '../api'
-import type { TimeEntry, Tag, Todo, Memo, LinkedNoteEntry } from '../types'
+import type { TimeEntry, Tag, Todo, Memo, LinkedNoteEntry, PlanBlock } from '../types'
 import { DateTimeSecondPicker } from '../components/DateTimeSecondPicker'
 import { syncNativeStatusBarTheme } from '../nativeStatusBar'
 import { GripVertical, ArrowUpDown } from 'lucide-react'
@@ -31,6 +31,13 @@ const formatTimeWithSeconds = (isoStr: string) => {
 const toLocalInputWithSeconds = (d: Date | string) => {
   const date = typeof d === 'string' ? new Date(d) : d
   return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 19)
+}
+
+const localDateKey = (date = new Date()) => {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
 }
 
 
@@ -158,7 +165,7 @@ export default function TimerPage() {
     if (tag?.trackType === 'count') {
       await quickCount(tagId, undefined, todoId || undefined)
     } else {
-      await start(tagId, undefined, todoId || undefined, interruptedFromId)
+      await start({ tagId, note: undefined, todoId: todoId || undefined, interruptedFromId })
     }
     await loadRecent()
   }
@@ -278,6 +285,7 @@ export default function TimerPage() {
           <span className="rounded-full border border-white/25 bg-white/10 px-3 py-1.5">CouchDB 后台同步</span>
         </div>
       </section>
+
       {/* 暂存条 */}
       {pending.length > 0 && (
         <div className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4">
@@ -718,6 +726,210 @@ export default function TimerPage() {
       {/* 全屏常显时钟 */}
       {showFullscreen && <FullscreenClockOverlay onClose={() => setShowFullscreen(false)} />}
     </div>
+  )
+}
+
+type PlanDraft = {
+  content: string
+  start: string
+  end: string
+  tagId: string
+  todoId: string
+}
+
+const minuteFromTime = (value: string) => {
+  const [hour, minute] = value.split(':').map(Number)
+  return hour * 60 + minute
+}
+
+const timeFromMinute = (minute: number) => {
+  const h = Math.floor(minute / 60) % 24
+  const m = minute % 60
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+}
+
+const planStatusLabel: Record<string, string> = {
+  upcoming: '待开始',
+  active: '进行中',
+  paused: '已暂停',
+  done: '已完成',
+  partial: '部分完成',
+  missed: '未执行',
+}
+
+const planDispositionLabel: Record<string, string> = { planned: '按原计划', skipped: '已跳过', deferred: '已推迟' }
+
+function PlanPanel({
+  plans,
+  tags,
+  todos,
+  error,
+  onReload,
+  onStart,
+  onChanged,
+}: {
+  plans: PlanBlock[]
+  tags: Tag[]
+  todos: Todo[]
+  error: string
+  onReload: () => Promise<void>
+  onStart: (plan: PlanBlock, tagId: string) => Promise<void>
+  onChanged: () => Promise<void>
+}) {
+  const [showComposer, setShowComposer] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [actionId, setActionId] = useState<string | null>(null)
+  const [startingPlanId, setStartingPlanId] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [draft, setDraft] = useState<PlanDraft>(() => {
+    const now = new Date()
+    const start = Math.ceil((now.getHours() * 60 + now.getMinutes()) / 15) * 15
+    return { content: '', start: timeFromMinute(Math.min(start, 23 * 60 + 45)), end: timeFromMinute(Math.min(start + 60, 24 * 60 - 1)), tagId: '', todoId: '' }
+  })
+  const [editDraft, setEditDraft] = useState<PlanDraft | null>(null)
+  const resetDraft = () => {
+    const now = new Date()
+    const start = Math.ceil((now.getHours() * 60 + now.getMinutes()) / 15) * 15
+    setDraft({ content: '', start: timeFromMinute(Math.min(start, 23 * 60 + 45)), end: timeFromMinute(Math.min(start + 60, 24 * 60 - 1)), tagId: '', todoId: '' })
+  }
+
+  const submitNew = async () => {
+    if (!draft.content.trim()) return
+    const startMinute = minuteFromTime(draft.start)
+    const endMinute = minuteFromTime(draft.end)
+    if (endMinute <= startMinute) {
+      alert('结束时间必须晚于开始时间')
+      return
+    }
+    setSaving(true)
+    try {
+      await api.plans.create({
+        date: localDateKey(),
+        startMinute,
+        endMinute,
+        content: draft.content.trim(),
+        tagId: draft.tagId || null,
+        todoId: draft.todoId || null,
+      })
+      resetDraft()
+      setShowComposer(false)
+      await onChanged()
+    } catch (error) {
+      alert(error instanceof Error ? error.message : '创建计划失败')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const beginEdit = (plan: PlanBlock) => {
+    setEditingId(plan.id)
+    setEditDraft({
+      content: plan.content,
+      start: timeFromMinute(plan.startMinute),
+      end: timeFromMinute(plan.endMinute),
+      tagId: plan.tagId ?? '',
+      todoId: plan.todoId ?? '',
+    })
+  }
+
+  const saveEdit = async (plan: PlanBlock) => {
+    if (!editDraft || !editDraft.content.trim()) return
+    const startMinute = minuteFromTime(editDraft.start)
+    const endMinute = minuteFromTime(editDraft.end)
+    if (endMinute <= startMinute) {
+      alert('结束时间必须晚于开始时间')
+      return
+    }
+    setSaving(true)
+    try {
+      await api.plans.update(plan.id, {
+        content: editDraft.content.trim(),
+        startMinute,
+        endMinute,
+        tagId: editDraft.tagId || null,
+        todoId: editDraft.todoId || null,
+      })
+      setEditingId(null)
+      setEditDraft(null)
+      await onChanged()
+    } catch (error) {
+      alert(error instanceof Error ? error.message : '保存计划失败')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const perform = async (plan: PlanBlock, action: () => Promise<unknown>) => {
+    setActionId(plan.id)
+    try {
+      await action()
+      await onChanged()
+    } catch (error) {
+      alert(error instanceof Error ? error.message : '计划操作失败')
+    } finally {
+      setActionId(null)
+    }
+  }
+
+  const deferPlan = async (plan: PlanBlock) => {
+    const date = window.prompt('推迟到哪一天？', localDateKey())
+    if (!date) return
+    const start = window.prompt('新的开始时间（HH:mm）', timeFromMinute(plan.startMinute))
+    if (!start) return
+    const end = window.prompt('新的结束时间（HH:mm）', timeFromMinute(plan.endMinute))
+    if (!end) return
+    const startMinute = minuteFromTime(start)
+    const endMinute = minuteFromTime(end)
+    if (endMinute <= startMinute) {
+      alert('结束时间必须晚于开始时间')
+      return
+    }
+    await perform(plan, () => api.plans.defer(plan.id, { date, startMinute, endMinute }))
+  }
+
+  const renderEditor = (value: PlanDraft, setValue: (next: PlanDraft) => void, onSave: () => void, onCancel?: () => void) => (
+    <div className="mt-3 space-y-2 rounded-xl border border-brand/20 bg-brand/5 p-3">
+      <textarea
+        value={value.content}
+        onChange={(event) => setValue({ ...value, content: event.target.value })}
+        placeholder="具体要做什么？"
+        rows={2}
+        maxLength={2000}
+        className="input min-h-16 w-full resize-y"
+        autoFocus
+      />
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <label className="text-xs text-gray-500">开始<input type="time" value={value.start} onChange={(event) => setValue({ ...value, start: event.target.value })} className="input mt-1 w-full" /></label>
+        <label className="text-xs text-gray-500">结束<input type="time" value={value.end} onChange={(event) => setValue({ ...value, end: event.target.value })} className="input mt-1 w-full" /></label>
+        <label className="col-span-2 text-xs text-gray-500 sm:col-span-1">标签（可选）<select value={value.tagId} onChange={(event) => setValue({ ...value, tagId: event.target.value })} className="input mt-1 w-full"><option value="">不挂标签</option>{tags.map((tag) => <option key={tag.id} value={tag.id}>{tag.name}{tag.trackType === 'count' ? ' · 次数型（不可启动计划）' : ''}</option>)}</select></label>
+        <label className="col-span-2 text-xs text-gray-500 sm:col-span-1">待办（可选）<select value={value.todoId} onChange={(event) => setValue({ ...value, todoId: event.target.value })} className="input mt-1 w-full"><option value="">不关联待办</option>{todos.map((todo) => <option key={todo.id} value={todo.id}>{todo.title}</option>)}</select></label>
+      </div>
+      <div className="flex justify-end gap-2"><button type="button" onClick={onCancel} className="btn-secondary px-3 py-1.5 text-sm">取消</button><button type="button" onClick={onSave} disabled={saving || !value.content.trim()} className="btn-primary px-3 py-1.5 text-sm">{saving ? '保存中…' : '保存计划'}</button></div>
+    </div>
+  )
+
+  return (
+    <section className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900 sm:p-5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div><h2 className="text-base font-semibold text-gray-900 dark:text-gray-100">今日计划</h2><p className="mt-0.5 text-xs text-gray-500">写清楚这一段时间要完成的具体事情</p></div>
+        <button type="button" onClick={() => setShowComposer((value) => !value)} className="btn-primary px-3 py-1.5 text-sm">{showComposer ? '收起' : '＋ 新建计划'}</button>
+      </div>
+      {showComposer && renderEditor(draft, setDraft, submitNew, () => setShowComposer(false))}
+      {error && <div className="mt-3 flex items-center justify-between rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/30 dark:text-red-300"><span>{error}</span><button type="button" onClick={onReload} className="underline">重试</button></div>}
+      {plans.length === 0 ? <div className="py-6 text-center text-sm text-gray-500">今天还没有计划，先写下第一件要做的事。</div> : <div className="mt-4 space-y-2">{[...plans].sort((a, b) => a.startMinute - b.startMinute).map((plan) => {
+        const selectedTagId = plan.tagId ?? ''
+        const tag = tags.find((item) => item.id === selectedTagId)
+        const editing = editingId === plan.id && editDraft
+        return <div key={plan.id} className={`rounded-xl border p-3 ${plan.disposition === 'skipped' ? 'border-gray-200 opacity-60 dark:border-gray-800' : 'border-gray-200 dark:border-gray-800'}`}>
+          <div className="flex flex-wrap items-start gap-3">
+            <div className="w-24 shrink-0 text-xs font-medium text-gray-500">{timeFromMinute(plan.startMinute)} - {timeFromMinute(plan.endMinute)}<div className="mt-1 text-[11px]">{planStatusLabel[plan.executionStatus ?? 'upcoming'] ?? '待开始'}</div><div className="mt-0.5 text-[10px] text-gray-400">{planDispositionLabel[plan.disposition ?? 'planned']}{plan.confirmed ? ' · 已确认' : ''}</div></div>
+            <div className="min-w-0 flex-1"><div className="whitespace-pre-wrap text-sm text-gray-900 dark:text-gray-100">{plan.content}</div><div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500"><select value={selectedTagId} onChange={(event) => void perform(plan, () => api.plans.update(plan.id, { tagId: event.target.value || null }))} className="input !w-auto !py-0.5 text-xs"><option value="">选择标签</option>{tags.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>{tag && <span>{tag.trackType === 'count' ? '次数型' : '时长型'}</span>}{plan.actualMs != null && <span>已记录 {formatDuration(plan.actualMs)}</span>}{plan.coverageRate != null && <span>覆盖 {Math.round(plan.coverageRate * 100)}%</span>}</div></div>
+            <div className="flex shrink-0 flex-wrap justify-end gap-1.5">{plan.disposition !== 'skipped' && (selectedTagId ? <button type="button" disabled={actionId === plan.id || tag?.trackType === 'count'} onClick={() => tag?.trackType === 'time' && void perform(plan, () => onStart(plan, selectedTagId))} className="btn-primary px-2.5 py-1 text-xs">{tag?.trackType === 'count' ? '次数标签不可启动' : '开始'}</button> : startingPlanId === plan.id ? <select autoFocus aria-label="选择计划计时标签" defaultValue="" onChange={(event) => { const id = event.target.value; if (id) { setStartingPlanId(null); void perform(plan, () => onStart(plan, id)) } }} className="input !w-auto !py-1 text-xs"><option value="" disabled>选择时长型标签</option>{tags.filter((item) => item.trackType === 'time').map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select> : <button type="button" disabled={actionId === plan.id || !tags.some((item) => item.trackType === 'time')} onClick={() => setStartingPlanId(plan.id)} className="btn-primary px-2.5 py-1 text-xs">开始</button>)}{plan.disposition === 'skipped' ? <button type="button" disabled={actionId === plan.id} onClick={() => void perform(plan, () => api.plans.unskip(plan.id))} className="btn-secondary px-2.5 py-1 text-xs">恢复</button> : <button type="button" disabled={actionId === plan.id} onClick={() => void perform(plan, () => api.plans.skip(plan.id))} className="btn-secondary px-2.5 py-1 text-xs">跳过</button>}<button type="button" disabled={actionId === plan.id} onClick={() => void perform(plan, () => api.plans.confirm(plan.id))} className="btn-secondary px-2.5 py-1 text-xs">确认</button>{plan.disposition !== 'deferred' && <button type="button" disabled={actionId === plan.id} onClick={() => void deferPlan(plan)} className="btn-secondary px-2.5 py-1 text-xs">推迟</button>}<button type="button" onClick={() => beginEdit(plan)} className="btn-secondary px-2.5 py-1 text-xs">编辑</button><button type="button" disabled={actionId === plan.id} onClick={() => { if (window.confirm('删除这项计划？')) void perform(plan, () => api.plans.remove(plan.id)) }} className="btn-secondary px-2.5 py-1 text-xs text-red-500">删除</button></div>
+          </div>
+          {editing && renderEditor(editDraft, setEditDraft, () => void saveEdit(plan), () => { setEditingId(null); setEditDraft(null) })}
+        </div>
+      })}</div>}
+    </section>
   )
 }
 

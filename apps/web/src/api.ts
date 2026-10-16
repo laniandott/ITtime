@@ -19,6 +19,7 @@ import type {
   RelatedEntities,
   EntityLinkType,
   LinkedNoteEntry,
+  PlanBlock,
 } from './types'
 
 export function getServerHost(): string {
@@ -244,12 +245,12 @@ export const api = {
   },
   timer: {
     current: () => req<{ running: TimeEntry[]; serverTime: string }>('/timer/current'),
-    start: (data: { tagId: string; note?: string; todoId?: string; resumedFromId?: string; interruptedFromId?: string }) =>
+    start: (data: { tagId: string; note?: string; todoId?: string; planId?: string; resumedFromId?: string; interruptedFromId?: string }) =>
       req<TimeEntry & { serverTime: string }>('/timer/start', { method: 'POST', body: JSON.stringify(data) }),
     stop: (id: string, note?: string, pendingResume?: boolean) =>
       req<TimeEntry>(`/timer/stop/${id}`, { method: 'POST', body: JSON.stringify({ note, pendingResume }) }),
     stopAll: () => req<{ count: number }>('/timer/stop', { method: 'POST' }),
-    quick: (data: { tagId: string; note?: string; todoId?: string }) =>
+    quick: (data: { tagId: string; note?: string; todoId?: string; planId?: string }) =>
       req<TimeEntry & { serverTime: string }>('/timer/quick', { method: 'POST', body: JSON.stringify(data) }),
     list: (params?: { from?: string; to?: string; tagId?: string }) => {
       const q = new URLSearchParams()
@@ -287,6 +288,26 @@ export const api = {
     toggle: (id: string, lateReason?: string, restoreReason?: string) =>
       req<Todo>(`/todos/${id}/toggle`, { method: 'PATCH', body: JSON.stringify({ lateReason, restoreReason }) }),
     remove: (id: string) => req(`/todos/${id}`, { method: 'DELETE' }),
+  },
+  plans: {
+    list: (params?: { date?: string; tagId?: string; deferredFromId?: string }) => {
+      const q = new URLSearchParams()
+      if (params?.date) q.set('date', params.date)
+      if (params?.tagId) q.set('tagId', params.tagId)
+      if (params?.deferredFromId) q.set('deferredFromId', params.deferredFromId)
+      return req<PlanBlock[]>(`/plans?${q}`)
+    },
+    create: (data: { date: string; startMinute: number; endMinute: number; content: string; tagId?: string | null; todoId?: string | null }) =>
+      req<PlanBlock>('/plans', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: string, data: Partial<PlanBlock>) =>
+      req<PlanBlock>(`/plans/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    remove: (id: string) => req(`/plans/${id}`, { method: 'DELETE' }),
+    skip: (id: string) => req<PlanBlock>(`/plans/${id}/skip`, { method: 'POST' }),
+    unskip: (id: string) => req<PlanBlock>(`/plans/${id}/unskip`, { method: 'POST' }),
+    confirm: (id: string) => req<PlanBlock>(`/plans/${id}/confirm`, { method: 'POST' }),
+    unconfirm: (id: string) => req<PlanBlock>(`/plans/${id}/unconfirm`, { method: 'POST' }),
+    defer: (id: string, data: { date: string; startMinute: number; endMinute: number }) =>
+      req<PlanBlock>(`/plans/${id}/defer`, { method: 'POST', body: JSON.stringify(data) }),
   },
   stats: {
     summary: (categoryId?: string) => {

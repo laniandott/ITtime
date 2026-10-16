@@ -200,7 +200,7 @@ export default function TodosPage() {
 
   const startFromTodo = async (todo: Todo, tagId: string) => {
     try {
-      await start(tagId, todo.title, todo.id)
+      await start({ tagId, note: todo.title, todoId: todo.id })
       setPickingTagFor(null)
       setError('')
     } catch (e) {

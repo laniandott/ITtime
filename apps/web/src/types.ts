@@ -58,11 +58,39 @@ export interface TimeEntry {
   dismissReason: string | null
   resumedFromId: string | null
   interruptedFromId: string | null
+  planId?: string | null
   tag?: Tag | null
   todo?: Todo | null
   memos?: Memo[]
   chainLength?: number
   totalFocusedMs?: number
+}
+
+export type PlanDisposition = 'planned' | 'skipped' | 'deferred'
+export type PlanExecutionStatus = 'upcoming' | 'active' | 'paused' | 'done' | 'partial' | 'missed'
+
+export interface PlanBlock {
+  id: string
+  date: string
+  startMinute: number
+  endMinute: number
+  content: string
+  tagId: string | null
+  todoId: string | null
+  skippedAt: string | null
+  confirmedAt: string | null
+  deferredFromId: string | null
+  tag?: Tag | null
+  todo?: Todo | null
+  disposition?: PlanDisposition
+  executionStatus?: PlanExecutionStatus
+  confirmed?: boolean
+  actualMs?: number
+  plannedMs?: number
+  coverageRate?: number
+  overlaps?: boolean
+  createdAt: string
+  updatedAt: string
 }
 
 export interface Todo {

@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import { formatDuration, useStore, toIsoSafe } from '../store'
-import type { TimeEntry, Memo, Todo, LinkedNoteEntry } from '../types'
+import type { TimeEntry, Memo, Todo, Tag, PlanBlock, LinkedNoteEntry } from '../types'
 import { DateTimeSecondPicker } from '../components/DateTimeSecondPicker'
 import { CalendarSyncModal } from '../components/CalendarSyncModal'
 import { SubscriptionManager } from '../components/SubscriptionManager'
@@ -94,6 +94,10 @@ function isSameMonth(a: Date, b: Date): boolean {
 
 function isToday(d: Date): boolean {
   return isSameDay(d, new Date())
+}
+
+function localDateKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 const WEEKDAYS = ['一', '二', '三', '四', '五', '六', '日']
@@ -244,7 +248,7 @@ const HOUR_HEIGHT_DAY = 60
 const HOUR_HEIGHT_WEEK = 48
 
 export default function CalendarPage() {
-  const { categories } = useStore()
+  const { categories, tags } = useStore()
   const [searchParams] = useSearchParams()
   const [view, setView] = useState<'month' | 'week' | 'four'>('month')
   const [currentDate, setCurrentDate] = useState(new Date())
@@ -253,14 +257,18 @@ export default function CalendarPage() {
   const [selectedEntry, setSelectedEntry] = useState<TimeEntry | null>(null)
   const [showSyncModal, setShowSyncModal] = useState(false)
   const [quickCreateDefaults, setQuickCreateDefaults] = useState<{ date: Date; startTime?: Date; endTime?: Date } | null>(null)
+  const [planCreateDate, setPlanCreateDate] = useState<Date | null>(null)
+  const [editingPlan, setEditingPlan] = useState<PlanBlock | null>(null)
   const [showSubManager, setShowSubManager] = useState(false)
   const [showFilter, setShowFilter] = useState(false)
   const [selectedCategoryKeys, setSelectedCategoryKeys] = useState<Set<string> | null>(null)
   const [externalEvents, setExternalEvents] = useState<CalendarEvent[]>([])
   const [activities, setActivities] = useState<Todo[]>([])
+  const [plans, setPlans] = useState<PlanBlock[]>([])
   const [calendarFilter, setCalendarFilter] = useState<'all' | 'timer' | 'activity'>('all')
   const [now, setNow] = useState(new Date())
   const [calendarLoading, setCalendarLoading] = useState(false)
+  const [dataRevision, setDataRevision] = useState(0)
   const [calendarError, setCalendarError] = useState('')
   const [externalEventsCachedAt, setExternalEventsCachedAt] = useState<string | null>(null)
   const [dayLinkedNotes, setDayLinkedNotes] = useState<LinkedNoteEntry[]>([])
@@ -280,6 +288,12 @@ export default function CalendarPage() {
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 60000)
     return () => clearInterval(t)
+  }, [])
+
+  useEffect(() => {
+    const refresh = () => setDataRevision((value) => value + 1)
+    window.addEventListener('ittime-data-changed', refresh)
+    return () => window.removeEventListener('ittime-data-changed', refresh)
   }, [])
 
   // 支持从笔记 [[date:YYYY-MM-DD]] 跳转：定位到月视图中的指定日期
@@ -330,6 +344,17 @@ export default function CalendarPage() {
     return calendarFilter === 'timer' ? [] : categoryActivities
   }, [activities, selectedCategoryKeys, calendarFilter])
 
+  const visiblePlans = useMemo(() => {
+    const from = startOfDay(range.from).getTime()
+    const to = endOfDay(range.to).getTime()
+    const filtered = plans.filter((plan) => {
+      const day = Date.parse(`${plan.date}T00:00:00`)
+      return Number.isFinite(day) && day >= from && day <= to
+    })
+    if (!selectedCategoryKeys) return filtered
+    return filtered.filter((plan) => selectedCategoryKeys.has(plan.tag?.categoryId ?? '_none'))
+  }, [plans, range.from, range.to, selectedCategoryKeys])
+
   const memosByDay = useMemo(() => {
     const map = new Map<string, Memo[]>()
     for (const memo of memos) {
@@ -351,7 +376,8 @@ export default function CalendarPage() {
       loadExternalEvents(params),
       api.memos.list(params),
       api.todos.list(),
-    ]).then(([entryResult, externalResult, memoResult, activityResult]) => {
+      api.plans.list(),
+    ]).then(([entryResult, externalResult, memoResult, activityResult, plansResult]) => {
       if (cancelled) return
       const failures: string[] = []
       const optionalFailures: string[] = []
@@ -366,6 +392,8 @@ export default function CalendarPage() {
       else failures.push('记事')
       if (activityResult.status === 'fulfilled') setActivities(activityResult.value)
       else failures.push('活动')
+      if (plansResult.status === 'fulfilled') setPlans(plansResult.value)
+      else optionalFailures.push('计划')
       const messages = [
         failures.length ? `${failures.join('、')}加载失败，请稍后重试` : '',
         optionalFailures.length ? `${optionalFailures.join('、')}暂时不可用，本地日历仍可正常使用` : '',
@@ -375,7 +403,7 @@ export default function CalendarPage() {
     })
 
     return () => { cancelled = true }
-  }, [range.from, range.to])
+  }, [range.from, range.to, dataRevision])
 
   // 导航
   const navigate = (dir: number) => {
@@ -441,7 +469,7 @@ export default function CalendarPage() {
     }, 0)
   }, [visibleEntries, range.from, range.to, now])
 
-  const hasCalendarContent = visibleEntries.length > 0 || visibleActivities.length > 0 || externalEvents.length > 0 || memos.length > 0
+  const hasCalendarContent = visibleEntries.length > 0 || visibleActivities.length > 0 || visiblePlans.length > 0 || externalEvents.length > 0 || memos.length > 0
   const filterCount = selectedCategoryKeys?.size ?? allCategoryKeys.size
 
   const setQuickCreateForDate = (date: Date, startTime?: Date, endTime?: Date) => {
@@ -475,6 +503,7 @@ export default function CalendarPage() {
             <span className="text-lg leading-none">+</span>
             <span className="hidden sm:inline">新建</span>
           </button>
+          <button type="button" onClick={() => setPlanCreateDate(currentDate)} className="px-3 py-2 rounded-full border border-gray-300 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">新建计划</button>
           <button
             onClick={() => navigate(-1)}
             className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors"
@@ -609,6 +638,7 @@ export default function CalendarPage() {
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-400" aria-label="月视图图例">
           <span className="font-medium text-gray-500 dark:text-gray-300">月视图</span>
           <span className="inline-flex items-center gap-1"><i className="h-2 w-2 rounded-full bg-brand" />计时记录</span>
+          <span className="inline-flex items-center gap-1"><i className="h-2 w-2 rounded border border-dashed border-slate-500" />计划</span>
           <span className="inline-flex items-center gap-1"><i className="h-2 w-2 rounded-full bg-amber-400" />活动</span>
           <span className="inline-flex items-center gap-1"><i className="h-2 w-2 rounded-full bg-emerald-500" />外部日历</span>
         </div>
@@ -638,6 +668,7 @@ export default function CalendarPage() {
           selectedDate={currentDate}
           entries={visibleEntries}
           activities={visibleActivities}
+          plans={visiblePlans}
           memosByDay={memosByDay}
           externalEvents={externalEvents}
           now={now}
@@ -651,6 +682,7 @@ export default function CalendarPage() {
             selectedDate={currentDate}
             entriesByDay={entriesByDay}
             activities={visibleActivities}
+            plans={visiblePlans}
             memosByDay={memosByDay}
             externalEvents={externalEvents}
             onDayClick={setCurrentDate}
@@ -671,6 +703,7 @@ export default function CalendarPage() {
               date={currentDate}
               entries={visibleEntries}
               activities={visibleActivities}
+              plans={visiblePlans}
               dayMemos={memosByDay.get(startOfDay(currentDate).toISOString()) ?? []}
               externalEvents={externalEvents}
               now={now}
@@ -679,6 +712,7 @@ export default function CalendarPage() {
               linkedNotes={dayLinkedNotes}
               onOpenNote={(id) => goNote(`/notes/${id}`)}
             />
+            {visiblePlans.filter((plan) => plan.date === localDateKey(currentDate)).length > 0 && <div className="mt-3 space-y-1"><h3 className="text-xs font-semibold text-gray-500">当天计划</h3>{visiblePlans.filter((plan) => plan.date === localDateKey(currentDate)).map((plan) => <button key={plan.id} type="button" onClick={() => setEditingPlan(plan)} className="flex w-full items-center gap-2 rounded border border-dashed border-gray-300 px-2 py-1.5 text-left text-xs hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"><span className="w-20 shrink-0 text-gray-500">{String(Math.floor(plan.startMinute / 60)).padStart(2, '0')}:{String(plan.startMinute % 60).padStart(2, '0')} - {String(Math.floor(plan.endMinute / 60)).padStart(2, '0')}:{String(plan.endMinute % 60).padStart(2, '0')}</span><span className="min-w-0 flex-1 truncate">{plan.content}</span><span className="text-gray-400">编辑</span></button>)}</div>}
           </section>
         </div>
       )}
@@ -718,6 +752,8 @@ export default function CalendarPage() {
         />
       )}
 
+      {(planCreateDate || editingPlan) && <PlanCreateModal plan={editingPlan ?? undefined} date={planCreateDate ?? new Date(`${editingPlan!.date}T00:00:00`)} tags={tags} todos={activities} onClose={() => { setPlanCreateDate(null); setEditingPlan(null) }} onSaved={async () => { setPlanCreateDate(null); setEditingPlan(null); setDataRevision((value) => value + 1) }} />}
+
       {/* 外部日历订阅管理弹窗 */}
       {showSubManager && <SubscriptionManager onClose={() => {
         setShowSubManager(false)
@@ -730,12 +766,62 @@ export default function CalendarPage() {
   )
 }
 
+function PlanCreateModal({ date, plan, tags, todos, onClose, onSaved }: {
+  date: Date
+  plan?: PlanBlock
+  tags: Tag[]
+  todos: Todo[]
+  onClose: () => void
+  onSaved: () => Promise<void>
+}) {
+  const [content, setContent] = useState(plan?.content ?? '')
+  const [start, setStart] = useState(plan ? `${String(Math.floor(plan.startMinute / 60)).padStart(2, '0')}:${String(plan.startMinute % 60).padStart(2, '0')}` : '09:00')
+  const [end, setEnd] = useState(plan ? `${String(Math.floor(plan.endMinute / 60)).padStart(2, '0')}:${String(plan.endMinute % 60).padStart(2, '0')}` : '10:00')
+  const [tagId, setTagId] = useState(plan?.tagId ?? '')
+  const [todoId, setTodoId] = useState(plan?.todoId ?? '')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault()
+    const toMinute = (time: string) => {
+      const [hour, minute] = time.split(':').map(Number)
+      return hour * 60 + minute
+    }
+    if (toMinute(end) <= toMinute(start)) { setError('结束时间必须晚于开始时间'); return }
+    setSaving(true)
+    setError('')
+    try {
+      const data = { date: localDateKey(date), startMinute: toMinute(start), endMinute: toMinute(end), content: content.trim(), tagId: tagId || null, todoId: todoId || null }
+      if (plan) await api.plans.update(plan.id, data)
+      else await api.plans.create(data)
+      await onSaved()
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : '创建计划失败')
+    } finally {
+      setSaving(false)
+    }
+  }
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+      <form onSubmit={submit} className="w-full max-w-lg space-y-4 rounded-xl bg-white p-5 shadow-xl dark:bg-gray-900" onClick={(event) => event.stopPropagation()}>
+        <div className="flex items-center justify-between"><div><h2 className="text-lg font-semibold">{plan ? '编辑计划' : '新建计划'}</h2><p className="mt-1 text-sm text-gray-500">{date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}</p></div><button type="button" onClick={onClose} className="grid h-8 w-8 place-items-center rounded hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="关闭">×</button></div>
+        <label className="block text-sm font-medium">计划内容<textarea autoFocus required maxLength={2000} rows={4} value={content} onChange={(event) => setContent(event.target.value)} placeholder="写下这段时间具体要做什么" className="input mt-1 w-full resize-y" /></label>
+        <div className="grid grid-cols-2 gap-3"><label className="text-sm">开始时间<input required type="time" value={start} onChange={(event) => setStart(event.target.value)} className="input mt-1 w-full" /></label><label className="text-sm">结束时间<input required type="time" value={end} onChange={(event) => setEnd(event.target.value)} className="input mt-1 w-full" /></label></div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><label className="text-sm">Tag（可选）<select value={tagId} onChange={(event) => setTagId(event.target.value)} className="input mt-1 w-full"><option value="">不挂 Tag</option>{tags.map((tag) => <option key={tag.id} value={tag.id}>{tag.name}</option>)}</select></label><label className="text-sm">Todo（可选）<select value={todoId} onChange={(event) => setTodoId(event.target.value)} className="input mt-1 w-full"><option value="">不关联 Todo</option>{todos.map((todo) => <option key={todo.id} value={todo.id}>{todo.title}</option>)}</select></label></div>
+        {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+        <div className="flex justify-between gap-2">{plan ? <button type="button" disabled={saving} onClick={async () => { if (!window.confirm('删除这项计划？')) return; setSaving(true); try { await api.plans.remove(plan.id); await onSaved() } catch (reason) { setError(reason instanceof Error ? reason.message : '删除计划失败') } finally { setSaving(false) } }} className="text-sm text-red-600">删除</button> : <span />}<div className="flex gap-2"><button type="button" onClick={onClose} className="btn-secondary px-3 py-2 text-sm">取消</button><button type="submit" disabled={saving || !content.trim()} className="btn-primary px-4 py-2 text-sm">{saving ? '保存中…' : '保存计划'}</button></div></div>
+      </form>
+    </div>
+  )
+}
+
 // ===== 日视图 =====
 
-function DayView({ date, entries, activities, dayMemos, externalEvents, now, onEntryClick, onCreate, linkedNotes = [], onOpenNote }: {
+function DayView({ date, entries, activities, plans, dayMemos, externalEvents, now, onEntryClick, onCreate, linkedNotes = [], onOpenNote }: {
   date: Date
   entries: TimeEntry[]
   activities: Todo[]
+  plans: PlanBlock[]
   dayMemos: Memo[]
   externalEvents: CalendarEvent[]
   now: Date
@@ -750,6 +836,7 @@ function DayView({ date, entries, activities, dayMemos, externalEvents, now, onE
   const layout = layoutEntries(entries, dayStart, dayEnd)
   const countEntries = entries.filter((entry) => entry.tag?.trackType === 'count' && isSameDay(new Date(entry.startTime), date))
   const dayActivities = activities.filter((todo) => activityIsOnDay(todo, date))
+  const dayPlans = plans.filter((plan) => plan.date === localDateKey(date))
   const topExternal = externalEvents.filter((event) => externalEventOverlapsDay(event, dayStart, dayEnd))
   const uniqueTopExternal = topExternal.filter((event, index, list) => list.findIndex((item) => item.summary === event.summary) === index)
 
@@ -800,8 +887,13 @@ function DayView({ date, entries, activities, dayMemos, externalEvents, now, onE
         </div>
       )}
       {/* 外部 ICS 事件和次数打卡栏，避免占用时间轴 */}
-      {(dayActivities.length > 0 || topExternal.length > 0 || countEntries.length > 0) && (
+      {(dayPlans.length > 0 || dayActivities.length > 0 || topExternal.length > 0 || countEntries.length > 0) && (
         <div className="flex border-b border-gray-200 dark:border-gray-800 px-2 py-1 gap-1 flex-wrap">
+          {dayPlans.map((plan) => (
+            <div key={plan.id} className={`text-[10px] font-semibold rounded px-2 py-0.5 border border-dashed ${plan.executionStatus === 'done' ? 'opacity-60' : ''}`} style={{ color: plan.tag?.color ?? '#64748b', borderColor: plan.tag?.color ?? '#64748b', backgroundColor: `${plan.tag?.color ?? '#64748b'}10` }} title={plan.content}>
+              ▷ {String(Math.floor(plan.startMinute / 60)).padStart(2, '0')}:{String(plan.startMinute % 60).padStart(2, '0')} {plan.content}
+            </div>
+          ))}
           {dayActivities.map((todo) => (
             <div
               key={todo.id}
@@ -897,6 +989,16 @@ function DayView({ date, entries, activities, dayMemos, externalEvents, now, onE
               </button>
             )
           })}
+          {dayPlans.map((plan) => {
+            const top = ((1440 - plan.endMinute) / 60) * HOUR_HEIGHT_DAY
+            const height = Math.max(((plan.endMinute - plan.startMinute) / 60) * HOUR_HEIGHT_DAY, 20)
+            const color = plan.tag?.color ?? '#64748b'
+            return (
+              <div key={plan.id} className={`absolute left-1 right-1 z-0 overflow-hidden rounded-md border border-dashed px-2 py-0.5 text-left ${plan.executionStatus === 'done' ? 'opacity-50' : ''}`} style={{ top, height, backgroundColor: `${color}0d`, borderColor: `${color}99` }} title={plan.content}>
+                <div className="truncate text-[10px] font-medium" style={{ color }}>▷ {plan.content}</div>
+              </div>
+            )
+          })}
           {/* 现在时间线 */}
           {nowTop >= 0 && (
             <div className="absolute left-0 right-0 z-20 pointer-events-none" style={{ top: nowTop }}>
@@ -926,11 +1028,12 @@ function DayView({ date, entries, activities, dayMemos, externalEvents, now, onE
 
 // ===== 周视图 =====
 
-function WeekView({ days, selectedDate, entries, activities, memosByDay, externalEvents, now, dayTotal, onEntryClick }: {
+function WeekView({ days, selectedDate, entries, activities, plans, memosByDay, externalEvents, now, dayTotal, onEntryClick }: {
   days: Date[]
   selectedDate: Date
   entries: TimeEntry[]
   activities: Todo[]
+  plans: PlanBlock[]
   memosByDay: Map<string, Memo[]>
   externalEvents: CalendarEvent[]
   now: Date
@@ -1060,6 +1163,7 @@ function WeekView({ days, selectedDate, entries, activities, memosByDay, externa
             return es < dayEnd && ee > dayStart
           })
             const layout = layoutEntries(dayEntries, dayStart, dayEnd)
+            const dayPlans = plans.filter((plan) => plan.date === localDateKey(d))
             const showNowLine = isToday(d)
           return (
             <div
@@ -1104,6 +1208,12 @@ function WeekView({ days, selectedDate, entries, activities, memosByDay, externa
                   </button>
                 )
               })}
+              {dayPlans.map((plan) => {
+                const top = ((1440 - plan.endMinute) / 60) * HOUR_HEIGHT_WEEK
+                const height = Math.max(((plan.endMinute - plan.startMinute) / 60) * HOUR_HEIGHT_WEEK, 16)
+                const color = plan.tag?.color ?? '#64748b'
+                return <div key={plan.id} className={`absolute left-0.5 right-0.5 z-0 overflow-hidden rounded border border-dashed px-1 text-[9px] ${plan.executionStatus === 'done' ? 'opacity-50' : ''}`} style={{ top, height, backgroundColor: `${color}0d`, borderColor: `${color}99`, color }} title={plan.content}>▷ {plan.content}</div>
+              })}
               {/* 现在时间线 */}
               {showNowLine && (
                 <div className="absolute left-0 right-0 z-20 pointer-events-none" style={{ top: nowTop }}>
@@ -1133,11 +1243,12 @@ function WeekView({ days, selectedDate, entries, activities, memosByDay, externa
 
 // ===== 月视图 =====
 
-function MonthView({ date, selectedDate, entriesByDay, activities, memosByDay, externalEvents, onDayClick, onNavigate }: {
+function MonthView({ date, selectedDate, entriesByDay, activities, plans, memosByDay, externalEvents, onDayClick, onNavigate }: {
   date: Date
   selectedDate: Date
   entriesByDay: Map<string, TimeEntry[]>
   activities: Todo[]
+  plans: PlanBlock[]
   memosByDay: Map<string, Memo[]>
   externalEvents: CalendarEvent[]
   onDayClick: (d: Date) => void
@@ -1177,6 +1288,7 @@ function MonthView({ date, selectedDate, entriesByDay, activities, memosByDay, e
           const key = startOfDay(d).toISOString()
           const dayEntries = entriesByDay.get(key) ?? []
           const dayActivities = activities.filter((todo) => activityIsOnDay(todo, d))
+          const dayPlans = plans.filter((plan) => plan.date === localDateKey(d))
           const dayMemos = memosByDay.get(key) ?? []
           const inMonth = isSameMonth(d, date)
           const today = isToday(d)
@@ -1224,6 +1336,7 @@ function MonthView({ date, selectedDate, entriesByDay, activities, memosByDay, e
               )}
               <div className={`mt-2 flex min-h-5 items-center gap-1.5 ${selected ? 'text-white' : ''}`} aria-label="当天日历内容">
                 {uniqueColors.slice(0, 5).map((c, i) => <span key={i} className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: c }} title="计时记录" />)}
+                {dayPlans.length > 0 && <span className="h-2.5 w-2.5 rounded-full border-2 border-dashed border-slate-500" title={`${dayPlans.length} 项计划`} />}
                 {dayActivities.length > 0 && <span className="h-2.5 w-2.5 rounded-full bg-amber-400" title="活动" />}
                 {(hasOtherExternal || allDayLabels.length > 0) && <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" title="外部日历" />}
                 {dayMemos.length > 0 && <span className="h-2.5 w-2.5 rounded-full bg-gray-400" title="备忘" />}
