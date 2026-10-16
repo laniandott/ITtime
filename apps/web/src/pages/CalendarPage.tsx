@@ -255,6 +255,7 @@ export default function CalendarPage() {
   const [entries, setEntries] = useState<TimeEntry[]>([])
   const [memos, setMemos] = useState<Memo[]>([])
   const [selectedEntry, setSelectedEntry] = useState<TimeEntry | null>(null)
+  const [dayDetailDate, setDayDetailDate] = useState<Date | null>(null)
   const [showSyncModal, setShowSyncModal] = useState(false)
   const [quickCreateDefaults, setQuickCreateDefaults] = useState<{ date: Date; startTime?: Date; endTime?: Date } | null>(null)
   const [planCreateDate, setPlanCreateDate] = useState<Date | null>(null)
@@ -492,7 +493,7 @@ export default function CalendarPage() {
   }, [view, currentDate])
 
   return (
-    <div className="space-y-4">
+    <div className="calendar-page space-y-4">
       {/* 头部：Google Calendar 风格导航栏 */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-1">
@@ -674,9 +675,10 @@ export default function CalendarPage() {
           now={now}
           dayTotal={dayTotal}
           onEntryClick={setSelectedEntry}
+          onDayClick={(date) => { setCurrentDate(date); setDayDetailDate(date) }}
         />
       ) : (
-        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.4fr)_minmax(360px,1fr)] gap-3 items-start">
+        <div className="calendar-month-shell">
           <MonthView
             date={currentDate}
             selectedDate={currentDate}
@@ -685,37 +687,30 @@ export default function CalendarPage() {
             plans={visiblePlans}
             memosByDay={memosByDay}
             externalEvents={externalEvents}
-            onDayClick={setCurrentDate}
+            onDayClick={(date) => { setCurrentDate(date); setDayDetailDate(date) }}
             onNavigate={(direction) => {
               const next = new Date(currentDate)
               next.setMonth(next.getMonth() + direction)
               setCurrentDate(next)
             }}
           />
-          <section className="min-w-0">
-            <div className="mb-2 flex items-baseline justify-between gap-2">
-              <h2 className="text-sm font-semibold text-gray-800 dark:text-gray-100">
-                {currentDate.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}
-              </h2>
-              <span className="text-xs text-gray-400">{getLunarText(currentDate)}</span>
-            </div>
-            <DayView
-              date={currentDate}
-              entries={visibleEntries}
-              activities={visibleActivities}
-              plans={visiblePlans}
-              dayMemos={memosByDay.get(startOfDay(currentDate).toISOString()) ?? []}
-              externalEvents={externalEvents}
-              now={now}
-              onEntryClick={setSelectedEntry}
-              onCreate={(start, end) => setQuickCreateForDate(start, start, end)}
-              linkedNotes={dayLinkedNotes}
-              onOpenNote={(id) => goNote(`/notes/${id}`)}
-            />
-            {visiblePlans.filter((plan) => plan.date === localDateKey(currentDate)).length > 0 && <div className="mt-3 space-y-1"><h3 className="text-xs font-semibold text-gray-500">当天计划</h3>{visiblePlans.filter((plan) => plan.date === localDateKey(currentDate)).map((plan) => <button key={plan.id} type="button" onClick={() => setEditingPlan(plan)} className="flex w-full items-center gap-2 rounded border border-dashed border-gray-300 px-2 py-1.5 text-left text-xs hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"><span className="w-20 shrink-0 text-gray-500">{String(Math.floor(plan.startMinute / 60)).padStart(2, '0')}:{String(plan.startMinute % 60).padStart(2, '0')} - {String(Math.floor(plan.endMinute / 60)).padStart(2, '0')}:{String(plan.endMinute % 60).padStart(2, '0')}</span><span className="min-w-0 flex-1 truncate">{plan.content}</span><span className="text-gray-400">编辑</span></button>)}</div>}
-          </section>
         </div>
       )}
+
+      {dayDetailDate && <DayDetailPopup
+        date={dayDetailDate}
+        entries={visibleEntries}
+        activities={visibleActivities}
+        plans={visiblePlans}
+        dayMemos={memosByDay.get(startOfDay(dayDetailDate).toISOString()) ?? []}
+        externalEvents={externalEvents}
+        linkedNotes={dayLinkedNotes}
+        now={now}
+        onClose={() => setDayDetailDate(null)}
+        onEntryClick={(entry) => { setDayDetailDate(null); setSelectedEntry(entry) }}
+        onCreate={(start, end) => { setDayDetailDate(null); setQuickCreateForDate(start, start, end) }}
+        onOpenNote={(id) => { setDayDetailDate(null); goNote(`/notes/${id}`) }}
+      />}
 
       {/* 条目详情弹窗 */}
       {selectedEntry && (
@@ -1028,7 +1023,7 @@ function DayView({ date, entries, activities, plans, dayMemos, externalEvents, n
 
 // ===== 周视图 =====
 
-function WeekView({ days, selectedDate, entries, activities, plans, memosByDay, externalEvents, now, dayTotal, onEntryClick }: {
+function WeekView({ days, selectedDate, entries, activities, plans, memosByDay, externalEvents, now, dayTotal, onEntryClick, onDayClick }: {
   days: Date[]
   selectedDate: Date
   entries: TimeEntry[]
@@ -1039,6 +1034,7 @@ function WeekView({ days, selectedDate, entries, activities, plans, memosByDay, 
   now: Date
   dayTotal: (d: Date) => number
   onEntryClick: (e: TimeEntry) => void
+  onDayClick: (date: Date) => void
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const nowTop = ((24 * 60 - minutesFromStartOfDay(now)) / 60) * HOUR_HEIGHT_WEEK
@@ -1060,7 +1056,7 @@ function WeekView({ days, selectedDate, entries, activities, plans, memosByDay, 
       <div className="flex sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
         <div className="flex-shrink-0 w-10" />
         {days.map((d) => (
-          <div key={d.toISOString()} className={`flex-1 text-center py-2 ${isToday(d) ? 'text-brand' : 'text-gray-500'}`}>
+          <button type="button" key={d.toISOString()} onClick={() => onDayClick(d)} className={`flex-1 text-center py-2 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/70 ${isToday(d) ? 'text-brand' : 'text-gray-500'}`} aria-label={`打开${d.toLocaleDateString('zh-CN')}日视图`}>
             <div className="text-xs">{WEEKDAYS[d.getDay() === 0 ? 6 : d.getDay() - 1]}</div>
             <div className={`text-sm font-semibold w-6 h-6 mx-auto flex items-center justify-center rounded-full ${
               isToday(d)
@@ -1071,7 +1067,7 @@ function WeekView({ days, selectedDate, entries, activities, plans, memosByDay, 
             }`}>
               {d.getDate()}
             </div>
-          </div>
+          </button>
         ))}
       </div>
 
@@ -1654,7 +1650,7 @@ function QuickCreateModal({ defaultDate, defaultStartTime, defaultEndTime, onClo
 
 // ===== 月视图点击日期详情弹窗 =====
 
-function DayDetailPopup({ date, entries, activities, dayMemos, externalEvents, onClose, onEntryClick }: {
+function DayDetailPopupLegacy({ date, entries, activities, dayMemos, externalEvents, onClose, onEntryClick }: {
   date: Date
   entries: TimeEntry[]
   activities: Todo[]
@@ -1782,6 +1778,56 @@ function DayDetailPopup({ date, entries, activities, dayMemos, externalEvents, o
           </button>
         </div>
       </div>
+    </div>
+  )
+}
+
+function DayDetailPopup({ date, entries, activities, plans, dayMemos, externalEvents, linkedNotes, now, onClose, onEntryClick, onCreate, onOpenNote }: {
+  date: Date
+  entries: TimeEntry[]
+  activities: Todo[]
+  plans: PlanBlock[]
+  dayMemos: Memo[]
+  externalEvents: CalendarEvent[]
+  linkedNotes: LinkedNoteEntry[]
+  now: Date
+  onClose: () => void
+  onEntryClick: (entry: TimeEntry) => void
+  onCreate: (start: Date, end: Date) => void
+  onOpenNote: (id: string) => void
+}) {
+  const dateLabel = date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })
+  const dayKey = startOfDay(date).toISOString()
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-3 backdrop-blur-sm sm:p-6" onClick={onClose}>
+      <section role="dialog" aria-modal="true" aria-label={`${dateLabel}日视图`} className="flex max-h-[calc(100vh-1.5rem)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/20 bg-gray-50 shadow-2xl shadow-gray-950/20 dark:bg-gray-950 sm:max-h-[calc(100vh-3rem)]" onClick={(event) => event.stopPropagation()}>
+        <header className="flex items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-800 dark:bg-gray-900 sm:px-5">
+          <div className="min-w-0"><div className="truncate text-base font-semibold text-gray-900 dark:text-gray-100">{dateLabel}</div><div className="mt-0.5 text-xs text-gray-500">当天时间线 · 双击空白处补录时长</div></div>
+          <button type="button" onClick={onClose} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200" aria-label="关闭日视图">×</button>
+        </header>
+        <div className="min-h-0 flex-1 overflow-y-auto p-2 sm:p-3">
+          <DayView
+            date={date}
+            entries={entries}
+            activities={activities}
+            plans={plans}
+            dayMemos={dayMemos}
+            externalEvents={externalEvents}
+            now={now}
+            onEntryClick={onEntryClick}
+            onCreate={onCreate}
+            linkedNotes={linkedNotes}
+            onOpenNote={onOpenNote}
+          />
+          {dayMemos.length === 0 && entries.length === 0 && activities.filter((todo) => activityIsOnDay(todo, date)).length === 0 && plans.filter((plan) => plan.date === localDateKey(date)).length === 0 && externalEvents.every((event) => !externalEventOverlapsDay(event, startOfDay(date).getTime(), endOfDay(date).getTime())) && (
+            <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 rounded-xl bg-white/90 px-4 py-2 text-xs text-gray-400 shadow-sm dark:bg-gray-900/90">当天还没有记录</div>
+          )}
+        </div>
+        <footer className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-2.5 dark:border-gray-800 dark:bg-gray-900 sm:px-5">
+          <span className="text-[11px] text-gray-400">{dayKey === startOfDay(new Date()).toISOString() ? '今天' : getLunarText(date)}</span>
+          <button type="button" onClick={onClose} className="btn-secondary px-3 py-1.5 text-xs">完成</button>
+        </footer>
+      </section>
     </div>
   )
 }

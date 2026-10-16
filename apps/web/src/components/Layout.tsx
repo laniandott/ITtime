@@ -45,7 +45,7 @@ export default function Layout({ children, username, onLogout }: { children: Rea
         </div>
       </header>
 
-      <main key={location.pathname} className="mx-auto w-full max-w-7xl flex-1 px-4 py-5 motion-safe:animate-[fade-in_.25s_ease-out] sm:py-8 lg:px-8">{children}</main>
+      <main key={location.pathname} className="mx-auto w-full max-w-[1440px] flex-1 px-4 py-5 motion-safe:animate-[fade-in_.25s_ease-out] sm:py-8 lg:px-8">{children}</main>
       <nav aria-label="主导航" className="fixed inset-x-0 bottom-0 z-20 border-t border-gray-200/80 bg-white/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl dark:border-gray-800 dark:bg-gray-950/95 lg:hidden">
         <div className="mx-auto grid h-[4.35rem] max-w-3xl grid-cols-7 px-1 sm:px-2">
           {navItems.map((item) => (

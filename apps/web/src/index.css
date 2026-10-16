@@ -32,6 +32,21 @@ body {
   box-shadow: 10px 0 28px rgb(15 23 42 / .025);
 }
 
+.calendar-page {
+  min-width: 0;
+}
+
+.calendar-month-shell > * {
+  overflow: hidden;
+  border: 1px solid rgb(226 232 240 / .9);
+  box-shadow: 0 12px 34px rgb(15 23 42 / .045);
+}
+
+.dark .calendar-month-shell > * {
+  border-color: rgb(51 65 85 / .75);
+  box-shadow: 0 12px 34px rgb(0 0 0 / .15);
+}
+
 [class~="fixed"][class~="z-50"] {
   animation: overlay-in .2s var(--ui-ease) both;
 }
