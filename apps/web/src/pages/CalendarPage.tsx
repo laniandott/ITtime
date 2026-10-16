@@ -882,13 +882,8 @@ function DayView({ date, entries, activities, plans, dayMemos, externalEvents, n
         </div>
       )}
       {/* 外部 ICS 事件和次数打卡栏，避免占用时间轴 */}
-      {(dayPlans.length > 0 || dayActivities.length > 0 || topExternal.length > 0 || countEntries.length > 0) && (
+      {(dayActivities.length > 0 || topExternal.length > 0 || countEntries.length > 0) && (
         <div className="flex border-b border-gray-200 dark:border-gray-800 px-2 py-1 gap-1 flex-wrap">
-          {dayPlans.map((plan) => (
-            <div key={plan.id} className={`text-[10px] font-semibold rounded px-2 py-0.5 border border-dashed ${plan.executionStatus === 'done' ? 'opacity-60' : ''}`} style={{ color: plan.tag?.color ?? '#64748b', borderColor: plan.tag?.color ?? '#64748b', backgroundColor: `${plan.tag?.color ?? '#64748b'}10` }} title={plan.content}>
-              ▷ {String(Math.floor(plan.startMinute / 60)).padStart(2, '0')}:{String(plan.startMinute % 60).padStart(2, '0')} {plan.content}
-            </div>
-          ))}
           {dayActivities.map((todo) => (
             <div
               key={todo.id}
@@ -920,9 +915,9 @@ function DayView({ date, entries, activities, plans, dayMemos, externalEvents, n
         </div>
       )}
 
-      <div className="flex">
+      <div className="grid grid-cols-[3.5rem_minmax(0,1fr)_minmax(0,1fr)]">
         {/* 小时刻度 */}
-        <div className="flex-shrink-0 w-12 relative" style={{ height: 24 * HOUR_HEIGHT_DAY }}>
+        <div className="relative" style={{ height: 24 * HOUR_HEIGHT_DAY }}>
           {Array.from({ length: 24 }, (_, h) => (
             <div
               key={h}
@@ -933,8 +928,8 @@ function DayView({ date, entries, activities, plans, dayMemos, externalEvents, n
             </div>
           ))}
         </div>
-        {/* 时间线区域 */}
-        <div className="flex-1 relative" style={{ height: 24 * HOUR_HEIGHT_DAY }} onDoubleClick={handleTimelineDoubleClick}>
+        <div className="relative border-l border-gray-200 dark:border-gray-800" style={{ height: 24 * HOUR_HEIGHT_DAY }} onDoubleClick={handleTimelineDoubleClick}>
+          <div className="sticky top-0 z-30 border-b border-gray-200 bg-white/90 px-2 py-1 text-[10px] font-semibold text-gray-500 backdrop-blur dark:border-gray-800 dark:bg-gray-900/90">实际打卡</div>
           {/* 水平网格线 */}
           {Array.from({ length: 24 }, (_, h) => (
             <div key={h} className="border-t border-gray-100 dark:border-gray-800" style={{ height: HOUR_HEIGHT_DAY }} />
@@ -984,25 +979,23 @@ function DayView({ date, entries, activities, plans, dayMemos, externalEvents, n
               </button>
             )
           })}
+          {nowTop >= 0 && <div className="pointer-events-none absolute left-0 right-0 z-20" style={{ top: nowTop }}><div className="h-px bg-red-500" /></div>}
+        </div>
+        <div className="relative border-l border-gray-200 dark:border-gray-800" style={{ height: 24 * HOUR_HEIGHT_DAY }}>
+          <div className="sticky top-0 z-30 border-b border-gray-200 bg-white/90 px-2 py-1 text-[10px] font-semibold text-gray-500 backdrop-blur dark:border-gray-800 dark:bg-gray-900/90">计划</div>
+          {Array.from({ length: 24 }, (_, h) => (
+            <div key={`plan-grid-${h}`} className="pointer-events-none border-t border-gray-100 dark:border-gray-800" style={{ height: HOUR_HEIGHT_DAY }} />
+          ))}
           {dayPlans.map((plan) => {
             const top = ((1440 - plan.endMinute) / 60) * HOUR_HEIGHT_DAY
             const height = Math.max(((plan.endMinute - plan.startMinute) / 60) * HOUR_HEIGHT_DAY, 20)
             const color = plan.tag?.color ?? '#64748b'
             return (
-              <div key={plan.id} className={`absolute left-1 right-1 z-0 overflow-hidden rounded-md border border-dashed px-2 py-0.5 text-left ${plan.executionStatus === 'done' ? 'opacity-50' : ''}`} style={{ top, height, backgroundColor: `${color}0d`, borderColor: `${color}99` }} title={plan.content}>
-                <div className="truncate text-[10px] font-medium" style={{ color }}>▷ {plan.content}</div>
+              <div key={plan.id} className={`absolute left-1 right-1 z-10 overflow-hidden rounded-md border border-dashed px-2 py-1 text-left shadow-sm ${plan.executionStatus === 'done' ? 'opacity-50' : ''}`} style={{ top, height, minHeight: 24, backgroundColor: `${color}16`, borderColor: `${color}99` }} title={plan.content}>
+                <div className="truncate text-[10px] font-medium" style={{ color }}>{String(Math.floor(plan.startMinute / 60)).padStart(2, '0')}:{String(plan.startMinute % 60).padStart(2, '0')} · {plan.content}</div>
               </div>
             )
           })}
-          {/* 现在时间线 */}
-          {nowTop >= 0 && (
-            <div className="absolute left-0 right-0 z-20 pointer-events-none" style={{ top: nowTop }}>
-              <div className="flex items-center">
-                <div className="w-2 h-2 rounded-full bg-red-500 -ml-1" />
-                <div className="flex-1 h-px bg-red-500" />
-              </div>
-            </div>
-          )}
         </div>
       </div>
       {dayMemos.length > 0 && (
