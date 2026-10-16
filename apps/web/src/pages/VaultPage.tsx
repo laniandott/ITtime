@@ -483,7 +483,7 @@ export default function VaultPage() {
         </section>
       </div>
       {vaultSettingsOpen && <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/30 p-4" role="dialog" aria-modal="true" aria-labelledby="vault-settings-title">
-        <div className="w-full max-w-lg rounded-xl bg-white p-4 shadow-xl dark:bg-gray-900">
+        <div className="modal-panel w-full max-w-lg rounded-xl bg-white p-4 shadow-xl dark:bg-gray-900">
           <div className="mb-3 flex items-center justify-between">
             <h2 id="vault-settings-title" className="text-base font-semibold text-gray-800 dark:text-gray-100">设置笔记文件库</h2>
             <button type="button" onClick={() => setVaultSettingsOpen(false)} className="rounded px-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="关闭">×</button>

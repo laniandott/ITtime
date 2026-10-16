@@ -797,8 +797,8 @@ function PlanCreateModal({ date, plan, tags, todos, onClose, onSaved }: {
     }
   }
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <form onSubmit={submit} className="w-full max-w-lg space-y-4 rounded-xl bg-white p-5 shadow-xl dark:bg-gray-900" onClick={(event) => event.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onClick={onClose}>
+      <form onSubmit={submit} className="modal-panel w-full max-w-lg space-y-4 rounded-xl bg-white p-5 shadow-xl dark:bg-gray-900" onClick={(event) => event.stopPropagation()}>
         <div className="flex items-center justify-between"><div><h2 className="text-lg font-semibold">{plan ? '编辑计划' : '新建计划'}</h2><p className="mt-1 text-sm text-gray-500">{date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}</p></div><button type="button" onClick={onClose} className="grid h-8 w-8 place-items-center rounded hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="关闭">×</button></div>
         <label className="block text-sm font-medium">计划内容<textarea autoFocus required maxLength={2000} rows={4} value={content} onChange={(event) => setContent(event.target.value)} placeholder="写下这段时间具体要做什么" className="input mt-1 w-full resize-y" /></label>
         <div className="grid grid-cols-2 gap-3"><label className="text-sm">开始时间<input required type="time" value={start} onChange={(event) => setStart(event.target.value)} className="input mt-1 w-full" /></label><label className="text-sm">结束时间<input required type="time" value={end} onChange={(event) => setEnd(event.target.value)} className="input mt-1 w-full" /></label></div>
@@ -1394,7 +1394,7 @@ function EntryDetail({ entry, onClose, onChanged }: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-sm mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-panel bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-sm mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2.5 mb-5">
           <span className="w-4 h-4 rounded-full flex-shrink-0" style={{ background: color }} />
           <div className="min-w-0">
@@ -1550,7 +1550,7 @@ function QuickCreateModal({ defaultDate, defaultStartTime, defaultEndTime, onClo
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-md mx-4 shadow-xl space-y-4" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-panel bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-md mx-4 shadow-xl space-y-4" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-bold">⚡ 快速创建</h3>
           <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 transition-colors">✕</button>
@@ -1677,7 +1677,7 @@ function DayDetailPopupLegacy({ date, entries, activities, dayMemos, externalEve
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-sm mx-4 shadow-xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-panel bg-white dark:bg-gray-900 rounded-2xl w-full max-w-sm mx-4 shadow-xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="px-5 pt-5 pb-3 border-b border-gray-100 dark:border-gray-800">
           <div className="flex items-center justify-between">
             <div>

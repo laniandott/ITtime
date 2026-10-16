@@ -20,6 +20,18 @@ body {
   overscroll-behavior-y: none;
 }
 
+.app-main {
+  background:
+    radial-gradient(42rem 22rem at 85% -8rem, rgb(20 184 166 / .08), transparent 65%),
+    radial-gradient(36rem 20rem at -10% 8rem, rgb(56 189 248 / .06), transparent 60%);
+}
+
+.dark .app-main {
+  background:
+    radial-gradient(42rem 22rem at 85% -8rem, rgb(20 184 166 / .07), transparent 65%),
+    radial-gradient(36rem 20rem at -10% 8rem, rgb(56 189 248 / .05), transparent 60%);
+}
+
 .app-shell {
   background-image: linear-gradient(to bottom, rgb(248 250 252 / .72), transparent 22rem);
 }
@@ -61,6 +73,27 @@ body {
 
 @keyframes overlay-in { from { opacity: 0; } to { opacity: 1; } }
 
+.modal-panel {
+  animation: modal-in .25s var(--ui-ease) both;
+  box-shadow: 0 24px 64px rgb(15 23 42 / .18);
+}
+
+@keyframes modal-in {
+  from { opacity: 0; transform: translateY(14px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.dark .modal-panel {
+  box-shadow: 0 24px 64px rgb(0 0 0 / .45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-panel,
+  [class*='animate-'] {
+    animation: none !important;
+  }
+}
+
 * {
   -webkit-tap-highlight-color: transparent;
 }
@@ -94,12 +127,12 @@ button:disabled {
 }
 
 .habit-result-progress { width: 100%; height: 7px; accent-color: #0f766e; }
-.stats-overview { display: grid; gap: 8px; padding: 24px; border: 1px solid #d5e9e3; border-radius: 20px; background: linear-gradient(130deg, #ecfdf7, #f5faff 72%, #fff7ed); }
+.stats-overview { display: grid; gap: 8px; padding: 24px; border: 1px solid rgb(13 148 136 / .18); border-radius: 20px; background: linear-gradient(130deg, #ecfdfa, #f2faff 72%, #fff8f0); box-shadow: 0 10px 30px rgb(15 23 42 / .05); }
 .stats-overview span, .stats-overview small { color: #62756f; font-size: 12px; }
-.stats-overview strong { color: #0f766e; font-size: 30px; font-variant-numeric: tabular-nums; }
+.stats-overview strong { color: #0d9488; font-size: 30px; font-variant-numeric: tabular-nums; }
 .stats-track { height: 8px; background: #e8edeb; border-radius: 999px; overflow: hidden; }
 .stats-track > div { height: 100%; border-radius: 4px; }
-.timer-welcome { background: radial-gradient(circle at 90% 5%, #5eead455 0, transparent 31%), linear-gradient(120deg, #115e59, #0f766e 52%, #256d86); }
+.timer-welcome { background: radial-gradient(circle at 90% 5%, #5eead466 0, transparent 31%), linear-gradient(120deg, #134e4a, #0d9488 52%, #2c7fa3); }
 .timer-empty { background: linear-gradient(135deg, #f0fdfa 0%, #eff6ff 58%, #fff7ed 100%); }
 .dark .timer-empty { background: linear-gradient(135deg, #0b2524 0%, #111c2a 58%, #292016 100%); }
 .timer-tag { min-height: 46px; border-radius: 14px !important; box-shadow: 0 2px 5px #172d2810; }

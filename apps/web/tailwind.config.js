@@ -6,18 +6,27 @@ export default {
     extend: {
       colors: {
         brand: {
-          DEFAULT: '#0f766e',
-          50: '#effcf9',
-          100: '#d8f5ef',
-          200: '#b5e9df',
-          300: '#82d5c7',
-          400: '#4bb8a9',
-          500: '#0f766e',
-          600: '#0d6962',
-          700: '#0f5753',
-          800: '#104744',
-          900: '#103b39',
+          DEFAULT: '#0d9488',
+          50: '#f0fdfa',
+          100: '#ccfbf1',
+          200: '#99f6e4',
+          300: '#5eead4',
+          400: '#2dd4bf',
+          500: '#14b8a6',
+          600: '#0d9488',
+          700: '#0f766e',
+          800: '#115e59',
+          900: '#134e4a',
         },
+      },
+      keyframes: {
+        'page-in': {
+          '0%': { opacity: '0', transform: 'translateY(8px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+      },
+      animation: {
+        'page-in': 'page-in .3s cubic-bezier(.2,.8,.2,1) both',
       },
     },
   },

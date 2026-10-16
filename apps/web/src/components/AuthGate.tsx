@@ -79,7 +79,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
 
   return (
     <main className="grid min-h-screen place-items-center bg-gray-50 px-4 py-8 dark:bg-gray-950">
-      <form onSubmit={submit} className="w-full max-w-sm space-y-5 rounded-2xl border border-gray-200 bg-white p-6 shadow-xl shadow-gray-900/5 dark:border-gray-800 dark:bg-gray-900 dark:shadow-black/20">
+      <form onSubmit={submit} className="modal-panel w-full max-w-sm space-y-5 rounded-2xl border border-gray-200 bg-white p-6 shadow-xl shadow-gray-900/5 dark:border-gray-800 dark:bg-gray-900 dark:shadow-black/20">
         <div className="flex items-start gap-3"><img src="/favicon.png" alt="" className="h-10 w-10 rounded-xl shadow-sm" /><div><h1 className="text-xl font-semibold tracking-tight">{mode === 'setup' ? '设置 ITtime 登录' : '登录 ITtime'}</h1><p className="mt-1 text-sm text-gray-500">{mode === 'setup' ? '创建本机账户以保护数据' : '登录后继续使用你的工作区'}</p></div></div>
         <label className="block text-sm text-gray-600 dark:text-gray-300">用户名<input autoComplete="username" required minLength={2} maxLength={40} value={username} onChange={(event) => setUsername(event.target.value)} className="input mt-1 w-full" /></label>
         <label className="block text-sm text-gray-600 dark:text-gray-300">密码<input autoComplete={mode === 'setup' ? 'new-password' : 'current-password'} type="password" required minLength={mode === 'setup' ? 8 : 1} maxLength={200} value={password} onChange={(event) => setPassword(event.target.value)} className="input mt-1 w-full" /></label>
