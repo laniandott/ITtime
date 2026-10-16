@@ -1,4 +1,5 @@
 import { getServerHost } from './api'
+import { getAuthHeaders } from './auth'
 import { prepareLocalDatabase } from './localData'
 
 type ExportEntity = 'categories' | 'tags' | 'timeEntries' | 'todos' | 'goals' | 'memos'
@@ -18,7 +19,7 @@ export async function importLegacyServerData() {
   const timeout = setTimeout(() => controller.abort(), 60_000)
   let payload: ExportPayload
   try {
-    const response = await fetch(`${getServerHost()}/api/migration/export`, { signal: controller.signal })
+    const response = await fetch(`${getServerHost()}/api/migration/export`, { signal: controller.signal, headers: getAuthHeaders() })
     if (!response.ok) {
       const body = await response.json().catch(() => ({}))
       throw new Error(body.error ?? `服务器导出失败 (${response.status})`)

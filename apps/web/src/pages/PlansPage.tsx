@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { CalendarClock, ChevronLeft, ChevronRight, GripVertical, Plus, Trash2, X } from 'lucide-react'
+import { CalendarClock, ChevronLeft, ChevronRight, Plus, Trash2, X } from 'lucide-react'
 import { api } from '../api'
 import { DateTimeSecondPicker } from '../components/DateTimeSecondPicker'
 import { formatDuration, toIsoSafe, useStore } from '../store'
-import type { PlanBlock, Tag, TimeEntry, Todo } from '../types'
+import type { Category, PlanBlock, Tag, TimeEntry, Todo } from '../types'
 
 const HOUR_HEIGHT = 60
 const DAY_MINUTES = 1440
@@ -32,7 +32,7 @@ function shiftDate(value: string, days: number) {
 }
 
 export default function PlansPage() {
-  const { tags } = useStore()
+  const { tags, categories } = useStore()
   const [selectedDate, setSelectedDate] = useState(() => dateKey(new Date()))
   const [plans, setPlans] = useState<PlanBlock[]>([])
   const [entries, setEntries] = useState<TimeEntry[]>([])
@@ -56,7 +56,7 @@ export default function PlansPage() {
     dayEnd.setDate(dayEnd.getDate() + 1)
     const [planResult, todoResult, entryResult] = await Promise.allSettled([
       api.plans.list({ date: selectedDate }),
-      api.todos.list({ status: 'pending' }),
+      api.todos.list(),
       api.timer.list({ from: dayStart.toISOString(), to: dayEnd.toISOString() }),
     ])
     if (sequence !== loadSequence.current) return
@@ -122,14 +122,7 @@ export default function PlansPage() {
     openNew(Math.min(Math.floor(next / 5) * 5, 23 * 60))
   }
 
-  const movePlan = async (plan: PlanBlock, startMinute: number) => {
-    try {
-      await api.plans.update(plan.id, { startMinute, endMinute: startMinute + plan.endMinute - plan.startMinute })
-      await load()
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : '移动计划失败')
-    }
-  }
+  const planLayouts = useMemo(() => layoutPlans(sortedPlans), [sortedPlans])
 
   return (
     <div className="plan-page space-y-4">
@@ -167,7 +160,7 @@ export default function PlansPage() {
             <div className="relative min-w-0 border-r border-gray-200 dark:border-gray-800" onClick={addFromTimeline}>
               <TimelineGrid />
               {selectedDate === today && <CurrentTimeLine now={now} />}
-              {sortedPlans.map((plan) => <PlanTimelineBlock key={plan.id} plan={plan} onClick={() => { setDraftStart(plan.startMinute); setEditing(plan) }} onMove={movePlan} />)}
+              {sortedPlans.map((plan) => <PlanTimelineBlock key={plan.id} plan={plan} layout={planLayouts.get(plan.id)!} onClick={() => { setDraftStart(plan.startMinute); setEditing(plan) }} />)}
               {loading && <div className="absolute inset-x-1 top-4 rounded bg-white/90 py-2 text-center text-[10px] text-gray-500 dark:bg-gray-900/90 sm:inset-x-4 sm:text-xs">正在加载…</div>}
               {!loading && sortedPlans.length === 0 && <div className="pointer-events-none absolute inset-x-1 top-4 text-center text-[10px] text-gray-400 sm:inset-x-4 sm:text-xs">双击空白处写计划</div>}
             </div>
@@ -183,7 +176,7 @@ export default function PlansPage() {
         <div className="flex flex-wrap items-center justify-between gap-1 border-t border-gray-200 px-3 py-2 text-[11px] text-gray-500 dark:border-gray-800"><span>计划列空白处新建计划 · 实际列空白处补录时长</span><span>两列共用分钟刻度</span></div>
       </section>
 
-      {editing !== undefined && <PlanNoteEditor date={selectedDate} plan={editing ?? undefined} startMinute={draftStart} tags={tags} todos={todos} onClose={() => setEditing(undefined)} onSaved={async () => { setEditing(undefined); await load() }} />}
+      {editing !== undefined && <PlanNoteEditor date={selectedDate} plan={editing ?? undefined} startMinute={draftStart} tags={tags} categories={categories} todos={todos} onClose={() => setEditing(undefined)} onSaved={async () => { setEditing(undefined); await load() }} />}
       {selectedEntry && <ActualEntryDialog entry={selectedEntry} tags={tags} todos={todos} onClose={() => setSelectedEntry(null)} onSaved={async () => { setSelectedEntry(null); await load() }} />}
       {recordStart && <ActualRecordEditor startTime={recordStart} tags={tags} todos={todos} onClose={() => setRecordStart(null)} onSaved={async () => { setRecordStart(null); await load() }} />}
     </div>
@@ -394,45 +387,42 @@ function toLocalInputWithSeconds(value: string) {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
 }
 
-function PlanTimelineBlock({ plan, onClick, onMove }: { plan: PlanBlock; onClick: () => void; onMove: (plan: PlanBlock, startMinute: number) => Promise<void> }) {
-  const pointerStart = useRef<{ y: number; startMinute: number } | null>(null)
-  const suppressClick = useRef(false)
-  const [previewStart, setPreviewStart] = useState<number | null>(null)
+interface PlanLayout { lane: number; lanes: number }
+
+function layoutPlans(plans: PlanBlock[]): Map<string, PlanLayout> {
+  const sorted = [...plans].sort((a, b) => a.startMinute - b.startMinute || a.endMinute - b.endMinute)
+  const lanes: PlanBlock[][] = []
+  const result = new Map<string, PlanLayout>()
+  for (const plan of sorted) {
+    let lane = lanes.findIndex(items => items.every(item => item.endMinute <= plan.startMinute || item.startMinute >= plan.endMinute))
+    if (lane < 0) lane = lanes.length
+    if (!lanes[lane]) lanes[lane] = []
+    lanes[lane].push(plan)
+    result.set(plan.id, { lane, lanes: 1 })
+  }
+  for (const plan of sorted) {
+    const overlapping = sorted.filter(other => other.startMinute < plan.endMinute && plan.startMinute < other.endMinute)
+    const clusterLanes = Math.max(1, ...overlapping.map(item => result.get(item.id)?.lane ?? 0)) + 1
+    result.set(plan.id, { lane: result.get(plan.id)!.lane, lanes: clusterLanes })
+  }
+  return result
+}
+
+function PlanTimelineBlock({ plan, layout, onClick }: { plan: PlanBlock; layout: PlanLayout; onClick: () => void }) {
   const color = plan.tag?.color ?? '#0f766e'
-  const top = previewStart ?? plan.startMinute
+  const top = plan.startMinute
   const height = plan.endMinute - plan.startMinute
   const showStatus = height >= 24
   const showCoverage = height >= 42
   const coverage = Math.max(0, Math.min(1, plan.coverageRate ?? 0))
   const status = planStatusText(plan)
   return (
-    <button type="button" data-plan-block onPointerDown={(event) => {
-      if (event.button !== 0) return
-      pointerStart.current = { y: event.clientY, startMinute: plan.startMinute }
-      event.currentTarget.setPointerCapture(event.pointerId)
-    }} onPointerMove={(event) => {
-      if (!pointerStart.current || !event.currentTarget.hasPointerCapture(event.pointerId)) return
-      const duration = plan.endMinute - plan.startMinute
-      const delta = Math.round(((event.clientY - pointerStart.current.y) / HOUR_HEIGHT * 60) / 5) * 5
-      const nextStart = Math.max(0, Math.min(DAY_MINUTES - duration, pointerStart.current.startMinute + delta))
-      setPreviewStart(nextStart)
-    }} onPointerUp={(event) => {
-      if (!pointerStart.current) return
-      const start = pointerStart.current.startMinute
-      const nextStart = previewStart ?? start
-      pointerStart.current = null
-      setPreviewStart(null)
-      if (nextStart !== start) {
-        suppressClick.current = true
-        void onMove(plan, nextStart)
-      }
-    }} onPointerCancel={() => { pointerStart.current = null; setPreviewStart(null) }} onClick={(event) => { event.stopPropagation(); if (suppressClick.current) { suppressClick.current = false; return } onClick() }} title={`${minuteText(top)}-${minuteText(top + height)} ${plan.content} · ${formatDuration(plan.actualMs ?? 0)} 实际 / ${Math.round(coverage * 100)}% 覆盖 · ${status}${plan.overlaps ? ' · 与其他计划时间重叠' : ''}`} aria-label={`${minuteText(top)} 到 ${minuteText(top + height)}，${plan.content}${plan.overlaps ? '，与其他计划时间重叠' : ''}，可拖动调整时间`} className={`absolute z-[2] touch-none select-none overflow-hidden rounded-r border-l-[3px] px-1.5 py-1 text-left transition-shadow hover:z-10 hover:shadow-md active:cursor-grabbing sm:px-2 ${plan.disposition === 'skipped' ? 'opacity-55' : ''}`} style={{ top, height: Math.max(height, 12), left: 6, right: 6, borderColor: plan.overlaps ? '#dc2626' : color, backgroundColor: plan.overlaps ? '#dc262614' : `${color}16`, color }}>
+    <button type="button" data-plan-block onClick={(event) => { event.stopPropagation(); onClick() }} title={`${minuteText(top)}-${minuteText(top + height)} ${plan.content} · ${formatDuration(plan.actualMs ?? 0)} 实际 / ${Math.round(coverage * 100)}% 覆盖 · ${status}${plan.overlaps ? ' · 并行安排' : ''}`} aria-label={`${minuteText(top)} 到 ${minuteText(top + height)}，${plan.content}${plan.overlaps ? '，并行安排' : ''}`} className={`absolute z-[2] overflow-hidden rounded-r border-l-[3px] px-1.5 py-1 text-left transition-shadow hover:z-10 hover:shadow-md sm:px-2 ${plan.disposition === 'skipped' ? 'opacity-55' : ''}`} style={{ top, height: Math.max(height, 12), left: `calc(6px + (100% - 12px) * ${layout.lane} / ${layout.lanes})`, width: `calc((100% - 12px) / ${layout.lanes})`, borderColor: color, backgroundColor: `${color}16`, color }}>
       <div className="flex h-full min-w-0 flex-col gap-0.5">
         <div className="flex min-w-0 items-center gap-1.5">
           <span className="shrink-0 text-[9px] font-semibold tabular-nums sm:text-[10px]">{minuteText(top)}{height >= 30 && `–${minuteText(top + height)}`}</span>
           {showStatus && <span className={`truncate text-[9px] font-medium sm:text-[10px] ${plan.executionStatus === 'done' || plan.confirmed ? 'text-green-700 dark:text-green-400' : plan.executionStatus === 'missed' ? 'text-red-700 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>{status}</span>}
-            {plan.overlaps && <span className="ml-auto shrink-0 text-[9px] font-semibold text-red-700 dark:text-red-400">冲突</span>}
-          {height >= 30 && <GripVertical size={12} className="ml-auto shrink-0 text-gray-400" aria-hidden="true" />}
+          {plan.overlaps && <span className="ml-auto shrink-0 text-[9px] font-semibold text-red-700 dark:text-red-400">并行</span>}
         </div>
         <span className="min-h-0 min-w-0 flex-1 whitespace-pre-wrap break-words text-[10px] leading-3 sm:text-xs sm:leading-4">{plan.content}</span>
         {showCoverage && <div className="mt-auto flex items-center gap-1.5">
@@ -447,6 +437,7 @@ function PlanTimelineBlock({ plan, onClick, onMove }: { plan: PlanBlock; onClick
 function planStatusText(plan: PlanBlock) {
   if (plan.disposition === 'skipped') return '已跳过'
   if (plan.disposition === 'deferred') return '已推迟'
+  if (plan.todo?.status === 'done') return 'Todo 已完成'
   if (plan.confirmed) return '手动确认'
   switch (plan.executionStatus) {
     case 'active': return '进行中'
@@ -458,11 +449,12 @@ function planStatusText(plan: PlanBlock) {
   }
 }
 
-function PlanNoteEditor({ date, plan, startMinute, tags, todos, onClose, onSaved }: {
+function PlanNoteEditor({ date, plan, startMinute, tags, categories, todos, onClose, onSaved }: {
   date: string
   plan?: PlanBlock
   startMinute: number
   tags: Tag[]
+  categories: Category[]
   todos: Todo[]
   onClose: () => void
   onSaved: () => Promise<void>
@@ -552,7 +544,7 @@ function PlanNoteEditor({ date, plan, startMinute, tags, todos, onClose, onSaved
         <div className="flex items-start justify-between"><div><h2 className="text-lg font-semibold">{plan ? '编辑计划笔记' : '写入计划笔记'}</h2><p className="mt-1 text-xs text-gray-500">{date} · 按分钟设置时间</p></div><button type="button" onClick={onClose} aria-label="关闭" className="grid h-8 w-8 place-items-center rounded hover:bg-gray-100 dark:hover:bg-gray-800"><X size={18} /></button></div>
         <textarea autoFocus required maxLength={2000} rows={5} value={content} onChange={(event) => setContent(event.target.value)} placeholder="具体要做什么？" className="input min-h-28 w-full resize-y" />
         <div className="grid grid-cols-2 gap-3"><label className="text-xs text-gray-500">开始<input required type="text" inputMode="numeric" placeholder="09:00" pattern="(?:[01][0-9]|2[0-3]):[0-5][0-9]" value={start} onChange={(event) => setStart(event.target.value)} className="input mt-1 w-full tabular-nums" /></label><label className="text-xs text-gray-500">结束<input required type="text" inputMode="numeric" placeholder="10:00 或 24:00" pattern="(?:(?:[01][0-9]|2[0-3]):[0-5][0-9]|24:00)" value={end} onChange={(event) => setEnd(event.target.value)} className="input mt-1 w-full tabular-nums" /></label></div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><label className="text-xs text-gray-500">Tag（可选）<select value={tagId} onChange={(event) => setTagId(event.target.value)} className="input mt-1 w-full"><option value="">不挂 Tag</option>{tags.map((tag) => <option key={tag.id} value={tag.id}>{tag.name}</option>)}</select></label><label className="text-xs text-gray-500">Todo（可选）<select value={todoId} onChange={(event) => setTodoId(event.target.value)} className="input mt-1 w-full"><option value="">不关联 Todo</option>{todos.map((todo) => <option key={todo.id} value={todo.id}>{todo.title}</option>)}</select></label></div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><label className="text-xs text-gray-500">Tag（可选）<select value={tagId} onChange={(event) => setTagId(event.target.value)} className="input mt-1 w-full"><option value="">不挂 Tag</option>{categories.map((category) => { const categoryTags = tags.filter((tag) => tag.categoryId === category.id); return categoryTags.length ? <optgroup key={category.id} label={category.name}>{categoryTags.map((tag) => <option key={tag.id} value={tag.id}>{tag.name}</option>)}</optgroup> : null })}<optgroup label="未分类">{tags.filter((tag) => !tag.categoryId).map((tag) => <option key={tag.id} value={tag.id}>{tag.name}</option>)}</optgroup></select></label><label className="text-xs text-gray-500">Todo（可选）<select value={todoId} onChange={(event) => setTodoId(event.target.value)} className="input mt-1 w-full"><option value="">不关联 Todo</option>{todos.map((todo) => <option key={todo.id} value={todo.id}>{todo.title}{todo.status === 'done' ? ' · 已完成' : ''}</option>)}</select>{todoId && todos.find((todo) => todo.id === todoId)?.status === 'done' && <span className="mt-1 block text-xs text-green-700 dark:text-green-400">关联 Todo 已完成</span>}</label></div>
         {plan && <div className="space-y-3 border-t border-gray-100 pt-3 dark:border-gray-800">
           <div className="flex flex-wrap items-center gap-2"><button type="button" disabled={saving} onClick={() => void setDisposition(plan.disposition === 'skipped' ? 'unskip' : 'skip')} className="btn-secondary px-2.5 py-1.5 text-xs">{plan.disposition === 'skipped' ? '恢复计划' : '跳过'}</button><button type="button" disabled={saving} onClick={() => void setDisposition(plan.confirmed ? 'unconfirm' : 'confirm')} className="btn-secondary px-2.5 py-1.5 text-xs">{plan.confirmed ? '撤销确认' : '手动确认完成'}</button>{plan.disposition !== 'deferred' && <button type="button" disabled={saving} onClick={() => setShowDefer((value) => !value)} className="btn-secondary px-2.5 py-1.5 text-xs">{showDefer ? '取消推迟' : '推迟到…'}</button>}<span className="mr-auto text-xs text-gray-500">实际覆盖 {Math.round((plan.coverageRate ?? 0) * 100)}%</span>{choosingStartTag ? <select autoFocus aria-label="选择时长型 Tag 开始计时" disabled={saving} value="" onChange={(event) => { const selected = event.target.value; if (selected) { setTagId(selected); setChoosingStartTag(false); void startPlannedTimer(selected) } }} className="input !w-auto !py-1.5 text-xs"><option value="" disabled>选择时长型 Tag</option>{tags.filter((tag) => tag.trackType === 'time' && !tag.parentId).map((tag) => <option key={tag.id} value={tag.id}>{tag.name}</option>)}</select> : <button type="button" disabled={saving || (tagId ? tags.find((tag) => tag.id === tagId)?.trackType !== 'time' : !tags.some((tag) => tag.trackType === 'time' && !tag.parentId))} onClick={() => tagId && tags.find((tag) => tag.id === tagId)?.trackType === 'time' ? void startPlannedTimer() : setChoosingStartTag(true)} className="btn-primary px-3 py-1.5 text-xs">开始计时</button>}</div>
           {showDefer && <div className="grid grid-cols-1 gap-2 rounded-md bg-gray-50 p-3 dark:bg-gray-800/60 sm:grid-cols-[1.2fr_1fr_1fr_auto] sm:items-end"><label className="text-xs text-gray-500">新日期<input required type="date" value={deferDate} onChange={(event) => setDeferDate(event.target.value)} className="input mt-1 w-full" /></label><label className="text-xs text-gray-500">开始<input required type="text" inputMode="numeric" pattern="(?:[01][0-9]|2[0-3]):[0-5][0-9]" value={deferStart} onChange={(event) => setDeferStart(event.target.value)} className="input mt-1 w-full tabular-nums" /></label><label className="text-xs text-gray-500">结束<input required type="text" inputMode="numeric" pattern="(?:(?:[01][0-9]|2[0-3]):[0-5][0-9]|24:00)" value={deferEnd} onChange={(event) => setDeferEnd(event.target.value)} className="input mt-1 w-full tabular-nums" /></label><button type="button" disabled={saving} onClick={() => void defer()} className="btn-primary px-3 py-2 text-xs">{saving ? '处理中…' : '确认推迟'}</button></div>}

@@ -1,6 +1,6 @@
 import React, { lazy, Suspense, useEffect } from 'react'
 import { Navigate, Routes, Route } from 'react-router-dom'
-import Layout from './components/Layout'
+import AuthGate from './components/AuthGate'
 import { useStore } from './store'
 import { syncNativeStatusBarTheme } from './nativeStatusBar'
 import { autoStartConfiguredSync } from './couchSync'
@@ -92,7 +92,7 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <Layout>
+      <AuthGate>
         <Suspense fallback={<PageFallback />}>
           <Routes>
             <Route path="/" element={<TimerPage />} />
@@ -107,7 +107,7 @@ export default function App() {
             <Route path="/notes/*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
-      </Layout>
+      </AuthGate>
     </ErrorBoundary>
   )
 }

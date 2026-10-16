@@ -170,10 +170,6 @@ function validatePlanInput(value: Record<string, any>, existing?: Record<string,
   if (!Number.isInteger(endMinute) || endMinute <= startMinute || endMinute > 1440) throw new Error('计划结束分钟无效')
 }
 
-function planOverlaps(candidate: Record<string, any>, plans: Record<string, any>[]) {
-  return plans.some(plan => plan.id !== candidate.id && plan.date === candidate.date && plan.startMinute < candidate.endMinute && candidate.startMinute < plan.endMinute)
-}
-
 export async function localRequest<T>(path: string, options?: RequestInit): Promise<T> {
   await readyDatabase()
   const url = new URL(path, 'http://local'); const [entity, key, action] = url.pathname.split('/').slice(1)
@@ -295,14 +291,12 @@ export async function localRequest<T>(path: string, options?: RequestInit): Prom
         const stableId = `deferred-${source.id}-${candidate.date}-${candidate.startMinute}-${candidate.endMinute}`
         try { return joined('plans', await get('plans', stableId)) } catch (error) { if ((error as { status?: number }).status !== 404) throw error }
         if (plans.some(plan => plan.deferredFromId === source.id)) throw new Error('这项计划已经推迟过；可推迟后继计划继续调整')
-        if (planOverlaps(candidate, plans)) throw new Error('推迟后的计划时间与已有计划重叠')
         const value = { ...defaults.plans, ...candidate, id: stableId, createdAt: now, updatedAt: now }
         await write('plans', value)
         return joined('plans', value)
       }
       if (method === 'POST' && !key) {
         validatePlanInput(body)
-        if (planOverlaps(body, plans)) throw new Error('计划时间与已有计划重叠')
       }
     }
     if (method === 'GET' && !key) {
@@ -341,7 +335,6 @@ export async function localRequest<T>(path: string, options?: RequestInit): Prom
     if (entity === 'plans' && method === 'PUT') {
       validatePlanInput({ ...existing, ...body }, existing)
       const value = { ...existing, ...body, id: existing.id, updatedAt: now }
-      if (planOverlaps(value, await list('plans'))) throw new Error('计划时间与已有计划重叠')
       await write(entity, value)
       return joined(entity, value)
     }

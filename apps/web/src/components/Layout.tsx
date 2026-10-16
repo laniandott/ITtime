@@ -11,7 +11,7 @@ const navItems = [
   { to: '/settings', label: '设置', icon: Settings },
 ] as const
 
-export default function Layout({ children }: { children: React.ReactNode }) {
+export default function Layout({ children, username, onLogout }: { children: React.ReactNode; username?: string; onLogout?: () => void }) {
   return (
     <div className="min-h-screen flex flex-col pb-24">
       <header className="sticky top-0 z-10 border-b border-gray-200/80 bg-white/90 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-950/90">
@@ -20,9 +20,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <img src="/favicon.png" alt="" className="h-8 w-8 rounded-lg shadow-sm" />
             <span>ITtime</span>
           </div>
-          <span className="flex items-center gap-1.5 rounded-full bg-teal-50 px-3 py-1 text-xs font-medium text-teal-700 dark:bg-teal-950/60 dark:text-teal-300">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />离线优先
-          </span>
+          <div className="flex items-center gap-2">
+            {onLogout && <button type="button" onClick={onLogout} className="text-xs text-gray-500 hover:text-gray-900 dark:hover:text-white" title={username ? `当前账户：${username}` : '退出登录'}>退出登录</button>}
+            <span className="flex items-center gap-1.5 rounded-full bg-teal-50 px-3 py-1 text-xs font-medium text-teal-700 dark:bg-teal-950/60 dark:text-teal-300"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />离线优先</span>
+          </div>
         </div>
       </header>
 

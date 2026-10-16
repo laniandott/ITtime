@@ -5,6 +5,8 @@ import { getSyncStatus, SYNC_SETTINGS_KEY, subscribeSyncStatus, testConnection, 
 import { importLegacyServerData } from '../legacyMigration'
 import { applyFontSizePreference, FONT_SIZE_KEY, readFontSizePreference, type FontSizePreference } from '../fontSettings'
 import GalleryPanel from '../components/GalleryPanel'
+import { getServerHost } from '../api'
+import { getAuthHeaders } from '../auth'
 
 function load(): SyncConfig { try { return { couchUrl: '', couchDatabase: 'ittime', couchUsername: '', couchPassword: '', ...JSON.parse(localStorage.getItem(SYNC_SETTINGS_KEY) ?? '{}') } } catch { return { couchUrl: '', couchDatabase: 'ittime', couchUsername: '', couchPassword: '' } } }
 export default function SettingsPage() {
@@ -37,8 +39,9 @@ export default function SettingsPage() {
   const migrate = async () => { setBusy(true); setMigrationMessage('正在读取旧服务器数据…'); try { const result = await importLegacyServerData(); setMigrationMessage(`导入完成：新增 ${result.imported} 条，跳过 ${result.skipped} 条（共 ${result.total} 条）`) } catch (error) { setMigrationMessage(error instanceof Error ? error.message : String(error)) } finally { setBusy(false) } }
   return <div className="space-y-6">
     <h1 className="text-2xl font-semibold">设置</h1>
-    <nav className="flex gap-2 border-b border-gray-200 dark:border-gray-800 pb-3">{[['tags', '打卡标签'], ['sync', 'CouchDB 同步'], ['migration', '数据迁移'], ['general', '常规']].map(([id, name]) => <button key={id} onClick={() => setPage(id)} className={`px-3 py-2 text-sm rounded-lg ${page === id ? 'bg-brand/10 text-brand' : 'text-gray-500'}`}>{name}</button>)}</nav>
+    <nav className="flex gap-2 border-b border-gray-200 dark:border-gray-800 pb-3">{[['tags', '打卡标签'], ['account', '账户'], ['sync', 'CouchDB 同步'], ['migration', '数据迁移'], ['general', '常规']].map(([id, name]) => <button key={id} onClick={() => setPage(id)} className={`px-3 py-2 text-sm rounded-lg ${page === id ? 'bg-brand/10 text-brand' : 'text-gray-500'}`}>{name}</button>)}</nav>
     {page === 'tags' && <TagsPage />}
+    {page === 'account' && <AccountSettings />}
     {page === 'migration' && <section className="max-w-2xl space-y-4">
       <h2 className="font-semibold">从服务器导入旧数据</h2>
       <p className="text-sm text-gray-600 dark:text-gray-300">将服务器 SQLite 中的分类、标签、计时记录、待办、目标和随手记导入此浏览器的 PouchDB。原记录 ID 会保留，已有记录不会被覆盖，因此可重复运行。</p>
@@ -82,4 +85,63 @@ export default function SettingsPage() {
       <p className="text-xs text-gray-500">密码保存在当前浏览器。CouchDB 数据库须预先建立，跨域连接须配置 CORS；生产环境使用 HTTPS。</p>
     </form>}
   </div>
+}
+
+function AccountSettings() {
+  const [username, setUsername] = useState('')
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState('')
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let active = true
+    void fetch(`${getServerHost()}/api/auth/session`, { headers: getAuthHeaders() })
+      .then(async response => {
+        const data = await response.json().catch(() => ({}))
+        if (!response.ok) throw new Error(data.error || '无法读取账户')
+        if (active) setUsername(data.username || '')
+      })
+      .catch(reason => { if (active) setError(reason instanceof Error ? reason.message : '无法读取账户') })
+    return () => { active = false }
+  }, [])
+
+  const save = async (event: React.FormEvent) => {
+    event.preventDefault()
+    setBusy(true); setError(''); setMessage('')
+    if (newPassword && newPassword !== confirmPassword) {
+      setBusy(false); setError('两次输入的新密码不一致'); return
+    }
+    try {
+      const response = await fetch(`${getServerHost()}/api/auth/account`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+        body: JSON.stringify({ currentPassword, username, newPassword }),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data.error || '保存账户失败')
+      setUsername(data.username)
+      setCurrentPassword(''); setNewPassword(''); setConfirmPassword('')
+      window.dispatchEvent(new CustomEvent('ittime-account-updated', { detail: data.username }))
+      setMessage('账户信息已更新')
+    } catch (reason) { setError(reason instanceof Error ? reason.message : '保存账户失败') }
+    finally { setBusy(false) }
+  }
+
+  return <section className="max-w-xl space-y-4 border-b border-gray-200 pb-6 dark:border-gray-800">
+    <div><h2 className="font-semibold">账户与密码</h2><p className="mt-1 text-xs text-gray-500">修改用户名或密码需要验证当前密码；新密码留空则保持不变。</p></div>
+    <form onSubmit={save} className="space-y-3">
+      <label className="block text-sm">用户名<input required minLength={2} maxLength={40} autoComplete="username" value={username} onChange={event => setUsername(event.target.value)} className="input mt-1 w-full" /></label>
+      <label className="block text-sm">当前密码<input required type="password" autoComplete="current-password" value={currentPassword} onChange={event => setCurrentPassword(event.target.value)} className="input mt-1 w-full" /></label>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="block text-sm">新密码<input type="password" minLength={8} maxLength={200} autoComplete="new-password" value={newPassword} onChange={event => setNewPassword(event.target.value)} className="input mt-1 w-full" /></label>
+        <label className="block text-sm">确认新密码<input type="password" minLength={8} maxLength={200} autoComplete="new-password" value={confirmPassword} onChange={event => setConfirmPassword(event.target.value)} className="input mt-1 w-full" /></label>
+      </div>
+      {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+      {message && <p role="status" className="text-sm text-green-700 dark:text-green-400">{message}</p>}
+      <button type="submit" disabled={busy || !username} className="btn-primary px-4 py-2 text-sm">{busy ? '保存中…' : '保存账户信息'}</button>
+    </form>
+  </section>
 }

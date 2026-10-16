@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "test": "node --import tsx --test test/activity-rules.test.ts test/helpers.test.ts test/links.test.ts test/server.test.ts test/http.test.ts test/routes.test.ts test/watcher.test.ts",
+    "test": "node --import tsx --test test/activity-rules.test.ts test/auth.test.ts test/helpers.test.ts test/links.test.ts test/server.test.ts test/http.test.ts test/routes.test.ts test/watcher.test.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "recovery:drill": "node scripts/recovery-drill.mjs",

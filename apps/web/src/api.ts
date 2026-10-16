@@ -21,6 +21,7 @@ import type {
   LinkedNoteEntry,
   PlanBlock,
 } from './types'
+import { getAuthHeaders, getAuthToken } from './auth'
 
 export function getServerHost(): string {
   if (typeof localStorage !== 'undefined') {
@@ -76,10 +77,19 @@ export function normalizeServerHost(value: unknown): string {
 
 export function resolveUploadUrl(path?: string | null): string {
   if (!path) return ''
+  const token = getAuthToken()
+  const withToken = (value: string) => {
+    if (!token) return value
+    try {
+      const url = new URL(value, typeof window === 'undefined' ? 'http://localhost' : window.location.origin)
+      url.searchParams.set('access_token', token)
+      return /^[a-z][a-z\d+.-]*:/i.test(value) ? url.toString() : `${url.pathname}${url.search}${url.hash}`
+    } catch { return value }
+  }
   if (path.startsWith('http://') || path.startsWith('https://')) {
     try {
       const parsed = new URL(path)
-      return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? parsed.toString() : ''
+      return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? withToken(parsed.toString()) : ''
     } catch {
       return ''
     }
@@ -90,7 +100,7 @@ export function resolveUploadUrl(path?: string | null): string {
   if (path.startsWith('//') || /^[a-z][a-z\d+.-]*:/i.test(path)) return ''
   const host = getServerHost()
   const cleanPath = path.startsWith('/') ? path : `/${path}`
-  return `${host}${cleanPath}`
+  return withToken(`${host}${cleanPath}`)
 }
 
 export function setServerHost(url: string): boolean {
@@ -149,6 +159,7 @@ async function requestOnce<T>(path: string, opts?: RequestOptions): Promise<T> {
   const host = getServerHost()
   const { timeout = configuredTimeout(), retryDelayMs: _retryDelayMs, ...fetchOptions } = opts ?? {}
   const headers = new Headers(fetchOptions.headers)
+  new Headers(getAuthHeaders()).forEach((value, key) => { if (!headers.has(key)) headers.set(key, value) })
   if (typeof fetchOptions.body === 'string' && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
   }
@@ -171,6 +182,7 @@ async function requestOnce<T>(path: string, opts?: RequestOptions): Promise<T> {
     })
     if (!res.ok) {
       const err = await res.json().catch(() => ({ error: res.statusText }))
+      if (res.status === 401 && !path.startsWith('/auth/') && typeof window !== 'undefined') window.dispatchEvent(new Event('ittime-auth-expired'))
       throw new ApiError(err.error ?? '请求失败', res.status, err)
     }
     const text = await res.text()
@@ -376,11 +388,12 @@ export const api = {
       const form = new FormData()
       form.append('file', file, file.name || 'upload.bin')
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 60_000)
+      const timeoutId = setTimeout(() => controller.abort(), Math.max(10 * 60_000, Math.ceil(file.size / (1024 * 1024) * 2_000)))
       const request = (url: string) => fetch(url, {
         method: 'POST',
         body: form,
         signal: controller.signal,
+        headers: getAuthHeaders(),
       })
       let res: Response
       try {
@@ -397,6 +410,7 @@ export const api = {
       }
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: `${res.status} ${res.statusText}` }))
+        if (res.status === 401 && typeof window !== 'undefined') window.dispatchEvent(new Event('ittime-auth-expired'))
         throw new Error(err.error ?? `上传文件失败 (${res.status})`)
       }
       return res.json() as Promise<{ filename: string; path: string; mimeType: string; size: number }>
