@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CalendarClock, ChevronLeft, ChevronRight, Plus, Trash2, X } from 'lucide-react'
 import { api } from '../api'
 import { DateTimeSecondPicker } from '../components/DateTimeSecondPicker'
+import { layoutPlans, type PlanLayout } from '../planLayout'
 import { formatDuration, toIsoSafe, useStore } from '../store'
 import type { Category, PlanBlock, Tag, TimeEntry, Todo } from '../types'
 
@@ -385,27 +386,6 @@ function toLocalInputWithSeconds(value: string) {
   const date = new Date(value)
   const pad = (number: number) => String(number).padStart(2, '0')
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
-}
-
-interface PlanLayout { lane: number; lanes: number }
-
-function layoutPlans(plans: PlanBlock[]): Map<string, PlanLayout> {
-  const sorted = [...plans].sort((a, b) => a.startMinute - b.startMinute || a.endMinute - b.endMinute)
-  const lanes: PlanBlock[][] = []
-  const result = new Map<string, PlanLayout>()
-  for (const plan of sorted) {
-    let lane = lanes.findIndex(items => items.every(item => item.endMinute <= plan.startMinute || item.startMinute >= plan.endMinute))
-    if (lane < 0) lane = lanes.length
-    if (!lanes[lane]) lanes[lane] = []
-    lanes[lane].push(plan)
-    result.set(plan.id, { lane, lanes: 1 })
-  }
-  for (const plan of sorted) {
-    const overlapping = sorted.filter(other => other.startMinute < plan.endMinute && plan.startMinute < other.endMinute)
-    const clusterLanes = Math.max(1, ...overlapping.map(item => result.get(item.id)?.lane ?? 0)) + 1
-    result.set(plan.id, { lane: result.get(plan.id)!.lane, lanes: clusterLanes })
-  }
-  return result
 }
 
 function PlanTimelineBlock({ plan, layout, onClick }: { plan: PlanBlock; layout: PlanLayout; onClick: () => void }) {

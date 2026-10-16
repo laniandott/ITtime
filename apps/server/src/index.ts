@@ -88,7 +88,7 @@ app.get('/api/auth/session', async (req, reply) => {
 })
 
 app.addHook('onRequest', async (req, reply) => {
-  if (req.url.startsWith('/healthz') || req.url.startsWith('/api/auth/')) return
+  if (!req.url.startsWith('/api/') || req.url.startsWith('/api/auth/')) return
   const username = authenticatedUser(requestToken(req))
   if (!username) return reply.code(401).send({ error: authConfigured() ? '请先登录' : '请先设置登录账户' })
 })
