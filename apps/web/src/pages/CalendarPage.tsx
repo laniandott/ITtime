@@ -1263,7 +1263,7 @@ function MonthView({ date, selectedDate, entriesByDay, activities, plans, memosB
   }
 
   return (
-    <div className="rounded-2xl bg-white p-2 dark:bg-gray-900 sm:p-4">
+    <div className="rounded-2xl border border-gray-200 bg-white p-2 dark:border-gray-800 dark:bg-gray-900 sm:p-4">
       <div className="mb-5 flex items-center justify-between px-1 sm:px-3">
         <button type="button" onClick={() => onNavigate(-1)} className="grid h-9 w-9 place-items-center rounded-full text-2xl text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800" aria-label="上个月">‹</button>
         <div className="flex items-center gap-2 text-xl font-bold text-gray-800 dark:text-gray-100 sm:text-2xl">
@@ -1274,12 +1274,12 @@ function MonthView({ date, selectedDate, entriesByDay, activities, plans, memosB
         </div>
         <button type="button" onClick={() => onNavigate(1)} className="grid h-9 w-9 place-items-center rounded-full text-2xl text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800" aria-label="下个月">›</button>
       </div>
-      <div className="grid grid-cols-7 mb-1">
+      <div className="mb-1 grid grid-cols-7 border-y border-gray-200 bg-gray-50/70 dark:border-gray-800 dark:bg-gray-800/40">
         {WEEKDAYS_FULL.map((w, index) => (
           <div key={w} className={`text-center py-2 text-sm font-medium ${index >= 5 ? 'text-gray-700 dark:text-gray-200' : 'text-gray-500 dark:text-gray-400'}`}>{w.replace('周', '')}</div>
         ))}
       </div>
-      <div className="grid grid-cols-7 gap-1 sm:gap-2">
+      <div className="calendar-month-grid grid grid-cols-7 overflow-hidden rounded-xl border-l border-t border-gray-200 dark:border-gray-800">
         {days.map((d) => {
           const key = startOfDay(d).toISOString()
           const dayEntries = entriesByDay.get(key) ?? []
@@ -1305,7 +1305,7 @@ function MonthView({ date, selectedDate, entriesByDay, activities, plans, memosB
               key={d.toISOString()}
               onClick={() => onDayClick(d)}
               aria-pressed={selected}
-              className={`relative min-h-[92px] rounded-xl p-2 text-left transition-colors group sm:min-h-[112px] sm:p-3 ${selected ? 'bg-brand-500 text-white shadow-md' : holidayEvent ? 'bg-red-50 dark:bg-red-950/20' : 'hover:bg-gray-50 dark:hover:bg-gray-800/60'} ${!inMonth ? 'opacity-30' : ''}`}
+              className={`relative min-h-[92px] border-b border-r border-gray-200 p-2 text-left transition-colors group sm:min-h-[112px] sm:p-3 dark:border-gray-800 ${selected ? 'bg-brand-500 text-white shadow-inner' : holidayEvent ? 'bg-red-50 dark:bg-red-950/20' : 'hover:bg-gray-50 dark:hover:bg-gray-800/60'} ${!inMonth ? 'opacity-30' : ''}`}
             >
               {holidayEvent && <span className="absolute right-1.5 top-1.5 rounded bg-red-500 px-1 text-[10px] font-bold text-white">休</span>}
               {workdayEvent && !holidayEvent && <span className="absolute right-1.5 top-1.5 rounded bg-slate-500 px-1 text-[10px] font-bold text-white">班</span>}

@@ -42,6 +42,14 @@ body {
   box-shadow: 0 12px 34px rgb(15 23 42 / .045);
 }
 
+.calendar-month-grid > button:nth-child(7n) {
+  border-right-width: 0;
+}
+
+.calendar-month-grid > button:nth-last-child(-n + 7) {
+  border-bottom-width: 0;
+}
+
 .dark .calendar-month-shell > * {
   border-color: rgb(51 65 85 / .75);
   box-shadow: 0 12px 34px rgb(0 0 0 / .15);

@@ -40,7 +40,6 @@ export default function Layout({ children, username, onLogout }: { children: Rea
           </div>
           <div className="ml-auto flex items-center gap-2">
             {onLogout && <button type="button" onClick={onLogout} className="rounded-lg px-2.5 py-1.5 text-xs text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-800 dark:hover:text-white lg:hidden" title={username ? `当前账户：${username}` : '退出登录'}>退出登录</button>}
-            <span className="flex items-center gap-1.5 rounded-full border border-teal-100 bg-teal-50 px-2.5 py-1 text-[11px] font-medium text-teal-700 dark:border-teal-900/60 dark:bg-teal-950/60 dark:text-teal-300"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />离线优先</span>
           </div>
         </div>
       </header>
