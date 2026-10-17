@@ -493,18 +493,11 @@ export default function CalendarPage() {
   }, [view, currentDate])
 
   return (
-    <div className="calendar-page space-y-4">
+    <div className="workspace-page calendar-page space-y-4">
       {/* 头部：Google Calendar 风格导航栏 */}
-      <div className="flex items-center justify-between flex-wrap gap-2">
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => setQuickCreateForDate(currentDate)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-brand text-white text-sm font-medium hover:bg-brand-600 transition-colors shadow-sm"
-          >
-            <span className="text-lg leading-none">+</span>
-            <span className="hidden sm:inline">新建</span>
-          </button>
-          <button type="button" onClick={() => setPlanCreateDate(currentDate)} className="px-3 py-2 rounded-full border border-gray-300 dark:border-gray-700 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">新建计划</button>
+      <div className="calendar-toolbar">
+        <div className="calendar-toolbar-date flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-1">
           <button
             onClick={() => navigate(-1)}
             className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors"
@@ -524,8 +517,13 @@ export default function CalendarPage() {
             今天
           </button>
           <h1 className="text-lg sm:text-xl font-semibold ml-2 text-gray-800 dark:text-gray-100 truncate">{title}</h1>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <button type="button" onClick={() => setPlanCreateDate(currentDate)} className="btn-secondary border border-gray-300 px-3 text-sm dark:border-gray-700">新建计划</button>
+            <button type="button" onClick={() => setQuickCreateForDate(currentDate)} className="btn-primary bg-brand px-3 text-sm text-white hover:bg-brand-600">新建记录</button>
+          </div>
         </div>
-        <div className="flex w-full items-center gap-2 overflow-x-auto pb-1 sm:w-auto sm:overflow-visible sm:pb-0">
+        <div className="calendar-toolbar-options flex w-full items-center gap-2 overflow-x-auto pb-1 sm:w-auto sm:overflow-visible sm:pb-0">
           {periodTotal > 0 && (
             <span className="text-xs text-gray-400 mr-1">
               合计 <span className="font-mono font-medium text-gray-500 dark:text-gray-400">{formatDuration(periodTotal)}</span>

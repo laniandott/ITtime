@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api } from '../api'
+import { PageHeader } from '../components/PageHeader'
 import { useNotesSocket } from '../hooks/useNotesSocket'
 import type { NoteListEntry } from '../types'
 
@@ -180,35 +181,32 @@ export default function NotesPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-lg font-bold text-gray-800 dark:text-gray-100">笔记</h1>
-        <div className="flex items-center gap-2">
+    <div className="workspace-page notes-page mx-auto space-y-4">
+      <PageHeader title="笔记" description="整理想法、资料与项目记录" actions={<div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => navigate('/notes/graph')}
-            className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            className="btn-secondary border border-gray-200 px-3 text-sm text-gray-600 dark:border-gray-800 dark:text-gray-300"
           >
             关系图
           </button>
           <button
             onClick={() => { setShowNewFolder((value) => !value); setShowNew(false) }}
-            className="px-3 py-1.5 text-sm rounded-lg border border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            className="btn-secondary border border-gray-200 px-3 text-sm text-gray-600 dark:border-gray-800 dark:text-gray-300"
           >
             新建文件夹
           </button>
           <button
             onClick={openNewNote}
-            className="px-3 py-1.5 text-sm bg-brand text-white rounded-lg hover:bg-brand-600 transition-colors"
+            className="btn-primary bg-brand px-3 text-sm text-white hover:bg-brand-600"
           >
             新建笔记
           </button>
-        </div>
-      </div>
+        </div>} />
 
       {error && <div className="text-sm text-red-500">{error}</div>}
 
       {showNewFolder && (
-        <div className="flex gap-2">
+        <div className="toolbar-surface flex gap-2">
           <input
             autoFocus
             value={newFolderName}
@@ -224,7 +222,7 @@ export default function NotesPage() {
       )}
 
       {showNew && (
-        <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_220px_auto] gap-2">
+        <div className="toolbar-surface grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_220px_auto]">
           <input
             autoFocus
             value={newTitle}
@@ -243,9 +241,9 @@ export default function NotesPage() {
         </div>
       )}
 
-      <input ref={searchInputRef} value={q} onChange={(event) => setQ(event.target.value)} placeholder="搜索标题或路径" className="w-full input" />
+      <div className="toolbar-surface"><input ref={searchInputRef} value={q} onChange={(event) => setQ(event.target.value)} placeholder="搜索标题或路径" className="input" /></div>
 
-      <div className="flex min-h-[480px] overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+      <div className="page-card flex min-h-[480px] overflow-hidden">
         <div className="flex w-10 shrink-0 flex-col items-center gap-1 border-r border-gray-200 bg-gray-50 py-2 dark:border-gray-800 dark:bg-gray-950">
           <button
             type="button"

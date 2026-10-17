@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { GripVertical } from 'lucide-react'
 import { api } from '../api'
+import { PageHeader } from '../components/PageHeader'
 import type { Goal, Todo } from '../types'
 
 const periods: Record<string, string> = { workday: '工作日', daily: '每日', weekly: '每周', monthly: '每月', once: '一次性', custom: '自定义周期' }
@@ -46,10 +47,11 @@ export default function GoalsPage() {
     }
   }
 
-  return <div className="space-y-6">
-    <div className="flex items-center justify-between"><h1 className="text-2xl font-semibold">习惯结果</h1><Link to="/settings" className="text-sm text-brand">管理标签规则</Link></div>
+  return <div className="workspace-page habits-page space-y-5">
+    <PageHeader title="习惯结果" description="周期性目标与完成记录" actions={<Link to="/settings" className="text-sm text-brand">管理标签规则</Link>} />
     {error && <p role="alert" className="text-red-500 text-sm">{error}</p>}
-    <section><h2 className="text-sm font-semibold text-gray-500 mb-3">当前周期</h2>{goals.map(goal => {
+    <div className="habits-layout">
+    <section className="page-card p-4 sm:p-5"><h2 className="text-sm font-semibold text-gray-500 mb-3">当前周期</h2>{goals.map(goal => {
       const current = goal.current ?? 0; const unit = goal.kind === 'activity' ? '项' : goal.type === 'count' ? '次' : '分钟'
       const percent = Math.min(100, goal.target ? current / goal.target * 100 : 0)
       const legacyDefaultTitle = goal.kind === 'activity' && goal.tag && goal.title === `每日${goal.tag.name}`
@@ -75,6 +77,7 @@ export default function GoalsPage() {
         </div>
       </article>
     })}{goals.length === 0 && <p className="py-8 text-gray-400 text-sm">标签中还没有设置目标。</p>}</section>
-    <section><h2 className="text-sm font-semibold text-gray-500 mb-3">已完成活动</h2>{completed.map(todo => <div key={todo.id} className="py-3 border-b border-gray-200 dark:border-gray-800 flex justify-between gap-4"><span>{todo.title}</span><time className="text-xs text-gray-500">{todo.completedAt ? new Date(todo.completedAt).toLocaleDateString('zh-CN') : '已完成'}</time></div>)}{!completed.length && <p className="text-sm text-gray-400 py-6">暂无已完成活动。</p>}</section>
+    <section className="habits-history page-card max-h-[calc(100vh-10rem)] overflow-y-auto p-4 sm:p-5"><h2 className="text-sm font-semibold text-gray-500 mb-3">已完成活动</h2>{completed.map(todo => <div key={todo.id} className="py-3 border-b border-gray-200 last:border-0 dark:border-gray-800 flex justify-between gap-4"><span className="min-w-0">{todo.title}</span><time className="shrink-0 text-xs text-gray-500">{todo.completedAt ? new Date(todo.completedAt).toLocaleDateString('zh-CN') : '已完成'}</time></div>)}{!completed.length && <p className="text-sm text-gray-400 py-6">暂无已完成活动。</p>}</section>
+    </div>
   </div>
 }

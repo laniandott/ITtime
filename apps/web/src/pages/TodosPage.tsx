@@ -3,6 +3,7 @@ import { api } from '../api'
 import { useStore } from '../store'
 import type { Goal, Todo } from '../types'
 import DiaryPanel from '../components/DiaryPanel'
+import { PageHeader } from '../components/PageHeader'
 
 const PRIORITY = [
   { value: 0, label: '普通', color: 'text-gray-400' },
@@ -226,28 +227,17 @@ export default function TodosPage() {
     return true
   }))
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-6 border-b border-gray-200 dark:border-gray-800" role="tablist" aria-label="待办与日记">
-        {([
-          ['todo', '待办'],
-          ['diary', '日记'],
-        ] as const).map(([tab, label]) => (
-          <button
-            key={tab}
-            type="button"
-            role="tab"
-            aria-selected={activeTab === tab}
-            onClick={() => setActiveTab(tab)}
-            className={`relative -mb-px pb-3 text-lg font-semibold transition-colors ${
-              activeTab === tab
-                ? 'text-brand after:absolute after:inset-x-0 after:-bottom-px after:h-0.5 after:bg-brand'
-                : 'text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+    <div className="workspace-page todo-page space-y-4">
+      <PageHeader
+        title={activeTab === 'todo' ? '待办活动' : '日记'}
+        description={activeTab === 'todo' ? '安排要做的事，按周期和状态快速处理' : '记录当天的想法、经过与资料'}
+        actions={<div className="flex flex-wrap items-center gap-2">
+          <div className="flex rounded-md border border-gray-200 p-0.5 dark:border-gray-700" role="tablist" aria-label="待办与日记">
+            {([['todo', '待办'], ['diary', '日记']] as const).map(([tab, label]) => <button key={tab} type="button" role="tab" aria-selected={activeTab === tab} onClick={() => setActiveTab(tab)} className={`rounded px-3 py-1.5 text-sm ${activeTab === tab ? 'bg-teal-700 text-white' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>{label}</button>)}
+          </div>
+          {activeTab === 'todo' && statusView === 'pending' && <button type="button" onClick={() => setShowQuickAdd((value) => !value)} className="btn-primary px-3 py-2 text-sm">{showQuickAdd ? '取消添加' : '+ 新建活动'}</button>}
+        </div>}
+      />
 
       {error && (
         <div className="flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300">
@@ -257,10 +247,10 @@ export default function TodosPage() {
       )}
 
       {activeTab === 'todo' ? (
-        <section className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-900/40 p-4 sm:p-5">
+        <section className="page-card p-4 sm:p-5">
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div>
-                <h1 className="text-xl font-semibold">{statusView === 'pending' ? '未完成活动' : '已完成活动'}</h1>
+                <h2 className="text-lg font-semibold">{statusView === 'pending' ? '未完成活动' : '已完成活动'}</h2>
                 <p className="text-xs text-gray-500 mt-1">{statusView === 'pending' ? '完成记录会收进「习惯」页面的结果里' : '点击左侧勾选框可恢复为未完成，并填写恢复原因'}</p>
               </div>
               <div className="flex items-center gap-1 rounded-full bg-gray-100 p-1 dark:bg-gray-800" role="tablist" aria-label="待办状态">
@@ -282,13 +272,13 @@ export default function TodosPage() {
               </div>
             </div>
             {statusView === 'pending' && goals.filter((goal) => goal.kind === 'tracking').length > 0 && (
-              <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3" aria-label="标签目标进度">
+              <div className="mt-3 flex gap-2 overflow-x-auto pb-1" aria-label="标签目标进度">
                 {goals.filter((goal) => goal.kind === 'tracking').map((goal) => {
                   const current = goal.current ?? 0
                   const unit = goal.type === 'count' ? '次' : '分钟'
                   const percent = Math.min(100, goal.target > 0 ? current / goal.target * 100 : 0)
                   return (
-                    <article key={goal.id} className="rounded-lg border border-gray-200 bg-white px-3 py-2 dark:border-gray-800 dark:bg-gray-900">
+                    <article key={goal.id} className="min-w-[210px] shrink-0 rounded-md border border-gray-200 bg-white px-3 py-2 dark:border-gray-800 dark:bg-gray-900">
                       <div className="flex items-center justify-between gap-2 text-xs">
                         <span className="truncate font-medium" style={{ color: goal.tag?.color }}>{goal.title}</span>
                         <span className="shrink-0 text-gray-500">{current} / {goal.target} {unit}</span>
@@ -332,11 +322,6 @@ export default function TodosPage() {
                 ))}
                 <option value="none">未分类</option>
               </select>
-              {statusView === 'pending' && (
-                <button type="button" onClick={() => setShowQuickAdd(!showQuickAdd)} className="ml-auto text-sm text-brand hover:underline whitespace-nowrap">
-                  {showQuickAdd ? '取消' : '+ 新建一次性活动'}
-                </button>
-              )}
             </div>
 
             {statusView === 'pending' && showQuickAdd && (
@@ -395,7 +380,7 @@ export default function TodosPage() {
               </div>
             </section>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3 items-stretch">
+            <div className="grid grid-cols-1 gap-3 mt-3 items-start xl:grid-cols-2">
               <ActivityModule title="工作日活动" subtitle="周一至周五" items={cycleItems('workday')} emptyText="今天没有工作日活动" running={running} togglingIds={togglingIds} onToggle={toggle} onEdit={setEditing} onDelete={remove} onPickTag={setPickingTagFor} />
               <ActivityModule title="日活动" subtitle="当前自然日" items={cycleItems('daily')} emptyText="今天暂无日活动" running={running} togglingIds={togglingIds} onToggle={toggle} onEdit={setEditing} onDelete={remove} onPickTag={setPickingTagFor} />
               <ActivityModule title="周活动" subtitle="当前自然周" items={cycleItems('weekly')} emptyText="本周暂无周活动" running={running} togglingIds={togglingIds} onToggle={toggle} onEdit={setEditing} onDelete={remove} onPickTag={setPickingTagFor} />
@@ -403,7 +388,7 @@ export default function TodosPage() {
             </div>
         </section>
       ) : (
-        <section className="rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50/70 dark:bg-gray-900/40 p-4 sm:p-5">
+        <section className="page-card p-4 sm:p-5">
           <DiaryPanel />
         </section>
       )}
@@ -456,7 +441,7 @@ function ActivityModule({
   onPickTag: (todo: Todo) => void
 }) {
   return (
-    <section className="min-h-[190px] max-h-[calc(100vh-18rem)] overflow-y-auto rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-3">
+    <section className="min-h-[150px] rounded-lg border border-gray-200 bg-white p-3 dark:border-gray-800 dark:bg-gray-900">
       <div className="flex items-center justify-between gap-2 mb-2">
         <div>
           <h2 className="font-semibold text-gray-800 dark:text-gray-100">{title}</h2>

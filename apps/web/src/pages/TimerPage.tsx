@@ -3,6 +3,7 @@ import { useStore, formatClock, formatDuration, toIsoSafe } from '../store'
 import { api, resolveUploadUrl } from '../api'
 import type { TimeEntry, Tag, Todo, Memo, LinkedNoteEntry, PlanBlock } from '../types'
 import { DateTimeSecondPicker } from '../components/DateTimeSecondPicker'
+import { PageHeader } from '../components/PageHeader'
 import { syncNativeStatusBarTheme } from '../nativeStatusBar'
 import { GripVertical, ArrowUpDown } from 'lucide-react'
 
@@ -269,23 +270,12 @@ export default function TimerPage() {
     }), [recent, filterCat, searchQuery])
 
   return (
-    <div className="space-y-6">
+    <div className="workspace-page timer-page space-y-6">
       {feedback && <div role="status" className="rounded-xl border border-green-200 bg-green-50 dark:bg-green-950/30 p-3 text-sm text-green-700 dark:text-green-300">{feedback}</div>}
-      <section className="timer-welcome rounded-3xl px-5 py-5 sm:px-7 sm:py-6 text-white shadow-lg">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs uppercase tracking-[0.2em] text-white/70">ITTIME · FOCUS</p>
-            <h1 className="mt-2 text-2xl sm:text-3xl font-semibold">让每段时间都有记录</h1>
-            <p className="mt-2 text-sm text-white/75">点选标签开始计时，再点一次结束；不同项目可以同时计时。</p>
-          </div>
-          <span className="hidden sm:flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-2xl" aria-hidden="true">◷</span>
-        </div>
-        <div className="mt-5 flex flex-wrap gap-2 text-xs">
-          <span className="rounded-full border border-white/25 bg-white/10 px-3 py-1.5">本机即时保存</span>
-          <span className="rounded-full border border-white/25 bg-white/10 px-3 py-1.5">CouchDB 后台同步</span>
-        </div>
-      </section>
+      <PageHeader title="打卡" description="时间记录" />
 
+      <div className="timer-workspace">
+      <div className="timer-session">
       {/* 暂存条 */}
       {pending.length > 0 && (
         <div className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4">
@@ -378,15 +368,16 @@ export default function TimerPage() {
           </div>
         </div>
       ) : (
-        <div className="timer-empty rounded-2xl border border-teal-200 dark:border-teal-900/70 p-8 text-center">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-teal-100 text-3xl text-teal-700 dark:bg-teal-900/50 dark:text-teal-200">◷</div>
+        <div className="timer-empty rounded-lg border border-gray-300 dark:border-gray-700 p-6 text-center">
+          <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-lg bg-teal-50 text-xl text-teal-700 dark:bg-teal-950/60 dark:text-teal-200">◷</div>
           <div className="text-lg font-semibold mb-1 text-gray-800 dark:text-gray-100">现在还没有计时项目</div>
           <div className="text-sm text-gray-500">点下面任意标签即可开始。正在计时的标签会清楚标出来。</div>
         </div>
       )}
+      </div>
 
       {/* 标签选择器 + 补录入口 */}
-      <div>
+      <div className="timer-quickstart">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
             快速开始
@@ -419,7 +410,7 @@ export default function TimerPage() {
           <div className="space-y-4">
             {tagsByCategory.map(({ category, tags: ts }) =>
               ts.length === 0 ? null : (
-                <div key={category.id} draggable={sortingQuickStart} onDragStart={(event) => { event.dataTransfer.setData('text/plain', category.id); event.dataTransfer.effectAllowed = 'move'; setDraggedQuickStartId(category.id) }} onDragOver={(event) => { if (sortingQuickStart) event.preventDefault() }} onDrop={(event) => { event.preventDefault(); const sourceId = event.dataTransfer.getData('text/plain'); if (sourceId) void saveOrder(orderedCategories, sourceId, category.id, (id, sortOrder) => api.categories.update(id, { sortOrder })) }} onDragEnd={() => setDraggedQuickStartId(null)} className={`timer-category rounded-2xl border p-4 sm:p-5 ${draggedQuickStartId === category.id ? 'opacity-40' : ''}`} style={{ borderColor: `${category.color}45`, background: `linear-gradient(135deg, ${category.color}12, ${category.color}04 75%)` }}>
+                <div key={category.id} draggable={sortingQuickStart} onDragStart={(event) => { event.dataTransfer.setData('text/plain', category.id); event.dataTransfer.effectAllowed = 'move'; setDraggedQuickStartId(category.id) }} onDragOver={(event) => { if (sortingQuickStart) event.preventDefault() }} onDrop={(event) => { event.preventDefault(); const sourceId = event.dataTransfer.getData('text/plain'); if (sourceId) void saveOrder(orderedCategories, sourceId, category.id, (id, sortOrder) => api.categories.update(id, { sortOrder })) }} onDragEnd={() => setDraggedQuickStartId(null)} className={`timer-category rounded-lg border p-4 sm:p-5 ${draggedQuickStartId === category.id ? 'opacity-40' : ''}`} style={{ borderColor: `${category.color}45`, background: `${category.color}0a` }}>
                   <div className="flex items-center gap-2 mb-3">
                     <span
                       className="w-3 h-3 rounded-full ring-4"
@@ -474,6 +465,7 @@ export default function TimerPage() {
             )}
           </div>
         )}
+      </div>
       </div>
 
       {/* 最近记录时间线 */}

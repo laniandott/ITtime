@@ -7,6 +7,7 @@ import { applyFontSizePreference, FONT_SIZE_KEY, readFontSizePreference, type Fo
 import GalleryPanel from '../components/GalleryPanel'
 import { getServerHost } from '../api'
 import { getAuthHeaders } from '../auth'
+import { PageHeader } from '../components/PageHeader'
 
 function load(): SyncConfig { try { return { couchUrl: '', couchDatabase: 'ittime', couchUsername: '', couchPassword: '', ...JSON.parse(localStorage.getItem(SYNC_SETTINGS_KEY) ?? '{}') } } catch { return { couchUrl: '', couchDatabase: 'ittime', couchUsername: '', couchPassword: '' } } }
 export default function SettingsPage() {
@@ -37,19 +38,21 @@ export default function SettingsPage() {
     } else setMessage('配置已保存到本机；填写服务器信息后即可开启实时同步')
   }
   const migrate = async () => { setBusy(true); setMigrationMessage('正在读取旧服务器数据…'); try { const result = await importLegacyServerData(); setMigrationMessage(`导入完成：新增 ${result.imported} 条，跳过 ${result.skipped} 条（共 ${result.total} 条）`) } catch (error) { setMigrationMessage(error instanceof Error ? error.message : String(error)) } finally { setBusy(false) } }
-  return <div className="space-y-6">
-    <h1 className="text-2xl font-semibold">设置</h1>
-    <nav className="flex gap-2 border-b border-gray-200 dark:border-gray-800 pb-3">{[['tags', '打卡标签'], ['account', '账户'], ['sync', 'CouchDB 同步'], ['migration', '数据迁移'], ['general', '常规']].map(([id, name]) => <button key={id} onClick={() => setPage(id)} className={`px-3 py-2 text-sm rounded-lg ${page === id ? 'bg-brand/10 text-brand' : 'text-gray-500'}`}>{name}</button>)}</nav>
-    {page === 'tags' && <TagsPage />}
+  return <div className="workspace-page settings-page space-y-6">
+    <PageHeader title="设置" description="账户、安全、数据同步与显示偏好" />
+    <div className="settings-layout">
+    <nav className="settings-nav flex gap-1 overflow-x-auto md:flex-col md:overflow-visible" role="tablist" aria-label="设置分类">{[['tags', '打卡标签'], ['account', '账户'], ['sync', 'CouchDB 同步'], ['migration', '数据迁移'], ['general', '常规']].map(([id, name]) => <button key={id} role="tab" aria-selected={page === id} onClick={() => setPage(id)} className={`shrink-0 rounded-md px-3 py-2.5 text-left text-sm transition-colors ${page === id ? 'bg-teal-50 font-medium text-teal-800 dark:bg-teal-950/50 dark:text-teal-200' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}>{name}</button>)}</nav>
+    <div className="min-w-0">
+    {page === 'tags' && <TagsPage embedded />}
     {page === 'account' && <AccountSettings />}
-    {page === 'migration' && <section className="max-w-2xl space-y-4">
+    {page === 'migration' && <section className="page-card max-w-2xl space-y-4 p-4 sm:p-5">
       <h2 className="font-semibold">从服务器导入旧数据</h2>
       <p className="text-sm text-gray-600 dark:text-gray-300">将服务器 SQLite 中的分类、标签、计时记录、待办、目标和随手记导入此浏览器的 PouchDB。原记录 ID 会保留，已有记录不会被覆盖，因此可重复运行。</p>
       <p className="text-sm text-amber-700 dark:text-amber-300">建议先备份服务器数据，并在开始 CouchDB 同步前完成导入。附件文件仍保存在服务器 uploads 目录。</p>
       <button type="button" disabled={busy} onClick={() => void migrate()} className="rounded-md bg-brand px-4 py-2 text-sm text-white disabled:opacity-50">{busy ? '正在处理…' : '扫描并导入旧数据'}</button>
       {migrationMessage && <p role="status" className="text-sm">{migrationMessage}</p>}
     </section>}
-    {page === 'general' && <div className="space-y-6">
+    {page === 'general' && <div className="page-card space-y-6 p-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div><label htmlFor="font-size" className="text-sm font-medium">界面字体大小</label><p className="mt-1 text-xs text-gray-500">紧凑模式也会适当压缩界面间距，适合小屏幕。</p></div>
         <select id="font-size" className="input w-auto min-w-32" value={fontSize} onChange={event => updateFontSize(event.target.value as FontSizePreference)}>
@@ -62,7 +65,7 @@ export default function SettingsPage() {
       <Link className="text-brand" to="/calendar">日历</Link>
       <div className="border-t border-gray-200 pt-5 dark:border-gray-800"><GalleryPanel /></div>
     </div>}
-    {page === 'sync' && <form onSubmit={event => { event.preventDefault(); void saveSettings() }} className="space-y-5 max-w-xl">
+    {page === 'sync' && <form onSubmit={event => { event.preventDefault(); void saveSettings() }} className="page-card max-w-2xl space-y-5 p-4 sm:p-5">
       <h2 className="font-semibold">CouchDB 连接</h2>
       <label className="block text-sm">地址<input className="input mt-2" type="url" value={settings.couchUrl} onChange={event => update('couchUrl', event.target.value)} placeholder="https://db.example.com" required /></label>
       <label className="block text-sm">数据库名称<input className="input mt-2" value={settings.couchDatabase} onChange={event => update('couchDatabase', event.target.value)} required /></label>
@@ -84,6 +87,8 @@ export default function SettingsPage() {
       <p className="text-xs text-gray-500">判断方式：仅本机为空、CouchDB 有文档时，用同步从云端恢复本机；两边都有数据时会合并，删除标记也会同步。若要开始一个全新的空数据集，请使用新的数据库，并确保本机也为空。应用内删除不是重置操作，不能靠重新同步恢复已删除记录。</p>
       <p className="text-xs text-gray-500">密码保存在当前浏览器。CouchDB 数据库须预先建立，跨域连接须配置 CORS；生产环境使用 HTTPS。</p>
     </form>}
+    </div>
+    </div>
   </div>
 }
 
@@ -130,7 +135,7 @@ function AccountSettings() {
     finally { setBusy(false) }
   }
 
-  return <section className="max-w-xl space-y-4 border-b border-gray-200 pb-6 dark:border-gray-800">
+  return <section className="page-card max-w-2xl space-y-4 p-4 sm:p-5">
     <div><h2 className="font-semibold">账户与密码</h2><p className="mt-1 text-xs text-gray-500">修改用户名或密码需要验证当前密码；新密码留空则保持不变。</p></div>
     <form onSubmit={save} className="space-y-3">
       <label className="block text-sm">用户名<input required minLength={2} maxLength={40} autoComplete="username" value={username} onChange={event => setUsername(event.target.value)} className="input mt-1 w-full" /></label>

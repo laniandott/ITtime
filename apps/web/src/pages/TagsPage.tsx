@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useId } from 'react'
 import { useStore } from '../store'
+import { PageHeader } from '../components/PageHeader'
 import { api } from '../api'
 import type { Category, Tag, Goal } from '../types'
 import { GripVertical } from 'lucide-react'
@@ -16,7 +17,7 @@ function defaultGoalTitle(tagName: string, kind: 'tracking' | 'activity', period
   return `${prefix}${tagName}`
 }
 
-export default function TagsPage() {
+export default function TagsPage({ embedded = false }: { embedded?: boolean } = {}) {
   const { categories, tags, loadAll } = useStore()
   const [showCatForm, setShowCatForm] = useState(false)
   const [showTagForm, setShowTagForm] = useState(false)
@@ -75,15 +76,14 @@ export default function TagsPage() {
   useEffect(() => { loadGoals() }, [tags])
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold">标签与分类</h1>
-      </div>
+    <div className="workspace-page tags-page space-y-6">
+      {!embedded && <PageHeader title="标签与分类" description="管理标签体系、颜色与分类归属" />}
 
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300">{error}</div>}
 
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(260px,.72fr)_minmax(0,1.28fr)]">
       {/* 分类管理 */}
-      <section className="space-y-3">
+      <section className="page-card space-y-3 p-4 sm:p-5 xl:sticky xl:top-4">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">分类</h2>
           <button
@@ -93,7 +93,7 @@ export default function TagsPage() {
             + 新建分类
           </button>
         </div>
-        <div className="space-y-2">
+        <div className="max-h-[calc(100vh-14rem)] space-y-2 overflow-y-auto pr-1">
           {categories.length === 0 && (
             <div className="text-sm text-gray-400 py-2">还没有分类，创建一个（如：日常、工作、宝宝）</div>
           )}
@@ -141,7 +141,7 @@ export default function TagsPage() {
       </section>
 
       {/* 标签管理 */}
-      <section className="space-y-3">
+      <section className="page-card space-y-3 p-4 sm:p-5">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">标签</h2>
           <button
@@ -220,6 +220,7 @@ export default function TagsPage() {
           })}
         </div>
       </section>
+      </div>
 
       {/* 目标管理 */}
       {goals.length > 0 && (
@@ -407,40 +408,43 @@ function TagForm({ tag, categories, tags, onClose, onSaved }: {
   }
 
   return (
-    <Modal onClose={onClose} title={tag ? '编辑标签' : '新建标签'}>
-      <div className="space-y-4">
-        <Field label="名称">
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="如：吃饭、编码、陪玩"
-            className="input" autoFocus />
-        </Field>
-        <Field label="所属分类">
-          <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="input">
-            <option value="">未分类</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
-        </Field>
-        <Field label="上级标签">
-          <select
-            value={parentId}
-            onChange={(e) => {
-              const nextParentId = e.target.value
-              setParentId(nextParentId)
-              const parent = tags.find((item) => item.id === nextParentId)
-              if (parent?.categoryId) setCategoryId(parent.categoryId)
-            }}
-            className="input"
-          >
-            <option value="">无上级（一级标签）</option>
-            {tags
-              .filter((item) => !item.parentId && item.id !== tag?.id)
-              .map((item) => (
-                <option key={item.id} value={item.id}>{item.name}</option>
+    <Modal onClose={onClose} title={tag ? '编辑标签' : '新建标签'} size="wide">
+      <div className="grid gap-x-8 gap-y-5 md:grid-cols-2">
+        <div className="space-y-4">
+          <Field label="名称">
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="如：吃饭、编码、陪玩"
+              className="input" autoFocus />
+          </Field>
+          <Field label="所属分类">
+            <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="input">
+              <option value="">未分类</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
               ))}
-          </select>
-        </Field>
-        <Field label="记录方式">
+            </select>
+          </Field>
+          <Field label="上级标签">
+            <select
+              value={parentId}
+              onChange={(e) => {
+                const nextParentId = e.target.value
+                setParentId(nextParentId)
+                const parent = tags.find((item) => item.id === nextParentId)
+                if (parent?.categoryId) setCategoryId(parent.categoryId)
+              }}
+              className="input"
+            >
+              <option value="">无上级（一级标签）</option>
+              {tags
+                .filter((item) => !item.parentId && item.id !== tag?.id)
+                .map((item) => (
+                  <option key={item.id} value={item.id}>{item.name}</option>
+                ))}
+            </select>
+          </Field>
+        </div>
+        <div className="space-y-4">
+          <Field label="记录方式">
           <div className="flex gap-2">
             <button
               onClick={() => setTrackType('time')}
@@ -454,10 +458,10 @@ function TagForm({ tag, categories, tags, onClose, onSaved }: {
             >
               🔢 次数打卡
             </button>
-          </div>
-        </Field>
-        {trackType === 'time' && (
-          <Field label="专注模式">
+            </div>
+          </Field>
+          {trackType === 'time' && (
+            <Field label="专注模式">
             <div className="flex gap-2">
               <button
                 onClick={() => setMode('chaos')}
@@ -474,15 +478,16 @@ function TagForm({ tag, categories, tags, onClose, onSaved }: {
             </div>
             <div className="text-xs text-gray-400 mt-1">
               {mode === 'chaos' ? '混沌：停止后无法续接，适合随性活动' : '有序：可暂存后续接，适合深度工作'}
-            </div>
+              </div>
+            </Field>
+          )}
+          <Field label="图标（可选）">
+            <input value={icon} onChange={(e) => setIcon(e.target.value)} placeholder="emoji" className="input" />
           </Field>
-        )}
-        <Field label="图标（可选）">
-          <input value={icon} onChange={(e) => setIcon(e.target.value)} placeholder="emoji" className="input" />
-        </Field>
-        <Field label="颜色">
-          <ColorPicker value={color} onChange={setColor} />
-        </Field>
+          <Field label="颜色">
+            <ColorPicker value={color} onChange={setColor} />
+          </Field>
+        </div>
       </div>
       {error && <div className="mt-4 text-sm text-red-500">{error}</div>}
       <FormActions onCancel={onClose} onSave={save} />
@@ -531,12 +536,25 @@ function ColorPicker({ value, onChange }: { value: string; onChange: (c: string)
 }
 
 // 通用组件
-function Modal({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
+function Modal({ title, children, onClose, size = 'default' }: { title: string; children: React.ReactNode; onClose: () => void; size?: 'default' | 'wide' }) {
+  const titleId = useId()
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [onClose])
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
-      <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-lg font-semibold mb-4">{title}</h3>
-        {children}
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/45 p-2" onClick={onClose}>
+      <div role="dialog" aria-modal="true" aria-labelledby={titleId} className={`modal-panel my-auto flex w-full flex-col overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900 ${size === 'wide' ? 'modal-panel-wide max-w-3xl' : 'max-h-[calc(100vh-2rem)] max-w-lg'}`} onClick={(e) => e.stopPropagation()}>
+        <header className="shrink-0 border-b border-gray-200 px-5 py-4 dark:border-gray-700 sm:px-6">
+          <h3 id={titleId} className="text-base font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
+        </header>
+        <div className="min-h-0 overflow-y-auto px-5 py-4 sm:px-6">
+          {children}
+        </div>
       </div>
     </div>
   )
@@ -553,7 +571,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 function FormActions({ onCancel, onSave }: { onCancel: () => void; onSave: () => void }) {
   return (
-    <div className="flex justify-end gap-2 mt-6">
+    <div className="sticky bottom-0 -mx-1 mt-5 flex justify-end gap-2 border-t border-gray-100 bg-white/95 px-1 pt-3 pb-1 backdrop-blur dark:border-gray-800 dark:bg-gray-900/95">
       <button onClick={onCancel} className="px-4 py-2 rounded-lg text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800">
         取消
       </button>

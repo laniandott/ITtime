@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { CalendarClock, ChevronLeft, ChevronRight, Plus, Trash2, X } from 'lucide-react'
 import { api } from '../api'
 import { DateTimeSecondPicker } from '../components/DateTimeSecondPicker'
+import { PageHeader } from '../components/PageHeader'
 import { layoutPlans, type PlanLayout } from '../planLayout'
 import { formatDuration, toIsoSafe, useStore } from '../store'
 import type { Category, PlanBlock, Tag, TimeEntry, Todo } from '../types'
@@ -126,19 +127,18 @@ export default function PlansPage() {
   const planLayouts = useMemo(() => layoutPlans(sortedPlans), [sortedPlans])
 
   return (
-    <div className="plan-page space-y-4">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-teal-700 text-white"><CalendarClock size={20} /></span>
-          <div className="min-w-0"><h1 className="text-xl font-semibold">每日计划</h1><p className="text-xs text-gray-500">计划笔记 · 按分钟安排</p></div>
-        </div>
-        <div className="flex items-center gap-1">
+    <div className="workspace-page plan-page space-y-4">
+      <PageHeader
+        title="每日计划"
+        description="用分钟安排一天，并与实际记录并列复盘"
+        icon={<CalendarClock size={19} />}
+        actions={<div className="toolbar-surface flex items-center gap-1">
           <button type="button" title="前一天" aria-label="前一天" onClick={() => setSelectedDate(shiftDate(selectedDate, -1))} className="grid h-9 w-9 place-items-center rounded-lg text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"><ChevronLeft size={18} /></button>
           <input aria-label="计划日期" type="date" value={selectedDate} onChange={(event) => event.target.value && setSelectedDate(event.target.value)} className="input !w-auto !py-1.5 tabular-nums" />
           <button type="button" title="后一天" aria-label="后一天" onClick={() => setSelectedDate(shiftDate(selectedDate, 1))} className="grid h-9 w-9 place-items-center rounded-lg text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"><ChevronRight size={18} /></button>
           <button type="button" onClick={() => setSelectedDate(today)} className="ml-1 rounded-lg border border-gray-300 px-3 py-2 text-sm hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800">今天</button>
-        </div>
-      </header>
+        </div>}
+      />
 
       <div className="flex flex-wrap items-end justify-between gap-3 border-b border-gray-200 pb-3 dark:border-gray-800">
         <div><div className="text-lg font-semibold">{selectedDateValue.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' })}</div><div className="mt-1 text-xs text-gray-500">计划 {sortedPlans.length} 项 · {formatDuration(sortedPlans.reduce((sum, plan) => sum + plan.plannedMs!, 0))} <span className="px-1.5">|</span> 实际计时 {formatDuration(actualSummary.elapsedMs)} · {actualBlocks.length} 条记录{actualSummary.countEntries ? `（含 ${actualSummary.countEntries} 次数打卡）` : ''}</div></div>

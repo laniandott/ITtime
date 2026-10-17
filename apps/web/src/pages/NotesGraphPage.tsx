@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import * as d3 from 'd3-force'
 import { api } from '../api'
+import { PageHeader } from '../components/PageHeader'
 import type { GraphData, GraphNode } from '../types'
 
 interface SimNode extends d3.SimulationNodeDatum {
@@ -230,27 +231,21 @@ export default function NotesGraphPage() {
   }, [isLocal, nodes])
 
   return (
-    <div className="max-w-4xl mx-auto space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
+    <div className="workspace-page notes-graph-page mx-auto space-y-4">
+      <PageHeader title={isLocal ? `关联图 · ${currentTitle}` : '全部笔记关系图'} description="浏览笔记之间的双向链接与未解析引用" actions={<div className="toolbar-surface flex flex-wrap items-center gap-2 text-sm">
           <button
             onClick={() => navigate('/notes')}
-            className="px-3 py-1.5 text-sm rounded-xl border border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            className="btn-secondary border border-gray-200 px-3 text-sm text-gray-600 dark:border-gray-800 dark:text-gray-300"
           >
             ← 返回
           </button>
-          <h1 className="text-lg font-bold text-gray-800 dark:text-gray-100">
-            {isLocal ? <>关联图 · {currentTitle}</> : '全部笔记关系图'}
-          </h1>
-        </div>
-        <div className="flex items-center gap-2 text-sm">
           {isLocal && (
             <>
               <label className="text-xs text-gray-500 dark:text-gray-400">深度</label>
               <select
                 value={depth}
                 onChange={(e) => setDepth(Number(e.target.value))}
-                className="px-2 py-1.5 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-sm"
+                className="input !w-auto !py-1.5"
               >
                 <option value={1}>1 层</option>
                 <option value={2}>2 层</option>
@@ -263,7 +258,7 @@ export default function NotesGraphPage() {
               <select
                 value={limit}
                 onChange={(e) => setLimit(Number(e.target.value))}
-                className="px-2 py-1.5 rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-sm"
+                className="input !w-auto !py-1.5"
               >
                 <option value={30}>30</option>
                 <option value={50}>50</option>
@@ -274,15 +269,14 @@ export default function NotesGraphPage() {
           <button
             onClick={load}
             disabled={loading}
-            className="px-3 py-1.5 text-sm bg-brand text-white rounded-xl hover:bg-brand-600 disabled:opacity-50 transition-colors"
+            className="btn-primary bg-brand px-3 text-sm text-white hover:bg-brand-600 disabled:opacity-50"
           >
             刷新
           </button>
-        </div>
-      </div>
+        </div>} />
 
       {/* 图例 */}
-      <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+      <div className="toolbar-surface flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-500 dark:text-gray-400">
         <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-[#818cf8]" /> 已解析笔记</span>
         <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-[#f59e0b]" /> 未解析链接</span>
         <span className="flex items-center gap-1.5"><span className="w-6 h-0.5 bg-gray-400" /> 已解析边</span>
@@ -307,7 +301,7 @@ export default function NotesGraphPage() {
 
       <div
         ref={wrapRef}
-        className="relative rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden"
+        className="page-card relative overflow-hidden"
         style={{ height: '68vh', minHeight: 440 }}
       >
         <svg
