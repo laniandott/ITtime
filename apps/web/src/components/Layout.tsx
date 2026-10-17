@@ -14,7 +14,7 @@ export default function Layout({ children, username, onLogout }: { children: Rea
   const location = useLocation()
   return (
     <div className="app-shell min-h-screen pb-24 lg:pl-64 lg:pb-0">
-      <aside className="desktop-sidebar fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-gray-200/80 bg-white px-3 py-4 dark:border-gray-800 dark:bg-gray-950 lg:flex">
+      <aside className="desktop-sidebar fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r px-3 py-4 lg:flex">
         <div className="flex items-center gap-3 px-3 pb-7">
           <div aria-hidden="true" className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-gradient-to-br from-teal-500 to-sky-400 text-[13px] font-extrabold text-[#04121a] shadow-[0_0_22px_rgba(20,184,166,.45)]">IT</div>
           <div className="min-w-0"><div className="font-semibold text-gray-900 dark:text-gray-100">ITtime</div><div className="text-[10px] uppercase tracking-[0.14em] text-gray-400 dark:text-gray-500">Aurora workspace</div></div>
@@ -40,14 +40,14 @@ export default function Layout({ children, username, onLogout }: { children: Rea
       </aside>
       <div className="min-h-screen">
       <main key={location.pathname} className="app-main mx-auto w-full max-w-[1440px] flex-1 px-4 py-5 motion-safe:animate-page-in sm:py-8 lg:px-8">{children}</main>
-      <nav aria-label="主导航" className="fixed inset-x-0 bottom-0 z-20 border-t border-white/10 bg-[rgba(10,15,25,0.82)] pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden">
+      <nav aria-label="主导航" className="mobile-nav fixed inset-x-0 bottom-0 z-20 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden">
         <div className="mx-auto grid h-[4.35rem] max-w-3xl grid-cols-5 px-1 sm:px-2">
           {navItems.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               end={item.to === '/'}
-              className={({ isActive }) => `relative mx-1 my-1 flex flex-col items-center justify-center gap-1 rounded-lg text-[11px] transition-colors ${isActive ? 'bg-gradient-to-br from-teal-500/20 to-sky-500/10 font-medium text-teal-200 shadow-[inset_0_0_14px_rgba(20,184,166,.12)]' : 'text-gray-400 hover:bg-white/5 hover:text-gray-200'}`}
+              className={({ isActive }) => `relative mx-1 my-1 flex flex-col items-center justify-center gap-1 rounded-lg text-[11px] transition-colors ${isActive ? 'bg-gradient-to-br from-teal-500/20 to-sky-500/10 font-medium text-teal-200 shadow-[inset_0_0_14px_rgba(20,184,166,.12)]' : 'text-gray-500 hover:bg-black/5 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-200'}`}
             >
               {({ isActive }) => <>
                 <item.icon aria-hidden="true" className="h-5 w-5" strokeWidth={1.8} />

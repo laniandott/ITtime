@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ITtime · 打卡页重设计原型</title>
+<style>
+  :root{
+    /* ---- 单一主色 ---- */
+    --brand-50:#F0FAF7;
+    --brand-100:#D7F2EB;
+    --brand-200:#AEE4D7;
+    --brand-500:#14A38B;
+    --brand-600:#0D9488;
+    --brand-700:#0F766E;
+    /* ---- 中性色阶 ---- */
+    --ink-900:#111827;
+    --ink-700:#374151;
+    --ink-500:#6B7280;
+    --ink-400:#8A9099;
+    --line:#E5E8E6;
+    --line-strong:#D5DAD8;
+    --surface:#FFFFFF;
+    --canvas:#F6F8F7;
+    /* ---- 语义色，仅用于状态 ---- */
+    --danger:#DC2626;
+    --danger-soft:#FEF2F2;
+    --warn:#B45309;
+    /* ---- 形状 ---- */
+    --r-card:10px;
+    --r-ctl:8px;
+    --shadow-1:0 1px 2px rgba(16,24,40,.05);
+    --shadow-2:0 4px 14px rgba(16,24,40,.07);
+    --ease:cubic-bezier(.2,.8,.2,1);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--canvas); color:var(--ink-900);
+    -webkit-font-smoothing:antialiased;
+    font-size:14px; line-height:1.5;
+  }
+  button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
+  .num{font-variant-numeric:tabular-nums}
+
+  /* ============ 布局骨架 ============ */
+  .shell{display:flex;min-height:100vh}
+  .side{
+    width:232px;flex:none;background:var(--surface);border-right:1px solid var(--line);
+    padding:16px 12px;display:flex;flex-direction:column;gap:24px;position:sticky;top:0;height:100vh;
+  }
+  .brand{display:flex;align-items:center;gap:10px;padding:4px 8px 0}
+  .brand-mark{
+    width:30px;height:30px;border-radius:8px;background:var(--brand-700);
+    display:grid;place-items:center;color:#fff;font-weight:700;font-size:13px;letter-spacing:-.02em;
+  }
+  .brand-name{font-weight:600;font-size:14px;letter-spacing:-.01em}
+  .brand-sub{font-size:11px;color:var(--ink-400);margin-top:1px}
+  .nav-group{display:flex;flex-direction:column;gap:1px}
+  .nav-label{font-size:11px;color:var(--ink-400);padding:0 10px 6px;letter-spacing:.02em}
+  .nav-item{
+    display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--r-ctl);
+    font-size:13px;color:var(--ink-500);text-align:left;width:100%;
+  }
+  .nav-item svg{width:16px;height:16px;flex:none;stroke:currentColor;fill:none;stroke-width:1.7}
+  .nav-item:hover{background:#F3F5F4;color:var(--ink-900)}
+  .nav-item.active{background:var(--brand-50);color:var(--brand-700);font-weight:600}
+  .side-foot{margin-top:auto;border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:8px}
+  .side-user{display:flex;align-items:center;gap:8px;padding:6px 8px;font-size:12px;color:var(--ink-500)}
+
+  .main{flex:1;min-width:0;padding:22px 28px 60px}
+  .wrap{max-width:1200px;margin:0 auto}
+
+  /* ============ 页头 ============ */
+  .page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;padding-bottom:16px;border-bottom:1px solid var(--line);margin-bottom:20px}
+  .kicker{font-size:11px;letter-spacing:.1em;color:var(--ink-400);text-transform:uppercase;margin-bottom:4px}
+  h1{margin:0;font-size:22px;line-height:1.3;letter-spacing:-.02em;font-weight:650}
+  .page-desc{margin:4px 0 0;font-size:12.5px;color:var(--ink-500)}
+  .head-actions{display:flex;align-items:center;gap:8px;flex:none}
+
+  /* ============ 控件 ============ */
+  .btn{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border-radius:var(--r-ctl);font-size:13px;font-weight:500;border:1px solid transparent;transition:background .16s var(--ease),border-color .16s var(--ease)}
+  .btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8}
+  .btn-primary{background:var(--brand-700);color:#fff}
+  .btn-primary:hover{background:#0B635C}
+  .btn-ghost{background:var(--surface);border-color:var(--line-strong);color:var(--ink-700)}
+  .btn-ghost:hover{background:#F3F5F4;border-color:#C7CDCA}
+  .btn-quiet{color:var(--ink-500);padding:0 8px}
+  .btn-quiet:hover{color:var(--ink-900);background:#F3F5F4}
+  .btn-danger{background:var(--danger);color:#fff}
+  .btn-danger:hover{background:#B91C1C}
+
+  /* ============ 主体两栏 ============ */
+  .grid{display:grid;grid-template-columns:minmax(0,1fr) 344px;gap:20px;align-items:start}
+
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);box-shadow:var(--shadow-1)}
+  .card-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line)}
+  .card-title{font-size:13px;font-weight:600;letter-spacing:-.01em}
+  .card-sub{font-size:11.5px;color:var(--ink-400);font-weight:400;margin-left:6px}
+
+  /* ---- 正在计时 ---- */
+  .session{padding:22px 24px 20px}
+  .session-top{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+  .live{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;color:var(--brand-700);background:var(--brand-50);border:1px solid var(--brand-100);padding:3px 8px;border-radius:999px}
+  .live-dot{width:6px;height:6px;border-radius:50%;background:var(--brand-600);animation:pulse 2s var(--ease) infinite}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.45;transform:scale(.85)}}
+  .cat-chip{font-size:11.5px;color:var(--ink-500);display:inline-flex;align-items:center;gap:5px}
+  .dot{width:6px;height:6px;border-radius:50%;flex:none}
+
+  .session-name{display:flex;align-items:baseline;gap:10px;margin-bottom:2px}
+  .session-name h2{margin:0;font-size:17px;font-weight:650;letter-spacing:-.01em}
+  .clock{
+    font-size:46px;line-height:1.05;font-weight:600;letter-spacing:-.035em;color:var(--ink-900);
+    font-variant-numeric:tabular-nums;margin:6px 0 2px;
+  }
+  .session-meta{font-size:12px;color:var(--ink-400);margin:2px 0 18px}
+
+  .session-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+  .field label{display:block;font-size:11.5px;color:var(--ink-400);margin-bottom:5px}
+  .select,.text-in{
+    width:100%;height:36px;border:1px solid var(--line-strong);border-radius:var(--r-ctl);
+    background:var(--surface);font-size:13px;color:var(--ink-900);padding:0 10px;
+    transition:border-color .16s var(--ease),box-shadow .16s var(--ease);
+  }
+  .select:hover,.text-in:hover{border-color:#C7CDCA}
+  .select:focus,.text-in:focus{outline:none;border-color:var(--brand-500);box-shadow:0 0 0 3px rgba(20,163,139,.14)}
+  .note-row{display:flex;gap:8px}
+  .note-row .text-in{flex:1}
+
+  .session-actions{display:flex;align-items:center;gap:8px;padding-top:16px;border-top:1px solid var(--line)}
+  .session-actions .spacer{flex:1}
+
+  /* ---- 时间线 ---- */
+  .tl-group-label{
+    display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--ink-400);
+    padding:14px 16px 6px;font-weight:600;letter-spacing:.02em;
+  }
+  .tl-group-label::after{content:"";flex:1;height:1px;background:var(--line)}
+  .tl-row{
+    display:grid;grid-template-columns:8px 1fr auto auto;align-items:center;gap:12px;
+    padding:0 16px;height:46px;border-bottom:1px solid #F0F2F1;position:relative;
+  }
+  .tl-row:last-child{border-bottom:none}
+  .tl-row:hover{background:#FAFBFA}
+  .tl-bar{width:3px;height:20px;border-radius:2px;justify-self:center}
+  .tl-main{min-width:0;display:flex;align-items:baseline;gap:8px;overflow:hidden}
+  .tl-tag{font-size:13px;font-weight:550;color:var(--ink-900);white-space:nowrap}
+  .tl-note{font-size:12px;color:var(--ink-400);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tl-time{font-size:11.5px;color:var(--ink-400);white-space:nowrap}
+  .tl-dur{font-size:13px;font-weight:600;color:var(--ink-700);min-width:56px;text-align:right}
+  .tl-actions{display:flex;gap:2px;opacity:0;transition:opacity .16s var(--ease);position:absolute;right:12px;background:linear-gradient(90deg,transparent,#FAFBFA 18%)}
+  .tl-row:hover .tl-actions{opacity:1}
+  .icon-btn{width:26px;height:26px;display:grid;place-items:center;border-radius:6px;color:var(--ink-400)}
+  .icon-btn:hover{background:#EDF0EE;color:var(--ink-700)}
+  .icon-btn svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.8}
+
+  /* ---- 右栏 快速开始 ---- */
+  .quick{padding:0}
+  .quick-body{padding:12px 14px 14px;display:flex;flex-direction:column;gap:14px}
+  .quick-tools{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line)}
+  .quick-tools .select{height:32px;font-size:12.5px}
+  .cat-block{display:flex;flex-direction:column;gap:8px}
+  .cat-head{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:var(--ink-700)}
+  .cat-head .count{margin-left:auto;font-size:11px;color:var(--ink-400);font-weight:400}
+  .tag-grid{display:flex;flex-wrap:wrap;gap:6px}
+  .tag-btn{
+    display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 11px;
+    border:1px solid var(--line-strong);border-radius:var(--r-ctl);background:var(--surface);
+    font-size:12.5px;color:var(--ink-700);transition:all .16s var(--ease);
+  }
+  .tag-btn:hover{border-color:#BFC6C3;background:#FAFBFA;transform:translateY(-1px);box-shadow:var(--shadow-1)}
+  .tag-btn .dot{width:5px;height:5px}
+  .tag-btn.is-count{border-style:dashed}
+  .tag-btn.is-running{background:var(--brand-50);border-color:var(--brand-200);color:var(--brand-700);font-weight:600;box-shadow:inset 0 0 0 1px var(--brand-200)}
+  .tag-btn .stop-ico{font-size:9px;line-height:1}
+
+  /* ---- 标注层 ---- */
+  .marker{
+    position:absolute;z-index:9;width:20px;height:20px;border-radius:50%;
+    background:#111827;color:#fff;font-size:11px;font-weight:600;display:none;place-items:center;
+    box-shadow:0 2px 8px rgba(0,0,0,.25);
+  }
+  body.annotate .marker{display:grid}
+  .rel{position:relative}
+  .toggle{
+    position:fixed;right:20px;bottom:20px;z-index:50;display:flex;align-items:center;gap:8px;
+    background:#111827;color:#fff;height:38px;padding:0 14px;border-radius:999px;font-size:12.5px;font-weight:500;
+    box-shadow:0 8px 24px rgba(16,24,40,.22);
+  }
+  .toggle svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8}
+  .legend{
+    position:fixed;left:20px;bottom:20px;z-index:50;max-width:340px;background:#111827;color:#E5E7EB;
+    border-radius:10px;padding:12px 14px;font-size:11.5px;line-height:1.7;display:none;box-shadow:0 12px 32px rgba(0,0,0,.28)
+  }
+  body.annotate .legend{display:block}
+  .legend b{color:#fff;font-weight:600}
+  .legend .n{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;background:#374151;color:#fff;font-size:10px;font-weight:600;margin-right:5px}
+
+  @media (max-width:1100px){
+    .grid{grid-template-columns:minmax(0,1fr)}
+    .side{display:none}
+    .main{padding:18px 16px 80px}
+    .clock{font-size:38px}
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <!-- 侧栏 -->
+  <aside class="side">
+    <div class="brand">
+      <div class="brand-mark">IT</div>
+      <div>
+        <div class="brand-name">ITtime</div>
+        <div class="brand-sub">Focus workspace</div>
+      </div>
+    </div>
+    <nav class="nav-group">
+      <div class="nav-label">记录</div>
+      <button class="nav-item active"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>打卡</button>
+      <button class="nav-item"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h7"/></svg>待办</button>
+      <button class="nav-item"><svg viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/><path d="M8 9h8M8 13h6"/></svg>日记</button>
+    </nav>
+    <nav class="nav-group">
+      <div class="nav-label">安排与回顾</div>
+      <button class="nav-item"><svg viewBox="0 0 24 24"><path d="M12 20V9"/><path d="M12 12c0-3 2-5 5-5 0 3-2 5-5 5z"/><path d="M12 16c0-2-1.5-4-4-4 0 2 1.5 4 4 4z"/></svg>习惯</button>
+      <button class="nav-item"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>统计</button>
+      <button class="nav-item"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>日历</button>
+      <button class="nav-item"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 13h4M8 17h7"/></svg>计划</button>
+    </nav>
+    <nav class="nav-group">
+      <div class="nav-label">整理</div>
+      <button class="nav-item"><svg viewBox="0 0 24 24"><path d="M20 12l-8 8-8-8 8-8z"/><circle cx="12" cy="12" r="1.6"/></svg>标签</button>
+    </nav>
+    <div class="side-foot">
+      <button class="nav-item"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.4-2.3 1a7 7 0 0 0-2-1.2L14.2 3H9.8l-.4 2.7a7 7 0 0 0-2 1.2l-2.3-1-2 3.4 2 1.5a7 7 0 0 0 0 2.4l-2 1.5 2 3.4 2.3-1a7 7 0 0 0 2 1.2l.4 2.7h4.4l.4-2.7a7 7 0 0 0 2-1.2l2.3 1 2-3.4-2-1.5c.06-.4.1-.8.1-1.2z"/></svg>设置</button>
+      <div class="side-user">
+        <div class="dot" style="width:7px;height:7px;background:var(--brand-500)"></div>
+        <span>本机即时保存</span>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="wrap">
+      <!-- 页头：标题永远靠左，右侧只放一个主操作 -->
+      <header class="page-head rel">
+        <div>
+          <div class="kicker">ITtime / 工作区</div>
+          <h1>打卡</h1>
+          <p class="page-desc">记录你此刻正在做什么</p>
+        </div>
+        <div class="head-actions">
+          <button class="btn btn-ghost">
+            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>补录
+          </button>
+          <button class="btn btn-primary">
+            <svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z"/></svg>开始计时
+          </button>
+        </div>
+        <div class="marker" style="left:-14px;top:-6px">1</div>
+      </header>
+
+      <div class="grid">
+        <!-- 左列 -->
+        <div style="display:flex;flex-direction:column;gap:20px">
+          <!-- 正在计时 -->
+          <section class="card session rel">
+            <div class="session-top">
+              <span class="live"><span class="live-dot"></span>正在计时</span>
+              <span class="cat-chip"><span class="dot" style="background:#0F766E"></span>工作</span>
+              <span class="cat-chip" style="margin-left:auto;color:var(--ink-400)">全屏常显</span>
+            </div>
+            <div class="session-name">
+              <h2>编码实现</h2>
+            </div>
+            <div class="clock num">00:26:05</div>
+            <div class="session-meta">开始于 13:33 · 已累计 26 分钟</div>
+
+            <div class="session-fields">
+              <div class="field">
+                <label>关联待办</label>
+                <select class="select"><option>不关联待办</option><option>完成统计页信息层级重构</option></select>
+              </div>
+              <div class="field">
+                <label>备注</label>
+                <div class="note-row">
+                  <input class="text-in" value="评审 UI 一致性">
+                </div>
+              </div>
+            </div>
+
+            <div class="session-actions">
+              <button class="btn btn-ghost">
+                <svg viewBox="0 0 24 24"><path d="M12 3v12M12 15l-4-4M12 15l4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>点记录
+              </button>
+              <button class="btn btn-ghost">
+                <svg viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/><path d="M8 9h8M8 13h6"/></svg>记日记
+              </button>
+              <div class="spacer"></div>
+              <button class="btn btn-quiet">终止链路</button>
+              <button class="btn btn-danger">
+                <svg viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="1.5"/></svg>停止
+              </button>
+            </div>
+            <div class="marker" style="right:16px;top:14px">2</div>
+          </section>
+
+          <!-- 时间线 -->
+          <section class="card rel" style="overflow:hidden">
+            <div class="card-head">
+              <div class="card-title">活动时间线<span class="card-sub">按结束时间倒序</span></div>
+              <div style="display:flex;align-items:center;gap:2px">
+                <button class="btn btn-quiet" style="background:#F3F5F4;color:var(--ink-900);font-weight:600">今天</button>
+                <button class="btn btn-quiet">近 7 天</button>
+                <button class="btn btn-quiet">近 30 天</button>
+              </div>
+            </div>
+
+            <div class="tl-group-label">今天 · 10 月 17 日</div>
+            <div class="tl-row">
+              <span class="tl-bar" style="background:#0D9488"></span>
+              <div class="tl-main"><span class="tl-tag">编码实现</span><span class="tl-note">评审 UI 一致性</span></div>
+              <span class="tl-time num">13:33 – 现在</span>
+              <span class="tl-dur num" style="color:var(--brand-700)">进行中</span>
+              <div class="tl-actions">
+                <button class="icon-btn" title="打断"><svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg></button>
+                <button class="icon-btn" title="记日记"><svg viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/></svg></button>
+              </div>
+            </div>
+            <div class="tl-row">
+              <span class="tl-bar" style="background:#0D9488"></span>
+              <div class="tl-main"><span class="tl-tag">编码实现</span><span class="tl-note">补一个边界用例</span></div>
+              <span class="tl-time num">11:30 – 12:15</span>
+              <span class="tl-dur num">45m</span>
+              <div class="tl-actions">
+                <button class="icon-btn" title="打断"><svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg></button>
+                <button class="icon-btn" title="记日记"><svg viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/></svg></button>
+              </div>
+            </div>
+            <div class="tl-row">
+              <span class="tl-bar" style="background:#8B5CF6"></span>
+              <div class="tl-main"><span class="tl-tag">代码评审</span></div>
+              <span class="tl-time num">10:45 – 11:15</span>
+              <span class="tl-dur num">30m</span>
+              <div class="tl-actions">
+                <button class="icon-btn" title="打断"><svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg></button>
+                <button class="icon-btn" title="记日记"><svg viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/></svg></button>
+              </div>
+            </div>
+            <div class="tl-row">
+              <span class="tl-bar" style="background:#3B82F6"></span>
+              <div class="tl-main"><span class="tl-tag">会议沟通</span><span class="tl-note">和产品对齐口径</span></div>
+              <span class="tl-time num">09:20 – 09:55</span>
+              <span class="tl-dur num">35m</span>
+              <div class="tl-actions">
+                <button class="icon-btn" title="打断"><svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg></button>
+                <button class="icon-btn" title="记日记"><svg viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/></svg></button>
+              </div>
+            </div>
+
+            <div class="tl-group-label">昨天 · 10 月 16 日</div>
+            <div class="tl-row">
+              <span class="tl-bar" style="background:#6366F1"></span>
+              <div class="tl-main"><span class="tl-tag">阅读</span><span class="tl-note">《深度工作》第三章</span></div>
+              <span class="tl-time num">22:15 – 22:55</span>
+              <span class="tl-dur num">40m</span>
+              <div class="tl-actions">
+                <button class="icon-btn" title="打断"><svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg></button>
+                <button class="icon-btn" title="记日记"><svg viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/></svg></button>
+              </div>
+            </div>
+            <div class="tl-row">
+              <span class="tl-bar" style="background:#EF4444"></span>
+              <div class="tl-main"><span class="tl-tag">健身</span></div>
+              <span class="tl-time num">21:00 – 21:50</span>
+              <span class="tl-dur num">50m</span>
+              <div class="tl-actions">
+                <button class="icon-btn" title="打断"><svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg></button>
+                <button class="icon-btn" title="记日记"><svg viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/></svg></button>
+              </div>
+            </div>
+            <div class="tl-row">
+              <span class="tl-bar" style="background:#0D9488"></span>
+              <div class="tl-main"><span class="tl-tag">编码实现</span><span class="tl-note">重构统计页布局</span></div>
+              <span class="tl-time num">14:10 – 15:45</span>
+              <span class="tl-dur num">1h 35m</span>
+              <div class="tl-actions">
+                <button class="icon-btn" title="打断"><svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg></button>
+                <button class="icon-btn" title="记日记"><svg viewBox="0 0 24 24"><path d="M5 4h11l3 3v13H5z"/></svg></button>
+              </div>
+            </div>
+            <div class="marker" style="right:16px;top:10px">3</div>
+          </section>
+        </div>
+
+        <!-- 右列：快速开始 -->
+        <section class="card quick rel">
+          <div class="card-head">
+            <div class="card-title">快速开始</div>
+            <button class="btn btn-quiet" style="font-size:12px">调整顺序</button>
+          </div>
+          <div class="quick-tools">
+            <select class="select" style="max-width:200px"><option>不关联待办</option></select>
+          </div>
+          <div class="quick-body">
+            <div class="cat-block">
+              <div class="cat-head"><span class="dot" style="background:#0F766E"></span>工作<span class="count">4 个标签</span></div>
+              <div class="tag-grid">
+                <button class="tag-btn is-running"><span class="dot" style="background:#0F766E"></span>编码实现<span class="stop-ico">■</span></button>
+                <button class="tag-btn"><span class="dot" style="background:#8B5CF6"></span>代码评审</button>
+                <button class="tag-btn"><span class="dot" style="background:#3B82F6"></span>会议沟通</button>
+                <button class="tag-btn"><span class="dot" style="background:#0891B2"></span>需求评审</button>
+              </div>
+            </div>
+            <div class="cat-block">
+              <div class="cat-head"><span class="dot" style="background:#B45309"></span>健康<span class="count">3 个标签</span></div>
+              <div class="tag-grid">
+                <button class="tag-btn is-count"><span class="dot" style="background:#38BDF8"></span>喝水</button>
+                <button class="tag-btn"><span class="dot" style="background:#EF4444"></span>健身</button>
+                <button class="tag-btn"><span class="dot" style="background:#14B8A6"></span>睡眠</button>
+              </div>
+            </div>
+            <div class="cat-block">
+              <div class="cat-head"><span class="dot" style="background:#B45309"></span>生活<span class="count">3 个标签</span></div>
+              <div class="tag-grid">
+                <button class="tag-btn"><span class="dot" style="background:#F59E0B"></span>吃饭</button>
+                <button class="tag-btn"><span class="dot" style="background:#EAB308"></span>家务</button>
+                <button class="tag-btn"><span class="dot" style="background:#F97316"></span>通勤</button>
+              </div>
+            </div>
+            <div class="cat-block">
+              <div class="cat-head"><span class="dot" style="background:#6366F1"></span>学习<span class="count">2 个标签</span></div>
+              <div class="tag-grid">
+                <button class="tag-btn"><span class="dot" style="background:#A855F7"></span>英语听力</button>
+                <button class="tag-btn"><span class="dot" style="background:#6366F1"></span>阅读</button>
+              </div>
+            </div>
+          </div>
+          <div class="marker" style="right:14px;top:52px">4</div>
+        </section>
+      </div>
+    </div>
+  </main>
+</div>
+
+<button class="toggle" id="tg">
+  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+  <span id="tg-txt">显示设计标注</span>
+</button>
+
+<div class="legend">
+  <div style="margin-bottom:6px;font-weight:600;color:#fff">这一版改了什么</div>
+  <div><span class="n">1</span><b>页头</b>：标题固定左对齐，右侧只留 1 个主操作 + 1 个次操作</div>
+  <div><span class="n">2</span><b>计时卡</b>：数字用近黑色而不是主色；「停止」是唯一实心危险按钮，「终止链路」降为文字按钮</div>
+  <div><span class="n">3</span><b>时间线</b>：按日期分组、行高 46px、标签色只保留 3px 色条、操作 hover 才出现</div>
+  <div><span class="n">4</span><b>快速开始</b>：去掉分类彩色底与彩色描边按钮，改为白底 + 6px 色点，运行态才上色</div>
+</div>
+
+<script>
+  const tg = document.getElementById('tg'), txt = document.getElementById('tg-txt')
+  tg.addEventListener('click', () => {
+    document.body.classList.toggle('annotate')
+    txt.textContent = document.body.classList.contains('annotate') ? '隐藏设计标注' : '显示设计标注'
+  })
+</script>
+</body>
+</html>

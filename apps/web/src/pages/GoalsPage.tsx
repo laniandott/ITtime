@@ -48,7 +48,7 @@ export default function GoalsPage({ embedded = false }: { embedded?: boolean } =
   }
 
   return <div className="workspace-page habits-page space-y-5">
-    {!embedded && <PageHeader title="习惯结果" description="周期性目标与完成记录" actions={<Link to="/tasks?tab=habits" className="text-sm text-brand">管理标签规则</Link>} />}
+    {!embedded && <PageHeader title="习惯结果" description="周期性目标与完成记录" actions={<Link to="/system?tab=settings" className="text-sm text-brand">管理标签规则</Link>} />}
     {error && <p role="alert" className="text-red-500 text-sm">{error}</p>}
     <div className="habits-layout items-stretch">
     <section className="page-card p-4 sm:p-5"><h2 className="text-sm font-semibold text-gray-500 mb-3">当前周期</h2>{goals.map(goal => {

@@ -71,12 +71,17 @@ export default function App() {
 
   useEffect(() => {
     applyFontSizePreference()
-    // Aurora Glass 深空形态为默认；亮色适配后再恢复 matchMedia 跟随系统。
-    const isDark = true
-    document.documentElement.classList.toggle('dark', isDark)
-    document.documentElement.style.colorScheme = isDark ? 'dark' : 'light'
-    void syncNativeStatusBarTheme(isDark)
-    return () => {}
+    // Aurora 双主题：亮色=晨雾玻璃，暗色=深空玻璃，跟随系统偏好。
+    const media = window.matchMedia('(prefers-color-scheme: dark)')
+    const applyTheme = () => {
+      const isDark = media.matches
+      document.documentElement.classList.toggle('dark', isDark)
+      document.documentElement.style.colorScheme = isDark ? 'dark' : 'light'
+      void syncNativeStatusBarTheme(isDark)
+    }
+    applyTheme()
+    media.addEventListener('change', applyTheme)
+    return () => media.removeEventListener('change', applyTheme)
   }, [])
 
   useEffect(() => {
@@ -98,15 +103,13 @@ export default function App() {
               path="/time"
               element={
                 <SectionPage
-                  title="时间"
-                  description="日历、计划与日记 · 都在看你的一天"
                   tabs={[
-                    { id: 'calendar', label: '日历', description: '按月 / 周查看投入与安排' },
-                    { id: 'plans', label: '计划', description: '当日计划与实际记录并列复盘' },
-                    { id: 'diary', label: '日记', description: '随手记与日记流' },
+                    { id: 'calendar', label: '日历' },
+                    { id: 'plans', label: '计划' },
+                    { id: 'diary', label: '日记' },
                   ]}
                 >
-                  {(tab) => tab === 'calendar' ? <CalendarPage /> : tab === 'plans' ? <PlansPage embedded /> : <DiaryPage embedded />}
+                  {(tab) => tab === 'calendar' ? <CalendarPage /> : tab === 'plans' ? <PlansPage /> : <DiaryPage />}
                 </SectionPage>
               }
             />
@@ -114,14 +117,12 @@ export default function App() {
               path="/tasks"
               element={
                 <SectionPage
-                  title="事项"
-                  description="待办与周期目标 · 要做的事都在这里"
                   tabs={[
-                    { id: 'todos', label: '待办', description: '一次性与周期活动' },
-                    { id: 'habits', label: '习惯', description: '周期目标的完成结果' },
+                    { id: 'todos', label: '待办' },
+                    { id: 'habits', label: '习惯' },
                   ]}
                 >
-                  {(tab) => tab === 'todos' ? <TodosPage embedded /> : <HabitsPage embedded />}
+                  {(tab) => tab === 'todos' ? <TodosPage /> : <HabitsPage />}
                 </SectionPage>
               }
             />
@@ -130,14 +131,12 @@ export default function App() {
               path="/system"
               element={
                 <SectionPage
-                  title="体系"
-                  description="标签体系与偏好设置"
                   tabs={[
-                    { id: 'tags', label: '标签与分类', description: '管理标签体系、颜色与分类归属' },
-                    { id: 'settings', label: '设置', description: '账户、安全、数据同步与显示偏好' },
+                    { id: 'tags', label: '标签与分类' },
+                    { id: 'settings', label: '设置' },
                   ]}
                 >
-                  {(tab) => tab === 'tags' ? <TagsPage embedded /> : <SettingsPage embedded />}
+                  {(tab) => tab === 'tags' ? <TagsPage /> : <SettingsPage />}
                 </SectionPage>
               }
             />

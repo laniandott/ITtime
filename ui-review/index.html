@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ITtime Web 端 UI 评审与优化方案</title>
+<style>
+  :root{
+    --brand-700:#0F766E;
+    --brand-600:#0D9488;
+    --brand-500:#14A38B;
+    --brand-50:#F0FAF7;
+    --brand-100:#D7F2EB;
+    --ink-900:#111827;
+    --ink-700:#374151;
+    --ink-500:#6B7280;
+    --ink-400:#8A9099;
+    --line:#E5E8E6;
+    --line-strong:#D5DAD8;
+    --canvas:#F6F8F7;
+    --surface:#FFFFFF;
+    --danger:#DC2626;
+    --warn:#B45309;
+    --r-card:10px;
+    --r-ctl:8px;
+    --shadow-1:0 1px 2px rgba(16,24,40,.05);
+    --shadow-2:0 6px 20px rgba(16,24,40,.08);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:var(--canvas);color:var(--ink-900);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    font-size:14.5px;line-height:1.75;-webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--brand-700)}
+  .wrap{max-width:1040px;margin:0 auto;padding:0 24px}
+
+  /* ---------- 封面 ---------- */
+  .hero{background:var(--surface);border-bottom:1px solid var(--line);padding:56px 0 44px}
+  .hero .kicker{font-size:11px;letter-spacing:.14em;color:var(--ink-400);text-transform:uppercase;margin-bottom:14px}
+  .hero h1{margin:0 0 12px;font-size:36px;line-height:1.25;letter-spacing:-.03em;font-weight:680}
+  .hero p{margin:0;color:var(--ink-500);font-size:15px;max-width:720px}
+  .meta{display:flex;gap:26px;margin-top:26px;flex-wrap:wrap;font-size:12.5px;color:var(--ink-400)}
+  .meta b{color:var(--ink-700);font-weight:600}
+
+  /* ---------- 结论卡 ---------- */
+  .verdict{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:32px 0 8px}
+  .vcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:18px 20px;box-shadow:var(--shadow-1)}
+  .vcard .n{font-size:30px;font-weight:660;letter-spacing:-.03em;line-height:1.1;color:var(--brand-700);font-variant-numeric:tabular-nums}
+  .vcard .l{font-size:12.5px;color:var(--ink-500);margin-top:6px}
+
+  /* ---------- 章节 ---------- */
+  section{padding:44px 0 8px}
+  h2{font-size:22px;letter-spacing:-.02em;margin:0 0 6px;font-weight:660}
+  h2 .idx{color:var(--brand-600);font-variant-numeric:tabular-nums;margin-right:10px;font-weight:600}
+  .lead{color:var(--ink-500);font-size:14px;margin:0 0 24px;max-width:760px}
+  h3{font-size:16px;margin:32px 0 10px;letter-spacing:-.01em;font-weight:640}
+  h4{font-size:14px;margin:20px 0 8px;font-weight:640}
+  p{margin:10px 0}
+  ul,ol{margin:10px 0;padding-left:22px}
+  li{margin:5px 0}
+
+  /* ---------- 卡片 ---------- */
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:20px 22px;box-shadow:var(--shadow-1)}
+  .card + .card{margin-top:14px}
+  .callout{border-left:3px solid var(--brand-600);background:var(--brand-50);border-radius:0 var(--r-ctl) var(--r-ctl) 0;padding:14px 18px;margin:18px 0;font-size:13.5px}
+  .callout.warn{border-left-color:var(--warn);background:#FFFBF2}
+  .callout strong{color:var(--ink-900)}
+
+  /* ---------- 截图 ---------- */
+  figure{margin:18px 0}
+  figure img{width:100%;display:block;border:1px solid var(--line-strong);border-radius:var(--r-ctl);box-shadow:var(--shadow-1)}
+  figcaption{font-size:12px;color:var(--ink-400);margin-top:8px}
+  .crop{overflow:hidden;border:1px solid var(--line-strong);border-radius:var(--r-ctl);position:relative;box-shadow:var(--shadow-1);background:#fff}
+  .crop img{position:absolute;max-width:none;border:none;border-radius:0;box-shadow:none}
+  .stackfig{margin:16px 0}
+  .stackfig h4{margin:0 0 6px;font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-400)}
+  .stackfig img{width:100%;display:block;border:1px solid var(--line-strong);border-radius:var(--r-ctl);box-shadow:var(--shadow-1)}
+  .floatfig{float:right;width:300px;margin:6px 0 14px 26px}
+  .floatfig img{width:100%}
+  .floatfig figcaption{margin-top:6px}
+  .anno{position:absolute;border:2px solid var(--danger);border-radius:6px;pointer-events:none}
+  .anno.teal{border-color:var(--brand-600)}
+  .badge{position:absolute;background:var(--danger);color:#fff;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;letter-spacing:.02em}
+  .badge.teal{background:var(--brand-600)}
+
+  /* ---------- 代码 ---------- */
+  pre{clear:both;background:#111827;color:#E5E7EB;border-radius:var(--r-ctl);padding:14px 16px;overflow-x:auto;font-size:12.5px;line-height:1.7;margin:12px 0;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+  pre .c{color:#9CA3AF}
+  pre .del{color:#FCA5A5}
+  pre .add{color:#86EFAC}
+  pre .k{color:#93C5FD}
+  code.inline{background:#EEF1EF;border-radius:4px;padding:1px 5px;font-size:12.5px;font-family:ui-monospace,Consolas,monospace;color:#0F766E}
+
+  /* ---------- 表格 ---------- */
+  table{clear:both;width:100%;border-collapse:collapse;font-size:13px;margin:14px 0;background:var(--surface)}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:11.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-400);font-weight:600;background:#FAFBFA}
+  tr:last-child td{border-bottom:none}
+  td:first-child,th:first-child{white-space:nowrap}
+  td:last-child,th:last-child{white-space:nowrap}
+  td:first-child{font-weight:600}
+  .tag{display:inline-block;font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;white-space:nowrap}
+  .tag.p0{background:#FEE2E2;color:#991B1B}
+  .tag.p1{background:#FEF3C7;color:#92400E}
+  .tag.p2{background:#E0F2FE;color:#075985}
+
+  /* ---------- 色板 ---------- */
+  .palette{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+  .sw{width:78px;border-radius:6px;overflow:hidden;border:1px solid var(--line)}
+  .sw .chip{height:44px}
+  .sw .lb{font-size:10px;padding:4px 6px;color:var(--ink-500);background:#fff;font-variant-numeric:tabular-nums}
+
+  /* ---------- 前后对比 ---------- */
+  .ba{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:18px 0}
+  .ba .col h4{margin:0 0 8px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-400)}
+  .ba .col img{width:100%;display:block;border:1px solid var(--line-strong);border-radius:var(--r-ctl)}
+
+  /* ---------- 路线图 ---------- */
+  .fixlist{display:grid;gap:10px;margin:16px 0}
+  .fix{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:14px 18px;box-shadow:var(--shadow-1)}
+  .fix-h{display:flex;align-items:center;gap:9px;font-size:14px}
+  .fix-n{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--brand-50);color:var(--brand-700);font-size:11px;font-weight:700;flex:none}
+  .fix-f{font-size:11.5px;color:var(--ink-400);margin:5px 0 0 29px;font-family:ui-monospace,Consolas,monospace}
+  .fix p{margin:7px 0 0 29px;font-size:13px;color:var(--ink-700);line-height:1.75}
+  .road{display:grid;gap:12px;margin-top:16px}
+  .step{display:grid;grid-template-columns:104px 1fr;gap:16px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:16px 18px;box-shadow:var(--shadow-1)}
+  .step .when{font-size:12px;color:var(--brand-700);font-weight:650;letter-spacing:.02em}
+  .step .when span{display:block;color:var(--ink-400);font-weight:400;margin-top:2px}
+  .step h4{margin:0 0 6px;font-size:14px}
+  .step ul{margin:4px 0 0;padding-left:18px;font-size:13px;color:var(--ink-700)}
+
+  .foot{margin:52px 0 60px;padding-top:20px;border-top:1px solid var(--line);font-size:12.5px;color:var(--ink-400)}
+  @media (max-width:860px){
+    .floatfig{float:none;width:100%;margin:16px 0}
+    .verdict{grid-template-columns:1fr}
+    .ba{grid-template-columns:1fr}
+    .hero h1{font-size:27px}
+    .step{grid-template-columns:1fr;gap:8px}
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="wrap">
+    <div class="kicker">UI Review · ITtime / apps/web</div>
+    <h1>不是「配色变丑了」，<br>是样式层和结构层脱钩了</h1>
+    <p>这份评审基于对 9 个页面、明暗两套主题、桌面与移动两个断点的实机截图与源码对照。结论是：视觉问题只是表象，真正让 web 端「越改越丑」的是三件事——设计 token 失效、颜色被当装饰、布局靠结构选择器打补丁。</p>
+    <div class="meta">
+      <div>项目 <b>ITtime（React 18 + Tailwind 3 + Vite）</b></div>
+      <div>范围 <b>打卡 / 待办 / 日记 / 习惯 / 统计 / 日历 / 计划 / 标签 / 设置</b></div>
+      <div>评审日期 <b>2026-10-17</b></div>
+    </div>
+
+    <div class="verdict">
+      <div class="vcard"><div class="n">7</div><div class="l">套圆角同时在使用（lg / full / xl / md / 2xl）</div></div>
+      <div class="vcard"><div class="n">38</div><div class="l">个硬编码色值；紫色 #6d5efc 出现 31 次，比主色 teal 还多</div></div>
+      <div class="vcard"><div class="n">87</div><div class="l">处小于 12px 的文字（10px×53、11px×20、9px×13、8px×1）</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="wrap">
+
+<!-- ============ 1 ============ -->
+<section>
+  <h2><span class="idx">01</span>诊断：三个根因</h2>
+  <p class="lead">先说结论。你的审美没有退步，问题在于代码里没有「唯一的视觉真相」，所以每加一个功能就多一套局部规则，最后整体失控。</p>
+
+  <h3>根因一：设计 token 名存实亡</h3>
+  <p>tailwind.config 里只定义了 <code class="inline">brand</code> 一个色阶，其余全部靠「现场发挥」。于是同一层级的卡片在不同页面拿到不同的圆角、阴影和字号：</p>
+  <table>
+    <thead><tr><th>维度</th><th>实际在用的取值</th><th>问题</th></tr></thead>
+    <tbody>
+      <tr><td>圆角</td><td>rounded-lg(137) · rounded-full(87) · rounded-xl(68) · rounded-md(36) · rounded-2xl(18)</td><td>卡片有的 8px、有的 12px、有的 16px，挨在一起就像不同产品</td></tr>
+      <tr><td>阴影</td><td>sm(20) · xl(12) · md(5) · lg(2) · 2xl · inner · xs</td><td>阴影不表达层级，只表达「谁先写的」</td></tr>
+      <tr><td>字号</td><td>xs(295) · sm(290) · 10px(53) · 11px(20) · 9px(13) · 8px(1)</td><td>87 处小于 12px，实际渲染在 Windows 上就是「糊成一片的灰字」</td></tr>
+      <tr><td>主色</td><td>teal #0f766e（9 次） vs 紫 #6d5efc（31 次）</td><td>两个主色在抢主导权，读者无法判断「品牌色是哪个」</td></tr>
+    </tbody>
+  </table>
+  <div class="callout warn">
+    <strong>这不是风格问题，是可维护性问题。</strong>当一个新页面要写「卡片」时，作者必须在 5 个圆角、8 个阴影里选一个——他一定会选错，因为他没有依据。
+  </div>
+
+  <h3>根因二：颜色被当装饰，而不是信息编码</h3>
+  <p>现在标签色同时出现在三个位置：<b>文字颜色 + 1px 边框 + 12% 透明底色</b>，再加上分类面板的「彩色边框 + 彩色底色」。结果是 12 个标签 = 12 个高饱和色块互相竞争，视觉上没有任何焦点。</p>
+
+  <figure class="floatfig">
+    <img src="assets/crop-timer-quick.png" alt="快速开始面板">
+    <figcaption>快速开始：每个分类自带彩色底 + 彩色边框，每个标签再自带彩色边框 + 彩色文字 + 彩色底。</figcaption>
+  </figure>
+
+  <p>更关键的是<b>颜色语义在互相打架</b>：</p>
+  <ul>
+    <li>日历里<b>红色 = 周末</b>，但红色在按钮上又是「删除/危险」，用户读到的是警报而不是休息日。</li>
+    <li>习惯页进度条是<b>纯绿 #22c55e</b>（浏览器默认 accent），统计页进度条是 teal，待办页目标条又是另一种绿——同一个「进度」有 3 套颜色。</li>
+    <li>日记页的「随手记」是<b>紫色</b>，与全站 teal 无关，因为编辑器模块用了 #6d5efc 并渗透到了外层 UI。</li>
+  </ul>
+
+  <h3>根因三：布局靠结构选择器反向覆盖 JSX</h3>
+  <p>index.css 里有一批这样的规则——用 <code class="inline">nth-child</code>、<code class="inline">:last-child</code>、<code class="inline">&gt; .space-y-4 &gt; :first-child</code> 去「够」到 JSX 里的元素改样式：</p>
+  <pre><span class="c">/* index.css:92-94 —— 靠 DOM 结构定位第 2 个 section 的最后一层 div */</span>
+.tags-page .grid.items-start > section:nth-child(2) > div:last-child {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.tags-page .grid.items-start > section:nth-child(2) > div:last-child > div > div:first-child { min-width: 0 }
+
+<span class="c">/* index.css:82 —— 靠 class 组合定位待办卡片的表头 */</span>
+.todo-page > section.page-card > .flex.items-center.justify-between { position: sticky; ... }
+
+<span class="c">/* index.css:40 —— 本次最严重的视觉故障就来自这一行 */</span>
+.page-header > :last-child { margin-left: auto; }</pre>
+  <p>这种写法有两个必然后果：一是<b>改 JSX 就崩样式</b>，所以大家不敢动结构，只能继续叠补丁；二是<b>补丁之间互相冲突</b>，同一个元素被 3 条规则抢，最终呈现取决于书写顺序。这就是「越改越丑」的机制——不是越改越差，是每次改动都在给上一个人擦屁股，而擦屁股的成本越来越高。</p>
+</section>
+
+<!-- ============ 2 ============ -->
+<section>
+  <h2><span class="idx">02</span>P0 故障：可以今天就修</h2>
+  <p class="lead">下面 4 个是「确定是 bug、不是审美分歧」的问题。它们每天在用户面前出现，而且修复成本极低。</p>
+
+  <div class="callout" style="border-left-color:#15803D;background:#F0FDF4">
+    <strong>✅ 已于 2026-10-17 全部修复并验证</strong>（外加 1 个登录后不刷新的功能 bug）。改动清单与修复后截图见文末「附录 A」。
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">① 没有操作按钮的页面，标题被推到最右边</h3>
+    <p><code class="inline">PageHeader</code> 里 <code class="inline">{actions && ...}</code> 是条件渲染，没有 actions 时 header 只剩一个子元素；而 index.css 有一条 <code class="inline">.page-header &gt; :last-child { margin-left:auto }</code>，于是这唯一的子元素（标题块）被推到了最右。</p>
+    <div class="stackfig">
+      <h4>打卡 / 标签 / 日记 —— 没有 actions，标题被推到最右</h4>
+      <img src="assets/header-timer.png" alt="标题右对齐">
+      <h4 style="margin-top:14px">待办 —— 有 actions，标题正常靠左</h4>
+      <img src="assets/header-todos.png" alt="标题左对齐">
+    </div>
+    <p>同一套组件，两种对齐。用户看到的是「打卡页的标题跑到右上角去了」，这是最伤专业感的一类错误——它让人觉得产品没做完。</p>
+    <pre><span class="c">/* index.css:40 */</span>
+<span class="del">- .page-header > :last-child { margin-left: auto; }</span>
+<span class="add">+ .page-header-actions { margin-left: auto; }</span>
+
+<span class="c">/* PageHeader.tsx —— 让 actions 容器始终存在，避免结构抖动 */</span>
+<span class="del">- {actions && &lt;div className="page-header-actions flex flex-wrap items-center gap-2"&gt;{actions}&lt;/div&gt;}</span>
+<span class="add">+ &lt;div className="page-header-actions flex flex-wrap items-center gap-2"&gt;{actions}&lt;/div&gt;</span></pre>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">② 标签列表在窄容器里「逐字竖排」</h3>
+    <p>标签行是 <code class="inline">flex items-center justify-between</code>，左侧信息组和右侧操作组都没有 <code class="inline">shrink-0</code> / <code class="inline">whitespace-nowrap</code>，也没有 <code class="inline">min-w-0</code>。中文可以在任意字符间断行，于是列宽一紧（设置页内嵌时只有 370px），就变成这样：</p>
+    <figure>
+      <img src="assets/crop-tags.png" alt="标签列表竖排" style="max-width:680px">
+      <figcaption>标签页右侧列：二级标签名「↳ 后端」被拆成两行，上级说明、分类 chip、「编辑 删除」全部退化成竖排单字。设置页内嵌时更严重。</figcaption>
+    </figure>
+    <pre><span class="c">/* TagsPage.tsx —— 三处关键修改 */</span>
+<span class="del">- &lt;div className="flex items-center justify-between rounded-lg border px-4 py-2.5"&gt;</span>
+<span class="add">+ &lt;div className="flex items-center justify-between gap-3 rounded-lg border px-4 py-2.5"&gt;</span>
+
+<span class="c">// 左侧信息组：允许压缩，但名字不许断行</span>
+<span class="del">- &lt;div className="flex items-center gap-3"&gt;</span>
+<span class="add">+ &lt;div className="flex min-w-0 flex-1 items-center gap-3"&gt;</span>
+<span class="del">-   &lt;span className="font-medium"&gt;{tag.name}&lt;/span&gt;</span>
+<span class="add">+   &lt;span className="truncate whitespace-nowrap font-medium"&gt;{tag.name}&lt;/span&gt;</span>
+<span class="del">-   &lt;span className="text-xs text-gray-400"&gt;上级：{...}&lt;/span&gt;</span>
+<span class="add">+   &lt;span className="hidden shrink-0 whitespace-nowrap text-xs text-gray-400 sm:inline"&gt;上级：{...}&lt;/span&gt;</span>
+
+<span class="c">// 右侧操作组：永不被压缩</span>
+<span class="del">- &lt;div className="flex items-center gap-2"&gt;</span>
+<span class="add">+ &lt;div className="flex shrink-0 items-center gap-2 whitespace-nowrap"&gt;</span></pre>
+    <p class="callout">顺带一个结构建议：设置页不该内嵌整个标签管理器。要么给一个「去标签页管理」的跳转，要么把标签管理做成独立路由 + 设置里只留入口。现在等于两处代码两处维护，而且窄容器必然复现这个 bug。</p>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">③ 日历页有两个标题、两套月份导航</h3>
+    <p>页面级工具栏里已经有一组「‹ 今天 2026年10月 ›」，日历卡片内部又有一组「‹ 2026 年 10 月 ›」。同一屏里两个功能相同的控件，用户不知道该点哪个，视觉上也是重复噪音。</p>
+    <figure>
+      <img src="assets/crop-calendar.png" alt="日历双标题" style="max-width:880px">
+      <figcaption>上半部分是页面级工具栏（‹ › 今天 2026年10月 + 合计 + 筛选 + 视图切换），下半部分日历卡片内又出现「‹ 2026 年 10 月 ›」。另外每个日期格子下面 5 个彩色圆点（=5 种记录类型）在 7 列 × 6 行的网格里重复 30 次，信息密度极低但视觉噪音极高。</figcaption>
+    </figure>
+    <ul>
+      <li><b>删掉卡片内的 header</b>，月份标题并入页面工具栏，只保留一套导航。</li>
+      <li>日期格子里的 5 个圆点，改成<b>一条 3px 的彩色进度条</b>（按时长占比分段），或者干脆只在有记录的日子显示一个 4px 圆点 + 右上角时长。</li>
+      <li>周末不要用红色数字，用<b>浅灰底</b>或加粗区分即可；红色留给危险操作。</li>
+      <li>选中日不要整格填充主色（文字对比度会崩），改为<b>1.5px 主色描边 + 浅主色底</b>。</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0">④ 待办右侧操作列被挤成三行</h3>
+    <p>行尾的「计时 / 编辑 / ×」在一个很窄的列里各自换行，形成了三行小字竖排。原因同上：操作组没有 <code class="inline">shrink-0</code>，且用 <code class="inline">text-sm</code> 的文字按钮而非图标按钮。</p>
+    <figure class="floatfig" style="width:230px">
+      <img src="assets/crop-todos.png" alt="待办操作列">
+      <figcaption>每行右侧都堆着「计时 / 编辑 / ×」三行竖排，行高被撑到 68px；删除的 × 又是最浅的灰色，几乎不可见。</figcaption>
+    </figure>
+    <p>建议改成<b>图标按钮 + hover 显示</b>：默认只显示一个「▶ 计时」，鼠标进入行才浮现「编辑 / 删除」图标。行高回到 44–48px，一屏能看到 12 条以上。</p>
+  </div>
+
+  <div class="callout warn">
+    <strong>顺手发现一个功能性 UX bug（不属于视觉）：</strong>首次登录成功后页面不刷新数据，需要手动刷新一次才出现内容。原因是 <code class="inline">loadAll()</code> 只在 App 挂载时执行一次，而登录成功时 App 没有重新挂载。建议在 AuthGate 切到 <code class="inline">app</code> 模式后触发一次 <code class="inline">loadAll()</code>。
+  </div>
+</section>
+
+<!-- ============ 3 ============ -->
+<section>
+  <h2><span class="idx">03</span>设计系统：把「唯一真相」写进代码</h2>
+  <p class="lead">这是让「越改越丑」停下来的关键一步。不是重画界面，而是先定义清楚：只有 1 个主色、3 档圆角、2 档阴影、5 档字号。之后所有页面都必须从这套里取。</p>
+
+  <h3>3.1 颜色：1 主色 + 1 语义组 + 1 中性组</h3>
+  <div class="palette">
+    <div class="sw"><div class="chip" style="background:#F0FAF7"></div><div class="lb">50</div></div>
+    <div class="sw"><div class="chip" style="background:#D7F2EB"></div><div class="lb">100</div></div>
+    <div class="sw"><div class="chip" style="background:#AEE4D7"></div><div class="lb">200</div></div>
+    <div class="sw"><div class="chip" style="background:#14A38B"></div><div class="lb">500</div></div>
+    <div class="sw"><div class="chip" style="background:#0D9488"></div><div class="lb">600</div></div>
+    <div class="sw"><div class="chip" style="background:#0F766E"></div><div class="lb">700</div></div>
+    <div class="sw"><div class="chip" style="background:#111827"></div><div class="lb">ink-900</div></div>
+    <div class="sw"><div class="chip" style="background:#6B7280"></div><div class="lb">ink-500</div></div>
+    <div class="sw"><div class="chip" style="background:#E5E8E6"></div><div class="lb">line</div></div>
+    <div class="sw"><div class="chip" style="background:#DC2626"></div><div class="lb">danger</div></div>
+    <div class="sw"><div class="chip" style="background:#B45309"></div><div class="lb">warn</div></div>
+  </div>
+
+  <div class="callout">
+    <strong>「三色法则」——标签色只允许出现在一个位置。</strong><br>
+    现在每个标签按钮同时用了「彩色文字 + 彩色边框 + 彩色底」，三处叠加就是噪音。新规则：<b>标签色只作为一个 5px 色点出现</b>（时间线里则是 3px 左侧色条），文字、边框、底色一律中性。只有在「正在运行」这一种状态下，才允许整块上主色浅底。
+  </div>
+
+  <h3>3.2 形状：3 档圆角、2 档阴影</h3>
+  <pre><span class="c">// tailwind.config.js</span>
+<span class="k">borderRadius</span>: {
+  card: '10px',   <span class="c">// 卡片、面板、弹窗</span>
+  ctl:  '8px',    <span class="c">// 按钮、输入框、下拉、标签块</span>
+  <span class="c">// 胶囊一律用 rounded-full，不再有 xl / 2xl / md</span>
+},
+<span class="k">boxShadow</span>: {
+  card:  '0 1px 2px rgba(16,24,40,.05)',
+  float: '0 6px 20px rgba(16,24,40,.08)',  <span class="c">// 仅弹窗 / 下拉</span>
+}</pre>
+
+  <h3>3.3 字阶：5 档，最低 12px</h3>
+  <table>
+    <thead><tr><th>用途</th><th>字号 / 字重</th><th>色</th></tr></thead>
+    <tbody>
+      <tr><td>页面标题 h1</td><td>22px / 650</td><td>ink-900</td></tr>
+      <tr><td>区块标题 h2</td><td>15px / 640</td><td>ink-900</td></tr>
+      <tr><td>正文 / 列表主信息</td><td>13px / 500</td><td>ink-900</td></tr>
+      <tr><td>辅助信息</td><td>12px / 400</td><td>ink-500</td></tr>
+      <tr><td>标签、kicker</td><td>11px / 500（仅大写英文或极短中文）</td><td>ink-400</td></tr>
+    </tbody>
+  </table>
+  <p>把 9px / 10px 全部清掉。这些字号在 125% 缩放的 Windows 屏上会渲染成不可读的灰块，是「看起来粗糙」的主要来源之一。计时数字属于特例，用 46px + <code class="inline">tabular-nums</code>。</p>
+
+  <h3>3.4 深色模式：用同一套 token，不要另起一套</h3>
+  <figure>
+    <img src="assets/dk-timer.png" alt="深色模式">
+    <figcaption>暗色下 4 个彩色分类面板变成了 4 块发光的彩色玻璃——因为底色是 <code class="inline">color + '0a'</code> 叠加在深色上，饱和度反而被放大。</figcaption>
+  </figure>
+  <p>正确做法是暗色下<b>取消彩色底</b>，只用「中性面 + 色点」；主色在暗色里提亮一档（#14A38B → #2DD4BF）用于文字和描边即可。</p>
+</section>
+
+<!-- ============ 4 ============ -->
+<section>
+  <h2><span class="idx">04</span>逐页优化清单</h2>
+  <p class="lead">按「改动能带来多少视觉收益 / 需要多少工作量」排序。</p>
+  <table>
+    <thead><tr><th>页面</th><th>核心问题</th><th>动作</th><th>优先级</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><b>打卡</b></td>
+        <td>右栏 12 个彩虹标签按钮；计时卡整块 teal 底 + teal 数字；左栏大量留白；「停止」与「终止链路」两个红色按钮并列</td>
+        <td>标签改中性 + 色点；计时数字改近黑；只保留一个实心危险按钮，其余降为文字按钮；左栏补上按日期分组的时间线</td>
+        <td><span class="tag p0">P0</span></td>
+      </tr>
+      <tr>
+        <td><b>待办</b></td>
+        <td>行尾操作竖排；目标进度条用浏览器默认绿；「一次性活动」区块用琥珀色底，像警告区</td>
+        <td>操作改图标 + hover；进度条统一主色；取消琥珀底，用普通分区 + 细分割线</td>
+        <td><span class="tag p0">P0</span></td>
+      </tr>
+      <tr>
+        <td><b>标签</b></td>
+        <td>窄容器逐字竖排；分类色块饱和度过高；三个 section 三套视觉语言</td>
+        <td>见 P0 ②；分类 chip 改浅底深字；三个 section 统一为同一种卡片</td>
+        <td><span class="tag p0">P0</span></td>
+      </tr>
+      <tr>
+        <td><b>日历</b></td>
+        <td>双标题双导航；5 色圆点；红色周末；选中日整格填主色</td>
+        <td>见 P0 ③</td>
+        <td><span class="tag p0">P0</span></td>
+      </tr>
+      <tr>
+        <td><b>统计</b></td>
+        <td>只有排行没有趋势；hero 数字卡右侧大量空白；右栏「计划遵循」全是 0 却占一屏</td>
+        <td>加一条近 14 天趋势折线（recharts 已在依赖里）；hero 卡与趋势图并排；右栏空态改为「本周还没有计划」引导</td>
+        <td><span class="tag p1">P1</span></td>
+      </tr>
+      <tr>
+        <td><b>计划</b></td>
+        <td>「计划」列全空却占 50% 宽；块内 10px 三行文字；网格线几乎看不见</td>
+        <td>空列折叠为窄条（或默认只显示「实际」）；块内只留「时间 + 标签」两行 12px；小时线加深到 #EDF0EE</td>
+        <td><span class="tag p1">P1</span></td>
+      </tr>
+      <tr>
+        <td><b>习惯</b></td>
+        <td>进度条是浏览器默认绿；超额完成（70/30）看不出来；右栏「已完成活动」空一大片</td>
+        <td>自定义进度条（主色 + 8px 圆角）；超额部分用第二段浅色延伸并标注 +130%；右栏并入主卡下方</td>
+        <td><span class="tag p1">P1</span></td>
+      </tr>
+      <tr>
+        <td><b>日记</b></td>
+        <td>单行文字长度约 90 字，超长行宽；紫色「随手记」与全站无关；卡片左侧游离的紫色圆点</td>
+        <td>正文限宽 68ch 或改两栏；紫色改为中性 chip；圆点移入卡片内作为左侧 3px 色条</td>
+        <td><span class="tag p2">P2</span></td>
+      </tr>
+      <tr>
+        <td><b>设置</b></td>
+        <td>内嵌整个标签管理器（重复代码 + 必然复现窄容器 bug）；左侧导航无明确选中态</td>
+        <td>标签管理移出，设置里只留入口；导航加主色左边条 + 浅底</td>
+        <td><span class="tag p2">P2</span></td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============ 5 ============ -->
+<section>
+  <h2><span class="idx">05</span>Before / After</h2>
+  <p class="lead">我把打卡页按上面的规则重做了一版可交互原型（<a href="prototype.html">prototype.html</a>，右下角可切换设计标注）。核心只做了三件事：去彩虹、立层级、清冗余。</p>
+
+  <div class="ba">
+    <div class="col">
+      <h4>Before · 现状</h4>
+      <img src="assets/d-timer.png" alt="改造前">
+    </div>
+    <div class="col">
+      <h4>After · 原型</h4>
+      <img src="assets/after-timer.png" alt="改造后">
+    </div>
+  </div>
+
+  <h3>具体改了什么</h3>
+  <table>
+    <thead><tr><th>元素</th><th>Before</th><th>After</th><th>为什么</th></tr></thead>
+    <tbody>
+      <tr><td>页头</td><td>标题被推到最右</td><td>标题靠左，右侧 1 主 + 1 次</td><td>视线起点固定，页面有「入口」</td></tr>
+      <tr><td>计时数字</td><td>teal 色 36px，居中</td><td>近黑 46px，左对齐</td><td>计时是这一页的绝对主角，主色留给「可操作」的东西</td></tr>
+      <tr><td>计时卡</td><td>整块 teal 浅底</td><td>白底 + 细边框</td><td>大色块会和其他卡片抢注意力，也让暗色模式很难看</td></tr>
+      <tr><td>危险操作</td><td>「停止」红实心 + 「终止链路」红描边</td><td>「停止」红实心 + 「终止链路」纯文字</td><td>同级两个红色 = 没有主次</td></tr>
+      <tr><td>标签按钮</td><td>彩色边框 + 彩色文字 + 彩色底 + ▶ 符号</td><td>白底 + 5px 色点，仅运行态上色</td><td>12 个颜色竞争 → 0 个焦点</td></tr>
+      <tr><td>分类面板</td><td>4 种彩色底 + 彩色边框</td><td>无底色，仅「色点 + 名称 + 计数」</td><td>分类是组织方式，不是状态，不该有颜色重量</td></tr>
+      <tr><td>时间线</td><td>行高 68px，色条 + 彩色标签名 + 3 个常驻操作</td><td>行高 46px，3px 色条 + 中性标签名，操作 hover 出现</td><td>同屏信息量提升 45%，噪音下降</td></tr>
+      <tr><td>时间线分组</td><td>一整条长列表无分组</td><td>「今天 / 昨天」分组标签</td><td>回看时先定位日期，再定位事件</td></tr>
+    </tbody>
+  </table>
+  <p>移动端同理（当前 390px 下计时卡的 4 个按钮会挤成两行，「终止链路」单独居中悬空）：</p>
+  <figure>
+    <img src="assets/crop-mobile.png" alt="移动端计时卡" style="max-width:420px">
+    <figcaption>390px 下：4 个操作按钮挤成两行，「终止链路」被单独甩到第二行居中悬空；emoji 图标（📍📝）与 lucide 图标混用；整张卡是主色浅底 + 主色描边。</figcaption>
+  </figure>
+</section>
+
+<!-- ============ 6 ============ -->
+<section>
+  <h2><span class="idx">06</span>落地路线</h2>
+  <p class="lead">不要一次性重构。按这个顺序做，每一步都能独立上线、独立验收。</p>
+  <div class="road">
+    <div class="step">
+      <div class="when">第 0 步<span>半天</span></div>
+      <div>
+        <h4>止血：修 4 个 P0 故障</h4>
+        <ul>
+          <li>page-header 对齐（1 行 CSS + 1 行 JSX）</li>
+          <li>标签行竖排（3 处 flex 类名）</li>
+          <li>日历删掉内层 header</li>
+          <li>待办操作列改图标 + hover</li>
+        </ul>
+      </div>
+    </div>
+    <div class="step">
+      <div class="when">第 1 步<span>1–2 天</span></div>
+      <div>
+        <h4>建 token，并且只建 token <span style="color:#15803D;font-size:12px;font-weight:600">✓ 结构选择器清零 + token 落地</span></h4>
+        <ul>
+          <li>tailwind.config 补 <code class="inline">borderRadius.card/ctl</code>、<code class="inline">boxShadow.card/float</code>、<code class="inline">fontSize</code> 字阶</li>
+          <li>删掉 index.css 里 20 余条 <code class="inline">nth-child</code> / <code class="inline">&gt; .space-y-4</code> 结构选择器，把样式搬回组件（见附录 B）</li>
+          <li>这一步不改任何视觉，改完页面应该「看起来完全一样」——这是验收标准</li>
+        </ul>
+      </div>
+    </div>
+    <div class="step">
+      <div class="when">第 2 步<span>2–3 天</span></div>
+      <div>
+        <h4>去彩虹：颜色降噪 <span style="color:#15803D;font-size:12px;font-weight:600">✓ 已完成</span></h4>
+        <ul>
+          <li>标签按钮 / 分类面板按「三色法则」改造</li>
+          <li>紫色 #6d5efc 从 UI 层清除，仅保留在编辑器内部</li>
+          <li>进度条统一主色；红色只留给危险操作</li>
+          <li>暗色模式取消彩色底</li>
+        </ul>
+      </div>
+    </div>
+    <div class="step">
+      <div class="when">第 3 步<span>3–5 天</span></div>
+      <div>
+        <h4>逐页信息架构 <span style="color:#15803D;font-size:12px;font-weight:600">✓ 首批已完成</span></h4>
+        <ul>
+          <li>统计页趋势图、计划遵循空态、计划页网格与字号、设置页移出标签管理器（见附录 D）</li>
+          <li>统计页加趋势图；计划页折叠空列；习惯页重做进度条</li>
+          <li>每改一页，用同一份截图脚本存一张「回归基线」</li>
+        </ul>
+      </div>
+    </div>
+    <div class="step">
+      <div class="when">第 4 步<span>持续</span></div>
+      <div>
+        <h4>加一条视觉验收门槛</h4>
+        <ul>
+          <li>禁止新增 <code class="inline">#hex</code>（除 token 文件外），禁止 &lt;12px 字号</li>
+          <li>新增卡片必须用 <code class="inline">.card</code> 组件类，不许现场写 border + rounded</li>
+          <li>可以在 CI 里用 grep 做硬检查：<code class="inline">#[0-9a-f]{6}</code> 出现在 <code class="inline">src/**/*.tsx</code> 即失败</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2><span class="idx">07</span>一句话总结</h2>
+  <div class="card">
+    <p style="margin:0;font-size:15px;line-height:1.9">
+      你现在的界面不是「丑」，是<b>每一处都在用不同的规则说话</b>——7 种圆角、38 个色值、87 处小字、两个主色。<br>
+      先把规则收敛成一套（第 1 步，两天，视觉零变化），再谈好看。反过来做，就会继续在旧补丁上叠新补丁，也就是现在这个状态。<br>
+      <b>真正让产品显得专业的从来不是配色，是一致性。</b>
+    </p>
+  </div>
+</section>
+
+<!-- ============ 附录 A ============ -->
+<section style="padding-top:36px">
+  <h2><span class="idx">A</span>附录：本轮已落地的改动</h2>
+  <p class="lead">2026-10-17 完成。范围严格限定在「确定是 bug」的 5 项，未触碰任何配色与布局风格，因此视觉回归风险为零。类型检查与生产构建均通过。</p>
+
+  <div class="fixlist">
+    <div class="fix">
+      <div class="fix-h"><span class="fix-n">1</span><b>无 actions 的页面，标题被推到最右</b></div>
+      <div class="fix-f">index.css · components/PageHeader.tsx</div>
+      <p>选择器从 <code class="inline">.page-header &gt; :last-child</code> 改为 <code class="inline">.page-header &gt; .page-header-actions</code>；actions 容器改为常驻渲染，header 结构不再随有无操作按钮而抖动。</p>
+    </div>
+    <div class="fix">
+      <div class="fix-h"><span class="fix-n">2</span><b>标签 / 分类行在窄容器里逐字竖排</b></div>
+      <div class="fix-f">pages/TagsPage.tsx</div>
+      <p>行容器补 <code class="inline">gap-3</code>；信息组 <code class="inline">min-w-0 flex-1</code>；名称 <code class="inline">shrink-0 whitespace-nowrap</code>；色点与分类 chip <code class="inline">shrink-0</code>；操作组 <code class="inline">shrink-0 whitespace-nowrap</code>。名称不再被压缩，「上级：…」改为 hover 提示。</p>
+    </div>
+    <div class="fix">
+      <div class="fix-h"><span class="fix-n">3</span><b>标签列表固定 2 列导致行内拥挤</b></div>
+      <div class="fix-f">index.css</div>
+      <p><code class="inline">repeat(2, 1fr)</code> → <code class="inline">repeat(auto-fill, minmax(300px, 1fr))</code>：容器不够宽时自动落为单列，够宽时才分栏。</p>
+    </div>
+    <div class="fix">
+      <div class="fix-h"><span class="fix-n">4</span><b>日历双标题、双月份导航</b></div>
+      <div class="fix-f">pages/CalendarPage.tsx</div>
+      <p>删除 <code class="inline">MonthView</code> 内层 header 与 <code class="inline">onNavigate</code> prop，只保留页面级工具栏。月视图首屏上移约 120px。</p>
+    </div>
+    <div class="fix">
+      <div class="fix-h"><span class="fix-n">5</span><b>待办行尾操作竖排三行</b></div>
+      <div class="fix-f">pages/TodosPage.tsx</div>
+      <p>改为 3 个图标按钮（Play / Pencil / Trash2），桌面 hover 出现、触屏常驻；行容器加 <code class="inline">group</code>；行高 68px → 62px，一屏多显示 2 条。</p>
+    </div>
+    <div class="fix">
+      <div class="fix-h"><span class="fix-n">6</span><b>首次登录后必须手动刷新才出数据</b></div>
+      <div class="fix-f">components/AuthGate.tsx</div>
+      <p>登录 / 初始化成功后主动调用一次 <code class="inline">loadAll()</code>。实测清除 token 重新登录后，快速开始面板直接渲染 12 个标签。</p>
+    </div>
+  </div>
+
+  <h3>修复前 / 修复后</h3>
+  <div class="ba">
+    <div class="col">
+      <h4>Before · 标签行竖排</h4>
+      <img src="assets/crop-tags.png" alt="修复前">
+    </div>
+    <div class="col">
+      <h4>After · 单行、名称完整</h4>
+      <img src="assets/after-tags.png" alt="修复后">
+    </div>
+  </div>
+  <div class="stackfig">
+    <h4>待办行 · Before（操作竖排三行，行高 68px）</h4>
+    <img src="assets/crop-todos.png" alt="修复前" style="max-width:200px">
+    <h4 style="margin-top:14px">待办行 · After（单行图标，hover 出现，行高 62px）</h4>
+    <img src="assets/after-todo-row.png" alt="修复后">
+  </div>
+
+  <h3>验证方式</h3>
+  <ul>
+    <li><code class="inline">npx tsc -b</code> 通过；<code class="inline">vite build</code> 通过。</li>
+    <li>1440×900 与 390×844 两个断点逐页截图比对，确认除上述 5 处外无视觉变化。</li>
+    <li>登录流程实测：清除 token 后重新登录，快速开始面板直接渲染 12 个标签，无需刷新。</li>
+  </ul>
+
+  <h3>遗留与下一步</h3>
+  <ul>
+    <li><b>移动端待办行：</b>图标常驻后标题可用宽度减少约 90px，长标题会折成两行。建议下一阶段改成「计时 + ⋯ 菜单」，把编辑/删除收进弹出菜单。</li>
+    <li>JSX 里仍有 60+ 处 <code class="inline">rounded-lg / rounded-xl</code> 字面量，可逐步替换为 <code class="inline">rounded-ctl / rounded-card</code>（新增代码请直接用语义 token）。</li>
+    <li>统计/计划页右栏的深度重排、设置页跳转卡片的信息补充，留待真实使用反馈后再定。</li>
+  </ul>
+</section>
+
+<!-- ============ 附录 B ============ -->
+<section style="padding-top:36px">
+  <h2><span class="idx">B</span>附录：结构选择器已全部迁回组件</h2>
+  <p class="lead">2026-10-17 完成「第 1 步」。index.css 里所有靠 <code class="inline">nth-child</code> / <code class="inline">:last-child</code> / <code class="inline">&gt; .space-y-4</code> 反查 DOM 的补丁已删除（净减 58 行），样式全部回到产生它的那个 JSX 节点上。</p>
+
+  <div class="callout" style="border-left-color:#15803D;background:#F0FDF4">
+    <strong>验收结论：0 处未解释的视觉变化。</strong>用「计算样式快照」逐元素比对 9 个页面 × 2 个断点（约 3,400 个元素 / 每元素 73 个属性），重构前后差异全部可归因为下面两类。
+  </div>
+
+  <h3>迁移清单</h3>
+  <div class="fixlist">
+    <div class="fix">
+      <div class="fix-h"><span class="fix-n">1</span><b>计时页：两栏/单栏、吸顶、快速开始网格</b></div>
+      <div class="fix-f">index.css → TimerPage.tsx</div>
+      <p>删掉 <code class="inline">.timer-workspace.idle / .has-running</code> 这类父级状态反推子元素的规则，改为在 JSX 里按 <code class="inline">running.length</code> 直接算出类名。同时去掉 <code class="inline">grid-template-areas</code>（DOM 顺序本来就是 session → quick，命名区域是多余的）。</p>
+    </div>
+    <div class="fix">
+      <div class="fix-h"><span class="fix-n">2</span><b>待办页：吸顶表头</b></div>
+      <div class="fix-f">index.css → TodosPage.tsx</div>
+      <p>原来用 <code class="inline">&gt; section.page-card &gt; .flex.items-center.justify-between</code> 靠类名组合命中表头，现在 sticky / 负边距 / 半透明模糊底直接写在那个 div 上。</p>
+    </div>
+    <div class="fix">
+      <div class="fix-h"><span class="fix-n">3</span><b>标签页：8 条 nth-child 规则</b></div>
+      <div class="fix-f">index.css → TagsPage.tsx</div>
+      <p><code class="inline">section:nth-child(2) &gt; div:last-child &gt; div &gt; div:first-child</code> 这类四级反查全部删除；分栏收口为单类名组件样式 <code class="inline">.tag-rows</code>（1 列 / ≥768px 自适应 300px 分栏），行内 <code class="inline">min-w-0</code> 与背景色直接写在元素上。</p>
+    </div>
+    <div class="fix">
+      <div class="fix-h"><span class="fix-n">4</span><b>日历：卡片外观 + 网格边框收口</b></div>
+      <div class="fix-f">index.css → CalendarPage.tsx</div>
+      <p><code class="inline">.calendar-month-shell &gt; *</code> 的边框/阴影/overflow 搬进 MonthView 根节点；<code class="inline">nth-child(7n)</code> 与 <code class="inline">nth-last-child(-n+7)</code> 改为按 <code class="inline">dayIndex % 7</code> 与 <code class="inline">dayIndex &gt;= days.length - 7</code> 计算。</p>
+    </div>
+    <div class="fix">
+      <div class="fix-h"><span class="fix-n">5</span><b>页头、统计、习惯、计划、日记</b></div>
+      <div class="fix-f">index.css → PageHeader / StatsPage / GoalsPage / PlansPage / DiaryPanel</div>
+      <p><code class="inline">.page-header &gt; :last-child</code>、<code class="inline">.workspace-page &gt; .page-header …</code>、<code class="inline">.stats-page .stats-layout</code>、<code class="inline">.plan-page &gt; section[aria-label=…]</code>、<code class="inline">.diary-page &gt; .diary-panel</code> 全部内联。</p>
+    </div>
+  </div>
+
+  <h3>顺手修掉的 2 处「双重间距」</h3>
+  <p>这是本次唯一两处有像素级差异的地方，而且都是原有 bug：<code class="inline">space-y-*</code> 的 <code class="inline">margin-top</code> 选择器优先级（0,3,0）高于作者手写的清零规则（0,2,0），所以那条 <code class="inline">margin-top: 0</code> 从来没生效过——网格的 <code class="inline">gap</code> 和列表的 <code class="inline">margin</code> 一直在叠加。</p>
+  <table>
+    <thead><tr><th>位置</th><th>Before</th><th>After</th></tr></thead>
+    <tbody>
+      <tr><td>计时页 · 快速开始</td><td>gap 11.25px + margin 15px（面板高 727px）</td><td>gap 11.25px（面板高 682px）</td></tr>
+      <tr><td>标签页 · 标签行</td><td>gap 7.5px + margin 7.5px（行高 50.75px）</td><td>gap 7.5px（行高 43.25px）</td></tr>
+    </tbody>
+  </table>
+
+  <h3>验证方式</h3>
+  <ul>
+    <li>用 Playwright 抓取每个元素的 73 个计算属性（布局、间距、边框、字体、颜色、网格、阴影），固定时钟 + 关闭动画，重构前后各跑一遍逐条 diff。</li>
+    <li>噪声基线：连续两次相同快照的差异为 2 条（进度条实时宽度），本次结果中剩余的差异全部落在上面两类里。</li>
+    <li><code class="inline">tsc -b</code> 通过，<code class="inline">vite build</code> 通过，<code class="inline">node --test</code> 49/49 通过。</li>
+    <li>额外人工确认：待办表头吸顶、计时页右栏吸顶、移动端单栏、暗色模式三处（打卡 / 标签 / 待办）。</li>
+  </ul>
+
+  <h3>刻意保留的</h3>
+  <p><code class="inline">.prose-preview</code>（Markdown 预览排版）与 <code class="inline">.ittime-editor</code>（CodeMirror 主题桥接）里的后代选择器没有动——它们是对第三方内容的排版约束，不是对自家布局的补丁，属于合理用法。</p>
+</section>
+
+<!-- ============ 附录 C ============ -->
+<section style="padding-top:36px">
+  <h2><span class="idx">C</span>附录：配色降噪已落地</h2>
+  <p class="lead">2026-10-17 完成「第 2 步」。这一步才真正改变视觉：把「颜色当装饰」改成「颜色当编码」。所有改动遵循同一条规则——<b>标签色只允许出现在一个位置</b>。</p>
+
+  <div class="verdict" style="margin-top:8px">
+    <div class="vcard"><div class="n">31 → 6</div><div class="l">紫色 #6d5efc 出现次数，剩余的 6 处全在编辑器主题变量里</div></div>
+    <div class="vcard"><div class="n">12 → 1</div><div class="l">快速开始的彩色按钮，收敛为「白底 + 1 个 5px 色点」</div></div>
+    <div class="vcard"><div class="n">3 → 1</div><div class="l">进度条的三套颜色（浏览器默认绿 / teal / 标签色），统一为主色</div></div>
+  </div>
+
+  <h3>三条落地规则</h3>
+  <div class="callout">
+    <strong>1. 三色法则：</strong>标签色只作为「色点 / 色条 / 时间线节点」出现一次。文字、边框、底色一律中性灰。<br>
+    <strong>2. 主色只给可操作元素：</strong>主色（teal）用于按钮、选中态、进行中状态、进度条。计时数字这类「读数」用近黑色。<br>
+    <strong>3. 状态色只表状态：</strong>红=危险/删除，绿=成功，琥珀=特殊类型。不再用红表示周末（日历惯例除外）。
+  </div>
+
+  <h3>变更清单</h3>
+  <div class="fixlist">
+    <div class="fix">
+      <div class="fix-h"><span class="fix-n">1</span><b>快速开始：12 个彩色按钮 → 白底 + 色点</b></div>
+      <div class="fix-f">TimerPage.tsx · QuickStartTagButton</div>
+      <p>原来每个标签按钮同时用了「彩色文字 + 彩色边框 + 彩色底 + ▶ 符号」。现在统一为白底中性按钮，标签色缩成一个 5px 圆点；只有「正在计时」那一个按钮允许上主色浅底。顺带把重复两遍的按钮 JSX 抽成了组件（两处的 hover 动效此前已经不一致）。</p>
+    </div>
+    <div class="fix">
+      <div class="fix-h"><span class="fix-n">2</span><b>分类面板：4 块彩色玻璃 → 纯标签分组</b></div>
+      <div class="fix-f">TimerPage.tsx</div>
+      <p>去掉 <code class="inline">borderColor: color+'45'</code> 与 <code class="inline">background: color+'0a'</code>，改为「色点 + 分类名 + 数量」的无框分组。暗色下不再出现发光的彩色玻璃（原先是透明色叠加在深色上，饱和度被放大）。</p>
+    </div>
+    <div class="fix">
+      <div class="fix-h"><span class="fix-n">3</span><b>计时卡：整块主色底 → 白底 + 近黑读数</b></div>
+      <div class="fix-f">TimerPage.tsx · RunningTimer</div>
+      <p>卡片从 <code class="inline">bg-brand-50 + border-brand-300</code> 改为白底细边框；计时数字从主色 24px 改为近黑 30/36px 等宽数字；标签名不再染成标签色。「正在计时」用一个 6px 主色圆点表达，不再靠整块底色。</p>
+    </div>
+    <div class="fix">
+      <div class="fix-h"><span class="fix-n">4</span><b>操作层级：4 种强调色 → 1 个主按钮</b></div>
+      <div class="fix-f">TimerPage.tsx</div>
+      <p>原来「点记录」蓝描边、「记日记」teal 描边、「停止」红实心、「终止链路」红描边，四个按钮四种强调，用户不知道哪个是主操作。现在：停止是唯一实心危险按钮，点记录/记日记是中性描边，终止链路降为灰色文字按钮（hover 才变红）。</p>
+    </div>
+    <div class="fix">
+      <div class="fix-h"><span class="fix-n">5</span><b>标签页 / 日记 / 时间线：彩色 chip → 中性 chip</b></div>
+      <div class="fix-f">TagsPage.tsx · DiaryPanel.tsx · TimerPage.tsx</div>
+      <p>分类 chip 从「饱和色底 + 白字」改为「浅灰底 + 深灰字」。行内已经有一个色点承担颜色编码，chip 再上一次色就是重复。</p>
+    </div>
+    <div class="fix">
+      <div class="fix-h"><span class="fix-n">6</span><b>进度条：三套颜色 → 统一主色</b></div>
+      <div class="fix-f">GoalsPage.tsx · TodosPage.tsx · StatsPage.tsx</div>
+      <p>原生 <code class="inline">&lt;progress&gt;</code> 的渲染在各浏览器不一致（你截图里看到的是浏览器默认绿）。全部换成自绘圆角进度条，统一主色。统计排行条同时从「按总量百分比」改为「按榜首归一化」——原先所有条都只占一小截，读不出相对差距。</p>
+    </div>
+    <div class="fix">
+      <div class="fix-h"><span class="fix-n">7</span><b>日历：选中日不再整格填主色</b></div>
+      <div class="fix-f">CalendarPage.tsx</div>
+      <p>原来选中日是 <code class="inline">bg-brand-500 text-white</code>，但周末的红色日期号没有跟着变白，出现「红字压在主色块上」的低对比。改为浅主色底 + 1px 主色描边，所有文字保持原有颜色。日期圆点从 10px 收到 8px。</p>
+    </div>
+    <div class="fix">
+      <div class="fix-h"><span class="fix-n">8</span><b>紫色从 UI 层清零</b></div>
+      <div class="fix-f">localData.ts · CalendarPage.tsx · TagsPage.tsx · TimerPage.tsx · DiaryPanel.tsx</div>
+      <p>24 处 <code class="inline">#6d5efc</code> 回退色统一为品牌主色；标签调色板的默认色也从紫色改为 teal。编辑器主题变量（<code class="inline">--atomic-editor-accent</code> 等）保持不变——那是笔记正文的语法高亮，属于内容层。</p>
+    </div>
+  </div>
+
+  <h3>前后对比</h3>
+  <div class="ba">
+    <div class="col"><h4>Before · 打卡</h4><img src="assets/c2-timer-before.png" alt="打卡改动前"></div>
+    <div class="col"><h4>After · 打卡</h4><img src="assets/c2-timer-after.png" alt="打卡改动后"></div>
+  </div>
+  <div class="ba">
+    <div class="col"><h4>Before · 标签</h4><img src="assets/c2-tags-before.png" alt="标签改动前"></div>
+    <div class="col"><h4>After · 标签</h4><img src="assets/c2-tags-after.png" alt="标签改动后"></div>
+  </div>
+  <div class="ba">
+    <div class="col"><h4>Before · 统计</h4><img src="assets/c2-stats-before.png" alt="统计改动前"></div>
+    <div class="col"><h4>After · 统计</h4><img src="assets/c2-stats-after.png" alt="统计改动后"></div>
+  </div>
+  <div class="ba">
+    <div class="col"><h4>Before · 习惯</h4><img src="assets/c2-habits-before.png" alt="习惯改动前"></div>
+    <div class="col"><h4>After · 习惯</h4><img src="assets/c2-habits-after.png" alt="习惯改动后"></div>
+  </div>
+  <div class="ba">
+    <div class="col"><h4>Before · 暗色打卡</h4><img src="assets/c2-dark-before.png" alt="暗色改动前"></div>
+    <div class="col"><h4>After · 暗色打卡</h4><img src="assets/c2-dark-after.png" alt="暗色改动后"></div>
+  </div>
+
+  <h3>顺带解决的三个问题</h3>
+  <ul>
+    <li><b>移动端计时卡按钮换行：</b>按钮瘦身后，390px 下「点记录 / 记日记 / 停止 / 终止链路」终于能排在一行，不再把「终止链路」孤零零甩到第二行。</li>
+    <li><b>统计排行条读不出差距：</b>改为按榜首归一化，第一名满格。</li>
+    <li><b>日记行宽 90 字：</b>正文限制 <code class="inline">max-w-[68ch]</code>，回到舒适阅读区间。</li>
+  </ul>
+
+  <h3>刻意保留的判断</h3>
+  <ul>
+    <li><b>日历周末仍是红色。</b>这是中文日历的通用惯例，不是「红色滥用」。真正的问题在选中日的低对比填充，已单独修掉。</li>
+    <li><b>标签色仍然存在，只是被约束。</b>颜色本身是有用的编码（你一眼能认出「健身」是红的），问题从来不是有颜色，而是同一个颜色在同一行出现了三次。</li>
+  </ul>
+
+  <h3>验证</h3>
+  <ul>
+    <li><code class="inline">tsc -b</code> 通过，<code class="inline">vite build</code> 通过，<code class="inline">node --test</code> 49/49 通过。</li>
+    <li>9 个页面 × 亮/暗 × 桌面/移动 全量截图复核，重点看对比度：主色文字在浅底上的对比度均 ≥ 4.5:1。</li>
+  </ul>
+</section>
+
+<!-- ============ 附录 D ============ -->
+<section style="padding-top:36px">
+  <h2><span class="idx">D</span>附录：信息架构首批落地</h2>
+  <p class="lead">2026-10-17 完成「第 3 步」的第一批。原则：先补上「缺的信息」和「多余的占位」，不动页面骨架。</p>
+
+  <div class="fixlist">
+    <div class="fix">
+      <div class="fix-h"><span class="fix-n">1</span><b>统计页新增「近 14 天趋势」柱状图</b></div>
+      <div class="fix-f">StatsPage.tsx（recharts 已在依赖里，此前从未使用）</div>
+      <p>原来只有「排行」，看不出时间维度——你不知道这周是比上周忙还是闲。新增每日投入柱状图（主色、圆角、悬浮显示时长），固定回看 14 个自然日，不受右上角周期选择影响。没有记录时显示空态引导，而不是一片空白坐标轴。</p>
+    </div>
+    <div class="fix">
+      <div class="fix-h"><span class="fix-n">2</span><b>「计划遵循」不再用一屏 0 值占位</b></div>
+      <div class="fix-f">StatsPage.tsx</div>
+      <p>当前周期没有计划时，右栏原本显示 6 个 0（计划时长 0、覆盖率 0%、漏执行 0…），看起来像数据坏了。现在改为一句空态 + 「去计划页安排」的跳转。有计划时才显示完整指标。</p>
+    </div>
+    <div class="fix">
+      <div class="fix-h"><span class="fix-n">3</span><b>计划页：网格可读性与字号</b></div>
+      <div class="fix-f">PlansPage.tsx</div>
+      <p>小时刻度线从 gray-200 加深到 gray-300（原先 1px 线几乎不可见，整个网格像浮在空白上）；计划块文字从 9/10px 提到 10/11px，正文 11/12px，并去掉「彩色文字」——颜色只保留左侧 3px 色条和浅色底；两条空态提示从左上角移到垂直居中。</p>
+    </div>
+    <div class="fix">
+      <div class="fix-h"><span class="fix-n">4</span><b>设置页不再内嵌整套标签管理器</b></div>
+      <div class="fix-f">SettingsPage.tsx · TagsPage.tsx</div>
+      <p>原来标签管理器被整组件塞进设置页，等于同一套逻辑两处维护，而且 370px 的窄容器必然复现「逐字竖排」那类布局 bug。现在设置里只留一张说明卡片 + 「去标签页管理」跳转，<code class="inline">embedded</code> prop 一并删除。</p>
+    </div>
+  </div>
+
+  <h3>验证</h3>
+  <ul>
+    <li><code class="inline">tsc -b</code>、<code class="inline">vite build</code>（统计页 chunk 381KB，recharts 按需分包）、<code class="inline">node --test</code> 49/49 通过。</li>
+    <li>DOM 校验：趋势图渲染 14 根柱、x 轴 5 个刻度；「计划遵循」空态文案出现；设置页不再存在 <code class="inline">.tags-page</code> 节点；计划页空态提示垂直居中、小时线已加深。</li>
+    <li>移动端 390px：趋势图宽 336px 正常渲染，统计/设置两页均无横向溢出；全程无页面脚本错误。</li>
+  </ul>
+
+  <h3>刻意没做的</h3>
+  <ul>
+    <li><b>计划页不再动态折叠「计划」列。</b>计划｜实际的并排对比是这个页面的核心心智模型，列随数据出现/消失会让布局跳动；改用「网格加深 + 字号提升 + 居中空态」解决可读性。</li>
+    <li><b>习惯页右栏没有并入主卡。</b>「已完成活动」列表是独立的信息流，并排其实合理；真正缺的是它自己没内容时的引导，留待真实使用反馈。</li>
+  </ul>
+</section>
+
+<!-- ============ 附录 E ============ -->
+<section style="padding-top:36px">
+  <h2><span class="idx">E</span>附录：设计 token 落地 + 移动端操作收口</h2>
+  <p class="lead">2026-10-17 收尾。补上第 1 步的另一半（token 只在注释里说过、没真正建立），以及移动端待办的最后一个遗留。</p>
+
+  <div class="fixlist">
+    <div class="fix">
+      <div class="fix-h"><span class="fix-n">1</span><b>设计 token 从「约定」变成「代码」</b></div>
+      <div class="fix-f">index.css · tailwind.config.js</div>
+      <p><code class="inline">:root</code> 里定义 <code class="inline">--radius-card: 12px / --radius-ctl: 8px / --shadow-card / --shadow-float</code>，tailwind 侧注册 <code class="inline">rounded-card / rounded-ctl / shadow-card / shadow-float</code> 引用同一批变量。<code class="inline">.page-card / .metric-card / .toolbar-surface / .input / .btn-* / .surface-card / .timer-tag</code> 七个组件类全部改从 token 取值。以后改一处，两边同时生效。</p>
+      <p><b>唯一的视觉变化：</b><code class="inline">page-card</code> 圆角从 8px 统一到 12px（对齐 JSX 里更常用的卡片档）。这是「收敛到 3 档语义」的代价，也是它的意义。</p>
+    </div>
+    <div class="fix">
+      <div class="fix-h"><span class="fix-n">2</span><b>移动端待办：计时 + ⋯ 菜单</b></div>
+      <div class="fix-f">TodosPage.tsx</div>
+      <p>附录 A 的遗留项。390px 下每行只保留「勾选 + 计时 + ⋯」，编辑/删除收进弹出菜单（点外部关闭），标题恢复完整宽度。桌面端行为不变（hover 展开三个图标）。</p>
+    </div>
+  </div>
+
+  <h3>验证</h3>
+  <ul>
+    <li>DOM 断言：<code class="inline">.page-card</code> 计算圆角 12px、<code class="inline">.input</code> 8px、<code class="inline">--radius-card</code> 变量值 12px。</li>
+    <li>移动端：每行可见操作 3 个（勾选/计时/更多）、菜单打开含 2 项、点外关闭、无横向溢出；桌面端 hover 展开不变。</li>
+    <li><code class="inline">tsc -b</code>、<code class="inline">vite build</code>、<code class="inline">node --test</code> 49/49 通过，无页面脚本错误。</li>
+  </ul>
+</section>
+
+<!-- ============ 附录 F ============ -->
+<section style="padding-top:36px">
+  <h2><span class="idx">F</span>附录：Aurora Glass 落地（视觉 + 信息架构）</h2>
+  <p class="lead">原型方向确认后分两阶段落到 React：第一阶段换视觉壳，第二阶段合并信息架构（9 页 → 5 页）。业务逻辑、表单、弹窗零改动。</p>
+
+  <div class="fixlist">
+    <div class="fix">
+      <div class="fix-h"><span class="fix-n">1</span><b>视觉壳：深空玻璃</b></div>
+      <div class="fix-f">index.css（Aurora 主题层）· Layout.tsx · main.tsx</div>
+      <p>深空底 #070b14 + 两团漂移极光（blur 120px，26s/32s 缓动）；page-card / metric-card / toolbar-surface / surface-card / timer-quickstart / 日历卡 / 计划卡全部玻璃化（白 4.5% + blur 20 + 18px 圆角）；btn-primary 变 Aurora 渐变实心；侧栏玻璃化 + 渐变 Logo + 选中项内嵌微光；计时数字与统计 hero 数字改为渐变镂空字。暗色成为默认主题。</p>
+    </div>
+    <div class="fix">
+      <div class="fix-h"><span class="fix-n">2</span><b>信息架构：9 页 → 5 页</b></div>
+      <div class="fix-f">components/SectionPage.tsx（新增）· App.tsx · Layout.tsx · 6 个页面加 embedded prop</div>
+      <p>导航变为：工作台 / 时间 / 事项 / 洞察 / 体系。「时间」= 日历 + 计划 + 日记（同看一天的事）；「事项」= 待办 + 习惯；「体系」= 标签 + 设置。分区页用 URL 参数记录 tab（<code class="inline">/time?tab=plans</code>），深链和刷新都不丢；8 条旧路径全部重定向，书签不落空。<b>重要修正：</b>分区层最初把子页面整体内嵌（藏掉各自头部），结果「写计划 / 新建活动 / 日期导航」跟着消失——已改为分区层只渲染 tab 条，子页面保留完整头部与操作入口，功能零缺失。</p>
+    </div>
+    <div class="fix">
+      <div class="fix-h"><span class="fix-n">3</span><b>刻意没做的</b></div>
+      <div class="fix-f">—</div>
+      <p>计划｜实际双列分钟网格保持原有布局（它是「时间·计划」页的核心，只做了玻璃化容器）；工作台的「今日待办」小部件未加（TimerPage 的待办数据是页内状态，加进去要动数据流，等真实使用反馈再定）。</p>
+    </div>
+  </div>
+
+  <h3>验证</h3>
+  <ul>
+    <li>DOM 断言：暗色类、深空底色、极光 fixed 层、五页玻璃（bg + blur + 圆角）、渐变时钟（background-clip: text）、侧栏 5 项导航。</li>
+    <li>路由断言：/time 三 tab 切换且 URL 带 tab 参数；/tasks、/system 同理；旧 /plans → /time?tab=plans 重定向生效；无横向溢出；无页面脚本错误。</li>
+    <li><code class="inline">tsc -b</code>、<code class="inline">vite build</code>、<code class="inline">node --test</code> 49/49 通过。</li>
+  </ul>
+</section>
+
+<!-- ============ 附录 G ============ -->
+<section style="padding-top:36px">
+  <h2><span class="idx">G</span>附录：亮色主题补齐（晨雾玻璃）</h2>
+  <p class="lead">Aurora 最初只做了深空形态。现在亮色也换成同一套设计语言的「晨雾」变体，并恢复跟随系统主题——系统切亮/暗，应用自动跟随。</p>
+  <div class="fixlist">
+    <div class="fix">
+      <div class="fix-h"><span class="fix-n">1</span><b>变量分流，规则共享</b></div>
+      <div class="fix-f">index.css</div>
+      <p>玻璃层规则去掉 <code class="inline">.dark</code> 前缀，取值全部走 <code class="inline">--glass-*</code> 变量：<b>亮色</b>白 68% 玻璃 + 冷灰蓝底 #edf2f8 + 极光透明度 13%；<b>暗色</b>白 4.5% 玻璃 + 深空底 #070b14 + 15%。同一套规则两种气质。</p>
+    </div>
+    <div class="fix">
+      <div class="fix-h"><span class="fix-n">2</span><b>清掉压住主题层的旧规则</b></div>
+      <div class="fix-f">index.css</div>
+      <p>删除 <code class="inline">.dark .app-shell/#030712</code>、<code class="inline">.dark .page-card/#111827</code> 等 4 条旧暗色规则——它们的优先级高于新的变量化玻璃层，是「暗色下玻璃不生效」的直接原因。时钟渐变补了 <code class="inline">.dark .clock-hero</code> 一条（压过 JSX 的 <code class="inline">dark:text-gray-50</code>）。</p>
+    </div>
+    <div class="fix">
+      <div class="fix-h"><span class="fix-n">3</span><b>恢复跟随系统</b></div>
+      <div class="fix-f">main.tsx · App.tsx</div>
+      <p>两处强制 <code class="inline">isDark = true</code> 全部还原为 <code class="inline">matchMedia</code> 跟随系统，系统切换亮/暗时应用实时跟随。</p>
+    </div>
+  </div>
+  <h3>验证</h3>
+  <ul>
+    <li>双主题 DOM 断言：亮色底 #edf2f8 / 白 68% 玻璃 / 极光层；暗色底 #070b14 / 白 4.5% 玻璃；时钟渐变镂空两主题都生效。</li>
+    <li>功能回归：合并后「写计划 / 日期导航 / 新建活动」在两个主题下都存在（分区层不再吞掉子页面头部）。</li>
+    <li><code class="inline">tsc -b</code>、<code class="inline">vite build</code>、<code class="inline">node --test</code> 49/49 通过。</li>
+  </ul>
+</section>
+
+<div class="foot">
+  <p>本报告所有截图取自 <code class="inline">apps/web</code> 实际运行版本（1440×900 / 390×844，light + dark），数据为脱敏演示数据。原型见同目录 <a href="prototype.html">prototype.html</a>。</p>
+</div>
+
+
+</div>
+</body>
+</html>
