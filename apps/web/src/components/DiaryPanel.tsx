@@ -61,7 +61,7 @@ export default function DiaryPanel() {
   }, [memos, searchQuery, filterCat])
 
   return (
-    <section className="diary-panel space-y-4" aria-label="日记面板">
+    <section className="diary-panel max-w-[1120px] space-y-4" aria-label="日记面板">
       <div>
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5 text-xs font-medium">
@@ -138,7 +138,7 @@ export default function DiaryPanel() {
                 hour: '2-digit',
                 minute: '2-digit',
               })
-              const tagColor = memo.tag?.color ?? memo.timeEntry?.tag?.color ?? '#6d5efc'
+              const tagColor = memo.tag?.color ?? memo.timeEntry?.tag?.color ?? '#0f766e'
               const tagName = memo.tag?.name ?? memo.timeEntry?.tag?.name ?? '随手记'
               const categoryName = memo.tag?.category?.name ?? memo.timeEntry?.tag?.category?.name
               const images = memo.attachments?.filter((attachment) => attachment.mimeType.startsWith('image/')) ?? []
@@ -154,10 +154,7 @@ export default function DiaryPanel() {
                     <div className="flex items-center justify-between text-xs text-gray-400 flex-wrap gap-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium text-gray-700 dark:text-gray-200">{timeStr}</span>
-                        <span
-                          className="px-2 py-0.5 rounded-full font-medium"
-                          style={{ backgroundColor: `${tagColor}20`, color: tagColor }}
-                        >
+                        <span className="rounded-full bg-gray-100 px-2 py-0.5 font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">
                           {categoryName ? `${categoryName} / ` : ''}{tagName}
                         </span>
                         {memo.timeEntry && (
@@ -194,7 +191,7 @@ export default function DiaryPanel() {
                       </div>
                     </div>
 
-                    <div className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap leading-relaxed">
+                    <div className="max-w-[68ch] text-sm leading-relaxed text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
                       {memo.content}
                     </div>
 

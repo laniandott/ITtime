@@ -148,8 +148,8 @@ async function joined(entity: string, value: Record<string, any>): Promise<any> 
   return { ...value, tag: await lookup('tags', value.tagId), category: await lookup('categories', value.categoryId) }
 }
 const defaults: Record<string, Record<string, any>> = {
-  categories: { color: '#6d5efc', icon: null, sortOrder: 0 },
-  tags: { color: '#6d5efc', icon: null, categoryId: null, parentId: null, trackType: 'time', mode: 'chaos', sortOrder: 0 },
+  categories: { color: '#0f766e', icon: null, sortOrder: 0 },
+  tags: { color: '#0f766e', icon: null, categoryId: null, parentId: null, trackType: 'time', mode: 'chaos', sortOrder: 0 },
   todos: { description: null, status: 'pending', priority: 0, dueDate: null, categoryId: null, tagId: null, goalId: null, repeatType: 'none', completedAt: null, lateReason: null, restoreReason: null },
   goals: { kind: 'tracking', type: 'time', period: 'daily', active: true, periodDays: null, weekDay: null, sortOrder: 0, deadlineTime: null, deadlineDay: null, deadlineAt: null },
   memos: { type: 'point', timeEntryId: null, tagId: null, attachments: [] },

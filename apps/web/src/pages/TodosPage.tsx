@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { api } from '../api'
 import { useStore } from '../store'
 import type { Goal, Todo } from '../types'
-import DiaryPanel from '../components/DiaryPanel'
+import { MoreHorizontal, Pencil, Play, Trash2 } from 'lucide-react'
 import { PageHeader } from '../components/PageHeader'
 
 const PRIORITY = [
@@ -99,11 +99,10 @@ function sortActivityItems(items: Todo[]): Todo[] {
   )
 }
 
-export default function TodosPage() {
+export default function TodosPage({ embedded = false }: { embedded?: boolean } = {}) {
   const { tags, categories, running, start } = useStore()
   const [todos, setTodos] = useState<Todo[]>([])
   const [goals, setGoals] = useState<Goal[]>([])
-  const [activeTab, setActiveTab] = useState<'todo' | 'diary'>('todo')
   const [statusView, setStatusView] = useState<TodoStatusView>('pending')
   const [activityView, setActivityView] = useState<ActivityView>('current')
   const [filterCat, setFilterCat] = useState('')
@@ -228,16 +227,13 @@ export default function TodosPage() {
   }))
   return (
     <div className="workspace-page todo-page space-y-4">
-      <PageHeader
-        title={activeTab === 'todo' ? '待办活动' : '日记'}
-        description={activeTab === 'todo' ? '安排要做的事，按周期和状态快速处理' : '记录当天的想法、经过与资料'}
+      {!embedded && <PageHeader
+        title="待办活动"
+        description="安排要做的事，按周期和状态快速处理"
         actions={<div className="flex flex-wrap items-center gap-2">
-          <div className="flex rounded-md border border-gray-200 p-0.5 dark:border-gray-700" role="tablist" aria-label="待办与日记">
-            {([['todo', '待办'], ['diary', '日记']] as const).map(([tab, label]) => <button key={tab} type="button" role="tab" aria-selected={activeTab === tab} onClick={() => setActiveTab(tab)} className={`rounded px-3 py-1.5 text-sm ${activeTab === tab ? 'bg-teal-700 text-white' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>{label}</button>)}
-          </div>
-          {activeTab === 'todo' && statusView === 'pending' && <button type="button" onClick={() => setShowQuickAdd((value) => !value)} className="btn-primary px-3 py-2 text-sm">{showQuickAdd ? '取消添加' : '+ 新建活动'}</button>}
+          {statusView === 'pending' && <button type="button" onClick={() => setShowQuickAdd((value) => !value)} className="btn-primary px-3 py-2 text-sm">{showQuickAdd ? '取消添加' : '+ 新建活动'}</button>}
         </div>}
-      />
+      />}
 
       {error && (
         <div className="flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300">
@@ -246,9 +242,8 @@ export default function TodosPage() {
         </div>
       )}
 
-      {activeTab === 'todo' ? (
-        <section className="page-card p-4 sm:p-5">
-            <div className="flex items-center justify-between gap-3 flex-wrap">
+        <section className="page-card overflow-visible p-4 sm:p-5">
+            <div className="sticky top-0 z-[5] -mx-5 -mt-5 mb-0 flex flex-wrap items-center justify-between gap-3 border-b border-[rgb(226_232_240_/_0.9)] bg-[rgb(255_255_255_/_0.96)] px-5 py-4 backdrop-blur-md dark:border-[rgb(51_65_85_/_0.9)] dark:bg-[rgb(17_24_39_/_0.96)]">
               <div>
                 <h2 className="text-lg font-semibold">{statusView === 'pending' ? '未完成活动' : '已完成活动'}</h2>
                 <p className="text-xs text-gray-500 mt-1">{statusView === 'pending' ? '完成记录会收进「习惯」页面的结果里' : '点击左侧勾选框可恢复为未完成，并填写恢复原因'}</p>
@@ -283,7 +278,9 @@ export default function TodosPage() {
                         <span className="truncate font-medium" style={{ color: goal.tag?.color }}>{goal.title}</span>
                         <span className="shrink-0 text-gray-500">{current} / {goal.target} {unit}</span>
                       </div>
-                      <progress className="mt-1.5 h-1.5 w-full" style={{ accentColor: goal.tag?.color ?? '#0f766e' }} value={percent} max="100" aria-label={`${goal.title}目标进度`} />
+                      <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700" role="progressbar" aria-valuenow={Math.round(percent)} aria-valuemin={0} aria-valuemax={100} aria-label={`${goal.title}目标进度`}>
+                        <div className="h-full rounded-full bg-brand-600 dark:bg-brand-500" style={{ width: `${percent}%` }} />
+                      </div>
                     </article>
                   )
                 })}
@@ -340,14 +337,14 @@ export default function TodosPage() {
               </div>
             )}
 
-            <section className="mt-4 rounded-xl border border-amber-200/80 bg-amber-50/60 dark:border-amber-900/60 dark:bg-amber-950/20 p-3">
+            <section className="mt-4 rounded-xl border border-gray-200 bg-gray-50/70 p-3 dark:border-gray-800 dark:bg-gray-900/60">
               <div className="flex items-center justify-between gap-2 mb-2">
                 <div>
-                  <h2 className="font-semibold text-amber-800 dark:text-amber-200">一次性活动</h2>
-                  <p className="text-xs text-amber-700/70 dark:text-amber-300/70">优先处理，不属于日、周、月循环</p>
+                  <h2 className="font-semibold text-gray-800 dark:text-gray-100">一次性活动</h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">优先处理，不属于日、周、月循环</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-amber-700/70 dark:text-amber-300/70">{oneTimeItems.length} 项</span>
+                  <span className="text-xs text-gray-400">{oneTimeItems.length} 项</span>
                   <button
                     type="button"
                     aria-expanded={!oneTimeCollapsed}
@@ -355,7 +352,7 @@ export default function TodosPage() {
                     aria-label={oneTimeCollapsed ? '展开一次性活动' : '折叠一次性活动'}
                     title={oneTimeCollapsed ? '展开一次性活动' : '折叠一次性活动'}
                     onClick={() => setOneTimeCollapsed((collapsed) => !collapsed)}
-                    className="flex h-7 w-7 items-center justify-center rounded-md text-amber-700/80 transition-colors hover:bg-amber-100 dark:text-amber-300/80 dark:hover:bg-amber-900/40"
+                    className="flex h-7 w-7 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-200/70 dark:text-gray-400 dark:hover:bg-gray-800"
                   >
                     <span aria-hidden="true" className={`text-base leading-none transition-transform ${oneTimeCollapsed ? '-rotate-90' : ''}`}>⌄</span>
                   </button>
@@ -387,11 +384,6 @@ export default function TodosPage() {
               <ActivityModule title="月活动" subtitle="当前自然月" items={cycleItems('monthly')} emptyText="本月暂无月活动" running={running} togglingIds={togglingIds} onToggle={toggle} onEdit={setEditing} onDelete={remove} onPickTag={setPickingTagFor} />
             </div>
         </section>
-      ) : (
-        <section className="page-card p-4 sm:p-5">
-          <DiaryPanel />
-        </section>
-      )}
 
       {/* Edit modal */}
       {editing && (
@@ -490,9 +482,10 @@ function TodoCard({
   onPickTag: (t: Todo) => void
   isDone?: boolean
 }) {
+  const [menuOpen, setMenuOpen] = useState(false)
   return (
     <div
-      className={`flex items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors ${
+      className={`group flex items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors ${
         isDone ? 'bg-green-50/70 border-green-200 dark:bg-green-950/20 dark:border-green-900/60' : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800'
       }`}
     >
@@ -547,28 +540,71 @@ function TodoCard({
             <span className="text-xs text-gray-400">已记录 {todo._count.timeEntries} 次</span>
           )}
           {todo.dueDate && (
-            <span className="text-xs text-gray-400">
-              📅 {todo.goalId ? `截止 ${formatActivityDueDate(todo.dueDate)}` : new Date(todo.dueDate).toLocaleDateString('zh-CN')}
+            <span className="ml-auto whitespace-nowrap text-xs text-gray-400">
+              {todo.goalId ? `截止 ${formatActivityDueDate(todo.dueDate)}` : new Date(todo.dueDate).toLocaleDateString('zh-CN')}
             </span>
           )}
         </div>
       </div>
-      <div className="flex flex-col gap-1 items-end flex-shrink-0">
+      {/* 操作区：移动端只留「计时 + ⋯」，编辑/删除收进菜单；桌面 hover 展开 */}
+      <div className="relative flex shrink-0 items-center gap-0.5 whitespace-nowrap">
         {todo.status === 'pending' && todo.categoryId && (
           running.some((r) => r.todoId === todo.id) ? (
-            <span className="text-xs text-green-500">● 计时中</span>
+            <span className="inline-flex items-center gap-1 px-1.5 text-xs text-green-600 dark:text-green-400" title="计时中">
+              <span className="h-1.5 w-1.5 rounded-full bg-green-500" />计时中
+            </span>
           ) : (
-            <button onClick={() => onPickTag(todo)} className="text-xs text-brand hover:underline">
-              ▶ 计时
+            <button
+              type="button"
+              onClick={() => onPickTag(todo)}
+              title="开始计时"
+              aria-label={`开始计时：${todo.title}`}
+              className="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-brand-50 hover:text-brand-700 dark:hover:bg-brand-900/30 dark:hover:text-brand-300"
+            >
+              <Play className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
           )
         )}
-        <button onClick={() => onEdit(todo)} className="text-xs text-gray-400 hover:text-brand">
-          编辑
+        <button
+          type="button"
+          onClick={() => onEdit(todo)}
+          title="编辑"
+          aria-label={`编辑：${todo.title}`}
+          className="hidden h-7 w-7 place-items-center rounded-md text-gray-400 transition-opacity hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200 sm:grid sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
+        >
+          <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
-        <button onClick={() => onDelete(todo.id)} className="text-xs text-gray-300 hover:text-red-500">
-          ✕
+        <button
+          type="button"
+          onClick={() => onDelete(todo.id)}
+          title="删除"
+          aria-label={`删除：${todo.title}`}
+          className="hidden h-7 w-7 place-items-center rounded-md text-gray-400 transition-opacity hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-400 sm:grid sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
+        >
+          <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
+        <button
+          type="button"
+          onClick={() => setMenuOpen((open) => !open)}
+          aria-expanded={menuOpen}
+          aria-label={`更多操作：${todo.title}`}
+          className="grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 sm:hidden"
+        >
+          <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+        </button>
+        {menuOpen && (
+          <>
+            <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} aria-hidden="true" />
+            <div className="absolute right-0 top-8 z-40 w-28 rounded-card border border-gray-200 bg-white py-1 shadow-float dark:border-gray-700 dark:bg-gray-800" role="menu">
+              <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); onEdit(todo) }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700">
+                <Pencil className="h-3.5 w-3.5" aria-hidden="true" />编辑
+              </button>
+              <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); onDelete(todo.id) }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40">
+                <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />删除
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )

@@ -497,7 +497,7 @@ export default function CalendarPage() {
       {/* 头部：Google Calendar 风格导航栏 */}
       <div className="calendar-toolbar">
         <div className="calendar-toolbar-date flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-1">
+          <div className="flex min-w-0 items-center gap-1 max-md:w-full max-md:overflow-x-auto">
           <button
             onClick={() => navigate(-1)}
             className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors"
@@ -518,7 +518,7 @@ export default function CalendarPage() {
           </button>
           <h1 className="text-lg sm:text-xl font-semibold ml-2 text-gray-800 dark:text-gray-100 truncate">{title}</h1>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2 max-md:ml-auto">
             <button type="button" onClick={() => setPlanCreateDate(currentDate)} className="btn-secondary border border-gray-300 px-3 text-sm dark:border-gray-700">新建计划</button>
             <button type="button" onClick={() => setQuickCreateForDate(currentDate)} className="btn-primary bg-brand px-3 text-sm text-white hover:bg-brand-600">新建记录</button>
           </div>
@@ -686,11 +686,6 @@ export default function CalendarPage() {
             memosByDay={memosByDay}
             externalEvents={externalEvents}
             onDayClick={(date) => { setCurrentDate(date); setDayDetailDate(date) }}
-            onNavigate={(direction) => {
-              const next = new Date(currentDate)
-              next.setMonth(next.getMonth() + direction)
-              setCurrentDate(next)
-            }}
           />
         </div>
       )}
@@ -886,7 +881,7 @@ function DayView({ date, entries, activities, plans, dayMemos, externalEvents, n
             <div
               key={todo.id}
               className={`text-[10px] font-semibold rounded px-2 py-0.5 border ${todo.status === 'done' ? 'line-through opacity-60' : ''}`}
-              style={{ color: todo.tag?.color ?? todo.category?.color ?? '#6d5efc', borderColor: todo.tag?.color ?? todo.category?.color ?? '#6d5efc', backgroundColor: `${todo.tag?.color ?? todo.category?.color ?? '#6d5efc'}12` }}
+              style={{ color: todo.tag?.color ?? todo.category?.color ?? '#0f766e', borderColor: todo.tag?.color ?? todo.category?.color ?? '#0f766e', backgroundColor: `${todo.tag?.color ?? todo.category?.color ?? '#0f766e'}12` }}
               title={todo.lateReason ?? undefined}
             >
               ◆ {todo.title}
@@ -897,7 +892,7 @@ function DayView({ date, entries, activities, plans, dayMemos, externalEvents, n
               key={entry.id}
               onClick={() => onEntryClick(entry)}
               className="text-[10px] font-semibold rounded px-2 py-0.5 border border-dashed"
-              style={{ color: entry.tag?.color ?? '#6d5efc', borderColor: entry.tag?.color ?? '#6d5efc', backgroundColor: `${entry.tag?.color ?? '#6d5efc'}12` }}
+              style={{ color: entry.tag?.color ?? '#0f766e', borderColor: entry.tag?.color ?? '#0f766e', backgroundColor: `${entry.tag?.color ?? '#0f766e'}12` }}
             >
               ● {entry.tag?.name}
             </button>
@@ -940,7 +935,7 @@ function DayView({ date, entries, activities, plans, dayMemos, externalEvents, n
             const height = Math.max((heightMin / 60) * HOUR_HEIGHT_DAY, 20)
             const widthPercent = 100 / cols
             const leftPercent = (col / cols) * 100
-            const color = entry.tag?.color ?? '#6d5efc'
+            const color = entry.tag?.color ?? '#0f766e'
             const hasMemos = entry.memos && entry.memos.length > 0
             return (
               <button
@@ -1090,7 +1085,7 @@ function WeekView({ days, selectedDate, entries, activities, plans, memosByDay, 
                     <div
                       key={todo.id}
                       className={`text-[9px] font-semibold rounded px-1 py-0.5 border truncate ${todo.status === 'done' ? 'line-through opacity-60' : ''}`}
-                      style={{ color: todo.tag?.color ?? todo.category?.color ?? '#6d5efc', borderColor: todo.tag?.color ?? todo.category?.color ?? '#6d5efc', backgroundColor: `${todo.tag?.color ?? todo.category?.color ?? '#6d5efc'}12` }}
+                      style={{ color: todo.tag?.color ?? todo.category?.color ?? '#0f766e', borderColor: todo.tag?.color ?? todo.category?.color ?? '#0f766e', backgroundColor: `${todo.tag?.color ?? todo.category?.color ?? '#0f766e'}12` }}
                       title={todo.title}
                     >
                       ◆ {todo.title}
@@ -1101,7 +1096,7 @@ function WeekView({ days, selectedDate, entries, activities, plans, memosByDay, 
                       key={entry.id}
                       onClick={() => onEntryClick(entry)}
                       className="w-full text-left text-[9px] font-semibold rounded px-1 py-0.5 border border-dashed truncate"
-                      style={{ color: entry.tag?.color ?? '#6d5efc', borderColor: entry.tag?.color ?? '#6d5efc', backgroundColor: `${entry.tag?.color ?? '#6d5efc'}12` }}
+                      style={{ color: entry.tag?.color ?? '#0f766e', borderColor: entry.tag?.color ?? '#0f766e', backgroundColor: `${entry.tag?.color ?? '#0f766e'}12` }}
                     >
                       ● {entry.tag?.name}
                     </button>
@@ -1170,7 +1165,7 @@ function WeekView({ days, selectedDate, entries, activities, plans, memosByDay, 
                 const height = Math.max((heightMin / 60) * HOUR_HEIGHT_WEEK, 16)
                 const widthPercent = 100 / cols
                 const leftPercent = (col / cols) * 100
-                const color = entry.tag?.color ?? '#6d5efc'
+                const color = entry.tag?.color ?? '#0f766e'
                 const hasMemos = entry.memos && entry.memos.length > 0
                 return (
                   <button
@@ -1230,7 +1225,7 @@ function WeekView({ days, selectedDate, entries, activities, plans, memosByDay, 
 
 // ===== 月视图 =====
 
-function MonthView({ date, selectedDate, entriesByDay, activities, plans, memosByDay, externalEvents, onDayClick, onNavigate }: {
+function MonthView({ date, selectedDate, entriesByDay, activities, plans, memosByDay, externalEvents, onDayClick }: {
   date: Date
   selectedDate: Date
   entriesByDay: Map<string, TimeEntry[]>
@@ -1239,7 +1234,6 @@ function MonthView({ date, selectedDate, entriesByDay, activities, plans, memosB
   memosByDay: Map<string, Memo[]>
   externalEvents: CalendarEvent[]
   onDayClick: (d: Date) => void
-  onNavigate: (direction: -1 | 1) => void
 }) {
   const days = getMonthGrid(date)
 
@@ -1247,31 +1241,21 @@ function MonthView({ date, selectedDate, entriesByDay, activities, plans, memosB
     const seen = new Set<string>()
     const colors: string[] = []
     for (const e of dayEntries) {
-      const c = e.tag?.color ?? '#6d5efc'
+      const c = e.tag?.color ?? '#0f766e'
       if (!seen.has(c)) { seen.add(c); colors.push(c) }
     }
     return colors
   }
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-2 dark:border-gray-800 dark:bg-gray-900 sm:p-4">
-      <div className="mb-5 flex items-center justify-between px-1 sm:px-3">
-        <button type="button" onClick={() => onNavigate(-1)} className="grid h-9 w-9 place-items-center rounded-full text-2xl text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800" aria-label="上个月">‹</button>
-        <div className="flex items-center gap-2 text-xl font-bold text-gray-800 dark:text-gray-100 sm:text-2xl">
-          <span className="rounded-md border border-gray-200 px-4 py-1 dark:border-gray-700">{date.getFullYear()}</span>
-          <span>年</span>
-          <span className="rounded-md border border-gray-200 px-4 py-1 dark:border-gray-700">{date.getMonth() + 1}</span>
-          <span>月</span>
-        </div>
-        <button type="button" onClick={() => onNavigate(1)} className="grid h-9 w-9 place-items-center rounded-full text-2xl text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800" aria-label="下个月">›</button>
-      </div>
+    <div className="overflow-hidden rounded-2xl border border-[rgb(226_232_240_/_0.9)] bg-white p-2 shadow-[0_12px_34px_rgb(15_23_42_/_0.045)] dark:border-[rgba(255,255,255,0.09)] dark:shadow-[0_12px_34px_rgb(0_0_0_/_0.15)] sm:p-4">
       <div className="mb-1 grid grid-cols-7 border-y border-gray-200 bg-gray-50/70 dark:border-gray-800 dark:bg-gray-800/40">
         {WEEKDAYS_FULL.map((w, index) => (
           <div key={w} className={`text-center py-2 text-sm font-medium ${index >= 5 ? 'text-gray-700 dark:text-gray-200' : 'text-gray-500 dark:text-gray-400'}`}>{w.replace('周', '')}</div>
         ))}
       </div>
       <div className="calendar-month-grid grid grid-cols-7 overflow-hidden rounded-xl border-l border-t border-gray-200 dark:border-gray-800">
-        {days.map((d) => {
+        {days.map((d, dayIndex) => {
           const key = startOfDay(d).toISOString()
           const dayEntries = entriesByDay.get(key) ?? []
           const dayActivities = activities.filter((todo) => activityIsOnDay(todo, d))
@@ -1296,16 +1280,16 @@ function MonthView({ date, selectedDate, entriesByDay, activities, plans, memosB
               key={d.toISOString()}
               onClick={() => onDayClick(d)}
               aria-pressed={selected}
-              className={`relative min-h-[92px] border-b border-r border-gray-200 p-2 text-left transition-colors group sm:min-h-[112px] sm:p-3 dark:border-gray-800 ${selected ? 'bg-brand-500 text-white shadow-inner' : holidayEvent ? 'bg-red-50 dark:bg-red-950/20' : 'hover:bg-gray-50 dark:hover:bg-gray-800/60'} ${!inMonth ? 'opacity-30' : ''}`}
+              className={`relative min-h-[92px] border-b border-r border-gray-200 p-2 text-left transition-colors group sm:min-h-[112px] sm:p-3 dark:border-gray-800 ${dayIndex % 7 === 6 ? 'border-r-0' : ''} ${dayIndex >= days.length - 7 ? 'border-b-0' : ''} ${selected ? 'bg-brand-50 ring-1 ring-inset ring-brand-500 dark:bg-brand-900/25' : holidayEvent ? 'bg-red-50 dark:bg-red-950/20' : 'hover:bg-gray-50 dark:hover:bg-gray-800/60'} ${!inMonth ? 'opacity-30' : ''}`}
             >
               {holidayEvent && <span className="absolute right-1.5 top-1.5 rounded bg-red-500 px-1 text-[10px] font-bold text-white">休</span>}
               {workdayEvent && !holidayEvent && <span className="absolute right-1.5 top-1.5 rounded bg-slate-500 px-1 text-[10px] font-bold text-white">班</span>}
               <div className="flex items-start justify-between gap-1">
                 <div className="flex flex-col gap-0.5">
-                  <span className={`text-2xl font-semibold leading-none sm:text-3xl ${selected ? 'text-white' : weekend || holidayEvent ? 'text-red-500' : 'text-gray-800 dark:text-gray-100'}`}>
+                  <span className={`text-2xl font-semibold leading-none sm:text-3xl ${weekend || holidayEvent ? 'text-red-500' : 'text-gray-800 dark:text-gray-100'}`}>
                     {d.getDate()}
                   </span>
-                  <span className={`text-[11px] ${selected ? 'text-white/80' : getLunarText(d) === Solar.fromDate(d).getLunar().getJieQi() ? 'font-medium text-amber-600 dark:text-amber-400' : 'text-gray-400'}`}>{getLunarText(d)}</span>
+                  <span className={`text-[11px] ${getLunarText(d) === Solar.fromDate(d).getLunar().getJieQi() ? 'font-medium text-amber-600 dark:text-amber-400' : 'text-gray-400'}`}>{getLunarText(d)}</span>
                 </div>
               </div>
               {allDayLabels.length > 0 && (
@@ -1314,15 +1298,15 @@ function MonthView({ date, selectedDate, entriesByDay, activities, plans, memosB
                     const kind = externalEventKind(event)
                     const color = kind === 'workday' ? '#2563eb' : kind === 'holiday' ? '#d97706' : (event.subscription?.color ?? '#059669')
                     return (
-                        <div key={event.id} className={`truncate rounded px-1 py-0.5 text-[10px] font-medium leading-tight ${selected ? 'bg-white/20 text-white' : ''}`} style={selected ? undefined : { color, backgroundColor: `${color}15` }} title={event.summary}>
+                        <div key={event.id} className="truncate rounded px-1 py-0.5 text-[10px] font-medium leading-tight" style={{ color, backgroundColor: `${color}15` }} title={event.summary}>
                         {event.summary}
                       </div>
                     )
                   })}
                 </div>
               )}
-              <div className={`mt-2 flex min-h-5 items-center gap-1.5 ${selected ? 'text-white' : ''}`} aria-label="当天日历内容">
-                {uniqueColors.slice(0, 5).map((c, i) => <span key={i} className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: c }} title="计时记录" />)}
+              <div className="mt-2 flex min-h-5 items-center gap-1.5" aria-label="当天日历内容">
+                {uniqueColors.slice(0, 5).map((c, i) => <span key={i} className="h-2 w-2 rounded-full" style={{ backgroundColor: c }} title="计时记录" />)}
                 {dayPlans.length > 0 && <span className="h-2.5 w-2.5 rounded-full border-2 border-dashed border-slate-500" title={`${dayPlans.length} 项计划`} />}
                 {dayActivities.length > 0 && <span className="h-2.5 w-2.5 rounded-full bg-amber-400" title="活动" />}
                 {(hasOtherExternal || allDayLabels.length > 0) && <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" title="外部日历" />}
@@ -1346,7 +1330,7 @@ function EntryDetail({ entry, onClose, onChanged }: {
   const start = new Date(entry.startTime)
   const end = entry.endTime ? new Date(entry.endTime) : new Date()
   const duration = end.getTime() - start.getTime()
-  const color = entry.tag?.color ?? '#6d5efc'
+  const color = entry.tag?.color ?? '#0f766e'
   const memos = entry.memos ?? []
   const [editing, setEditing] = useState(false)
   const [editStart, setEditStart] = useState(toLocalInputWithSeconds(start))
@@ -1736,7 +1720,7 @@ function DayDetailPopupLegacy({ date, entries, activities, dayMemos, externalEve
               {dayEntries.map((e) => {
                 const start = new Date(e.startTime)
                 const end = e.endTime ? new Date(e.endTime) : null
-                const color = e.tag?.color ?? '#6d5efc'
+                const color = e.tag?.color ?? '#0f766e'
                 const dur = end ? end.getTime() - start.getTime() : Date.now() - start.getTime()
                 return (
                   <button

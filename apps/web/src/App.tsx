@@ -1,5 +1,6 @@
 import React, { lazy, Suspense, useEffect } from 'react'
 import { Navigate, Routes, Route } from 'react-router-dom'
+import SectionPage from './components/SectionPage'
 import AuthGate from './components/AuthGate'
 import { useStore } from './store'
 import { syncNativeStatusBarTheme } from './nativeStatusBar'
@@ -8,6 +9,7 @@ import { applyFontSizePreference } from './fontSettings'
 
 const TimerPage = lazy(() => import('./pages/TimerPage'))
 const TodosPage = lazy(() => import('./pages/TodosPage'))
+const DiaryPage = lazy(() => import('./pages/DiaryPage'))
 const StatsPage = lazy(() => import('./pages/StatsPage'))
 const TagsPage = lazy(() => import('./pages/TagsPage'))
 const CalendarPage = lazy(() => import('./pages/CalendarPage'))
@@ -69,17 +71,12 @@ export default function App() {
 
   useEffect(() => {
     applyFontSizePreference()
-    const media = window.matchMedia('(prefers-color-scheme: dark)')
-    const applyTheme = () => {
-      const isDark = media.matches
-      document.documentElement.classList.toggle('dark', isDark)
-      document.documentElement.style.colorScheme = isDark ? 'dark' : 'light'
-      void syncNativeStatusBarTheme(isDark)
-    }
-
-    applyTheme()
-    media.addEventListener('change', applyTheme)
-    return () => media.removeEventListener('change', applyTheme)
+    // Aurora Glass 深空形态为默认；亮色适配后再恢复 matchMedia 跟随系统。
+    const isDark = true
+    document.documentElement.classList.toggle('dark', isDark)
+    document.documentElement.style.colorScheme = isDark ? 'dark' : 'light'
+    void syncNativeStatusBarTheme(isDark)
+    return () => {}
   }, [])
 
   useEffect(() => {
@@ -95,14 +92,65 @@ export default function App() {
       <AuthGate>
         <Suspense fallback={<PageFallback />}>
           <Routes>
+            {/* ── 5 个一级入口 ── */}
             <Route path="/" element={<TimerPage />} />
-            <Route path="/todos" element={<TodosPage />} />
-            <Route path="/calendar" element={<CalendarPage />} />
-            <Route path="/plans" element={<PlansPage />} />
-            <Route path="/stats" element={<StatsPage />} />
-            <Route path="/tags" element={<TagsPage />} />
-            <Route path="/habits" element={<HabitsPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
+            <Route
+              path="/time"
+              element={
+                <SectionPage
+                  title="时间"
+                  description="日历、计划与日记 · 都在看你的一天"
+                  tabs={[
+                    { id: 'calendar', label: '日历', description: '按月 / 周查看投入与安排' },
+                    { id: 'plans', label: '计划', description: '当日计划与实际记录并列复盘' },
+                    { id: 'diary', label: '日记', description: '随手记与日记流' },
+                  ]}
+                >
+                  {(tab) => tab === 'calendar' ? <CalendarPage /> : tab === 'plans' ? <PlansPage embedded /> : <DiaryPage embedded />}
+                </SectionPage>
+              }
+            />
+            <Route
+              path="/tasks"
+              element={
+                <SectionPage
+                  title="事项"
+                  description="待办与周期目标 · 要做的事都在这里"
+                  tabs={[
+                    { id: 'todos', label: '待办', description: '一次性与周期活动' },
+                    { id: 'habits', label: '习惯', description: '周期目标的完成结果' },
+                  ]}
+                >
+                  {(tab) => tab === 'todos' ? <TodosPage embedded /> : <HabitsPage embedded />}
+                </SectionPage>
+              }
+            />
+            <Route path="/insights" element={<StatsPage />} />
+            <Route
+              path="/system"
+              element={
+                <SectionPage
+                  title="体系"
+                  description="标签体系与偏好设置"
+                  tabs={[
+                    { id: 'tags', label: '标签与分类', description: '管理标签体系、颜色与分类归属' },
+                    { id: 'settings', label: '设置', description: '账户、安全、数据同步与显示偏好' },
+                  ]}
+                >
+                  {(tab) => tab === 'tags' ? <TagsPage embedded /> : <SettingsPage embedded />}
+                </SectionPage>
+              }
+            />
+
+            {/* ── 旧路径重定向：书签不落空 ── */}
+            <Route path="/todos" element={<Navigate to="/tasks?tab=todos" replace />} />
+            <Route path="/habits" element={<Navigate to="/tasks?tab=habits" replace />} />
+            <Route path="/calendar" element={<Navigate to="/time?tab=calendar" replace />} />
+            <Route path="/plans" element={<Navigate to="/time?tab=plans" replace />} />
+            <Route path="/diary" element={<Navigate to="/time?tab=diary" replace />} />
+            <Route path="/stats" element={<Navigate to="/insights" replace />} />
+            <Route path="/tags" element={<Navigate to="/system?tab=tags" replace />} />
+            <Route path="/settings" element={<Navigate to="/system?tab=settings" replace />} />
             {/* 旧版笔记链接平滑回到计时页，避免历史书签落到空白页。 */}
             <Route path="/notes/*" element={<Navigate to="/" replace />} />
           </Routes>

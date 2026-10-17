@@ -4,6 +4,15 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
+      borderRadius: {
+        // 语义圆角：卡片 12 / 控件 8 / 胶囊 999，取值与 :root 变量保持一致
+        card: 'var(--radius-card)',
+        ctl: 'var(--radius-ctl)',
+      },
+      boxShadow: {
+        card: 'var(--shadow-card)',
+        float: 'var(--shadow-float)',
+      },
       colors: {
         brand: {
           DEFAULT: '#0d9488',

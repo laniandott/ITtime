@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getServerHost } from '../api'
 import { clearAuthToken, getAuthHeaders, getAuthToken, setAuthToken } from '../auth'
+import { useStore } from '../store'
 import Layout from './Layout'
 
 type AuthMode = 'checking' | 'login' | 'setup' | 'offline' | 'app'
@@ -17,6 +18,7 @@ async function authRequest(path: string, body?: unknown, auth = false) {
 }
 
 export default function AuthGate({ children }: { children: React.ReactNode }) {
+  const loadAll = useStore((state) => state.loadAll)
   const [mode, setMode] = useState<AuthMode>('checking')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -64,6 +66,9 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
         : await authRequest('login', { username, password, remember })
       setAuthToken(session.token, mode === 'setup' || remember)
       setPassword(''); setMode('app')
+      // 登录/初始化成功后主动拉一次数据：App 的挂载 effect 在鉴权前就执行过了，
+      // 这里不补的话首次登录必须手动刷新才能看到内容。
+      void loadAll()
     } catch (reason) { setError(reason instanceof Error ? reason.message : '登录失败') }
     finally { setSubmitting(false) }
   }

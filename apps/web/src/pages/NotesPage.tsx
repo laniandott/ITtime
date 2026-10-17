@@ -206,7 +206,7 @@ export default function NotesPage() {
       {error && <div className="text-sm text-red-500">{error}</div>}
 
       {showNewFolder && (
-        <div className="toolbar-surface flex gap-2">
+        <div className="toolbar-surface flex gap-2 shadow-[0_1px_2px_rgb(15_23_42_/_0.04)]">
           <input
             autoFocus
             value={newFolderName}

@@ -5,7 +5,7 @@ import { api } from '../api'
 import type { Category, Tag, Goal } from '../types'
 import { GripVertical } from 'lucide-react'
 
-const COLORS = ['#6d5efc', '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#8b5cf6', '#14b8a6', '#64748b']
+const COLORS = ['#0f766e', '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#8b5cf6', '#14b8a6', '#64748b']
 const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
 
 function defaultGoalTitle(tagName: string, kind: 'tracking' | 'activity', period: string, weekDay: number, periodDays: number): string {
@@ -83,7 +83,7 @@ export default function TagsPage({ embedded = false }: { embedded?: boolean } = 
 
       <div className="grid items-start gap-4 xl:grid-cols-[minmax(260px,.72fr)_minmax(0,1.28fr)]">
       {/* 分类管理 */}
-      <section className="page-card space-y-3 p-4 sm:p-5 xl:sticky xl:top-4">
+      <section className="page-card min-w-0 space-y-3 bg-slate-50 p-4 sm:p-5 xl:sticky xl:top-4">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">分类</h2>
           <button
@@ -105,15 +105,15 @@ export default function TagsPage({ embedded = false }: { embedded?: boolean } = 
               onDragOver={(event) => event.preventDefault()}
               onDrop={(event) => { event.preventDefault(); dropInOrder(orderedCategories, event.dataTransfer.getData('text/plain'), cat.id, (id, sortOrder) => api.categories.update(id, { sortOrder })) }}
               onDragEnd={() => setDraggedId(null)}
-              className={`flex items-center justify-between rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 px-4 py-2.5 ${draggedId === cat.id ? 'opacity-40' : ''}`}
+              className={`flex items-center justify-between gap-3 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 px-4 py-2.5 ${draggedId === cat.id ? 'opacity-40' : ''}`}
             >
-              <div className="flex items-center gap-3">
-                <GripVertical className="h-4 w-4 cursor-grab text-gray-400 active:cursor-grabbing" aria-label="拖动排序" />
-                <span className="w-3 h-3 rounded-full" style={{ background: cat.color }} />
-                <span className="font-medium">{cat.name}</span>
-                <span className="text-xs text-gray-400">{cat._count?.tags ?? 0} 个标签</span>
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <GripVertical className="h-4 w-4 shrink-0 cursor-grab text-gray-400 active:cursor-grabbing" aria-label="拖动排序" />
+                <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: cat.color }} />
+                <span className="shrink-0 whitespace-nowrap font-medium">{cat.name}</span>
+                <span className="shrink-0 whitespace-nowrap text-xs text-gray-400">{cat._count?.tags ?? 0} 个标签</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex shrink-0 items-center gap-2 whitespace-nowrap">
                 <button
                   onClick={() => { setEditingCat(cat); setShowCatForm(true) }}
                   className="text-sm text-gray-400 hover:text-brand"
@@ -141,7 +141,7 @@ export default function TagsPage({ embedded = false }: { embedded?: boolean } = 
       </section>
 
       {/* 标签管理 */}
-      <section className="page-card space-y-3 p-4 sm:p-5">
+      <section className="page-card min-w-0 space-y-3 p-4 sm:p-5">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">标签</h2>
           <button
@@ -151,7 +151,7 @@ export default function TagsPage({ embedded = false }: { embedded?: boolean } = 
             + 新建标签
           </button>
         </div>
-        <div className="space-y-2">
+        <div className="tag-rows">
           {orderedTags.map((tag) => {
             return (
             <div
@@ -161,31 +161,27 @@ export default function TagsPage({ embedded = false }: { embedded?: boolean } = 
               onDragOver={(event) => event.preventDefault()}
               onDrop={(event) => { event.preventDefault(); dropInOrder(orderedTags, event.dataTransfer.getData('text/plain'), tag.id, (id, sortOrder) => api.tags.update(id, { sortOrder })) }}
               onDragEnd={() => setDraggedId(null)}
-              className={`flex items-center justify-between rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 px-4 py-2.5 ${draggedId === tag.id ? 'opacity-40' : ''}`}
+              className={`flex min-w-0 items-center justify-between gap-3 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 px-4 py-2.5 ${draggedId === tag.id ? 'opacity-40' : ''}`}
             >
-              <div className="flex items-center gap-3">
-                <GripVertical className="h-4 w-4 cursor-grab text-gray-400 active:cursor-grabbing" aria-label="拖动排序" />
-                <span className="w-3 h-3 rounded-full" style={{ background: tag.color }} />
-                <span className="font-medium">
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <GripVertical className="h-4 w-4 shrink-0 cursor-grab text-gray-400 active:cursor-grabbing" aria-label="拖动排序" />
+                <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: tag.color }} />
+                <span
+                  className="shrink-0 whitespace-nowrap font-medium"
+                  title={tag.parentId ? `上级：${tags.find((parent) => parent.id === tag.parentId)?.name ?? '未知'}` : undefined}
+                >
                   {tag.parentId ? '↳ ' : ''}{tag.icon ? `${tag.icon} ` : ''}{tag.name}
                 </span>
-                {tag.parentId && (
-                  <span className="text-xs text-gray-400">
-                    上级：{tags.find((parent) => parent.id === tag.parentId)?.name ?? '未知'}
-                  </span>
-                )}
-                <span className="text-xs px-2 py-0.5 rounded-full"
-                  style={{ background: tag.category?.color ?? '#e5e7eb', color: tag.category ? '#fff' : '#6b7280' }}
-                >
+                <span className="shrink-0 whitespace-nowrap rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500 dark:bg-gray-800 dark:text-gray-400">
                   {tag.category?.name ?? '未分类'}
                 </span>
                 {tag.trackType === 'count' && (
-                  <span className="text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
+                  <span className="shrink-0 whitespace-nowrap text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
                     次数
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex shrink-0 items-center gap-2 whitespace-nowrap">
                 {goals.filter((g) => g.tagId === tag.id).length === 0 && (
                   <button
                     onClick={() => setEditingGoal({ goal: null, tag })}
@@ -224,7 +220,7 @@ export default function TagsPage({ embedded = false }: { embedded?: boolean } = 
 
       {/* 目标管理 */}
       {goals.length > 0 && (
-        <section className="space-y-3">
+        <section className="space-y-3 border-t border-[rgb(226_232_240_/_0.9)] pt-5 dark:border-[rgb(51_65_85_/_0.9)]">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">目标 / 习惯</h2>
           </div>
@@ -263,7 +259,7 @@ export default function TagsPage({ embedded = false }: { embedded?: boolean } = 
                       </div>
                     </div>
                   </div>
-                  <div className="flex gap-2 flex-shrink-0">
+                  <div className="flex shrink-0 items-center gap-2 whitespace-nowrap">
                     <button
                       onClick={() => tag && setEditingGoal({ goal, tag })}
                       className="text-sm text-gray-400 hover:text-brand"
@@ -496,7 +492,7 @@ function TagForm({ tag, categories, tags, onClose, onSaved }: {
 }
 
 // 取色组件：原生取色板 + hex 输入 + 预设快捷色
-const PRESET_COLORS = ['#6d5efc', '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#8b5cf6', '#14b8a6', '#64748b']
+const PRESET_COLORS = ['#0f766e', '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#8b5cf6', '#14b8a6', '#64748b']
 
 function ColorPicker({ value, onChange }: { value: string; onChange: (c: string) => void }) {
   return (
@@ -515,7 +511,7 @@ function ColorPicker({ value, onChange }: { value: string; onChange: (c: string)
           value={value}
           onChange={(e) => onChange(e.target.value)}
           className="input !w-32 font-mono text-sm"
-          placeholder="#6d5efc"
+          placeholder="#0f766e"
         />
       </div>
       {/* 预设快捷色 */}

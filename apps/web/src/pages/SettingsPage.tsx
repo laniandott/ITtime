@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import TagsPage from './TagsPage'
 import { getSyncStatus, SYNC_SETTINGS_KEY, subscribeSyncStatus, testConnection, startSync, stopSync, type SyncConfig, type SyncMode } from '../couchSync'
 import { importLegacyServerData } from '../legacyMigration'
 import { applyFontSizePreference, FONT_SIZE_KEY, readFontSizePreference, type FontSizePreference } from '../fontSettings'
@@ -10,7 +9,7 @@ import { getAuthHeaders } from '../auth'
 import { PageHeader } from '../components/PageHeader'
 
 function load(): SyncConfig { try { return { couchUrl: '', couchDatabase: 'ittime', couchUsername: '', couchPassword: '', ...JSON.parse(localStorage.getItem(SYNC_SETTINGS_KEY) ?? '{}') } } catch { return { couchUrl: '', couchDatabase: 'ittime', couchUsername: '', couchPassword: '' } } }
-export default function SettingsPage() {
+export default function SettingsPage({ embedded = false }: { embedded?: boolean } = {}) {
   const [page, setPage] = useState('tags')
   const [settings, setSettings] = useState<SyncConfig>(load)
   const [message, setMessage] = useState(getSyncStatus)
@@ -39,11 +38,17 @@ export default function SettingsPage() {
   }
   const migrate = async () => { setBusy(true); setMigrationMessage('正在读取旧服务器数据…'); try { const result = await importLegacyServerData(); setMigrationMessage(`导入完成：新增 ${result.imported} 条，跳过 ${result.skipped} 条（共 ${result.total} 条）`) } catch (error) { setMigrationMessage(error instanceof Error ? error.message : String(error)) } finally { setBusy(false) } }
   return <div className="workspace-page settings-page space-y-6">
-    <PageHeader title="设置" description="账户、安全、数据同步与显示偏好" />
+    {!embedded && <PageHeader title="设置" description="账户、安全、数据同步与显示偏好" />}
     <div className="settings-layout">
-    <nav className="settings-nav flex gap-1 overflow-x-auto md:flex-col md:overflow-visible" role="tablist" aria-label="设置分类">{[['tags', '打卡标签'], ['account', '账户'], ['sync', 'CouchDB 同步'], ['migration', '数据迁移'], ['general', '常规']].map(([id, name]) => <button key={id} role="tab" aria-selected={page === id} onClick={() => setPage(id)} className={`shrink-0 rounded-md px-3 py-2.5 text-left text-sm transition-colors ${page === id ? 'bg-teal-50 font-medium text-teal-800 dark:bg-teal-950/50 dark:text-teal-200' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}>{name}</button>)}</nav>
+    <nav className="settings-nav flex gap-1 overflow-x-auto md:flex-col md:overflow-visible" role="tablist" aria-label="设置分类">{[['tags', '标签与分类'], ['account', '账户'], ['sync', 'CouchDB 同步'], ['migration', '数据迁移'], ['general', '常规']].map(([id, name]) => <button key={id} role="tab" aria-selected={page === id} onClick={() => setPage(id)} className={`shrink-0 rounded-md px-3 py-2.5 text-left text-sm transition-colors ${page === id ? 'bg-teal-50 font-medium text-teal-800 dark:bg-teal-950/50 dark:text-teal-200' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}>{name}</button>)}</nav>
     <div className="min-w-0">
-    {page === 'tags' && <TagsPage embedded />}
+    {page === 'tags' && <section className="page-card max-w-2xl space-y-3 p-4 sm:p-5">
+      <h2 className="font-semibold">标签与分类</h2>
+      <p className="text-sm text-gray-600 dark:text-gray-300">标签体系、分类归属、颜色与目标规则，已合并到「标签」页面统一管理。设置页不再内嵌整套管理器，避免同一套逻辑两处维护。</p>
+      <div className="flex flex-wrap gap-2">
+        <Link to="/tags" className="rounded-md bg-brand px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-600">去标签页管理</Link>
+      </div>
+    </section>}
     {page === 'account' && <AccountSettings />}
     {page === 'migration' && <section className="page-card max-w-2xl space-y-4 p-4 sm:p-5">
       <h2 className="font-semibold">从服务器导入旧数据</h2>

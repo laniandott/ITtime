@@ -7,7 +7,7 @@ import type { Goal, Todo } from '../types'
 
 const periods: Record<string, string> = { workday: '工作日', daily: '每日', weekly: '每周', monthly: '每月', once: '一次性', custom: '自定义周期' }
 const weekDayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
-export default function GoalsPage() {
+export default function GoalsPage({ embedded = false }: { embedded?: boolean } = {}) {
   const [goals, setGoals] = useState<Goal[]>([])
   const [completed, setCompleted] = useState<Todo[]>([])
   const [error, setError] = useState('')
@@ -48,9 +48,9 @@ export default function GoalsPage() {
   }
 
   return <div className="workspace-page habits-page space-y-5">
-    <PageHeader title="习惯结果" description="周期性目标与完成记录" actions={<Link to="/settings" className="text-sm text-brand">管理标签规则</Link>} />
+    {!embedded && <PageHeader title="习惯结果" description="周期性目标与完成记录" actions={<Link to="/tasks?tab=habits" className="text-sm text-brand">管理标签规则</Link>} />}
     {error && <p role="alert" className="text-red-500 text-sm">{error}</p>}
-    <div className="habits-layout">
+    <div className="habits-layout items-stretch">
     <section className="page-card p-4 sm:p-5"><h2 className="text-sm font-semibold text-gray-500 mb-3">当前周期</h2>{goals.map(goal => {
       const current = goal.current ?? 0; const unit = goal.kind === 'activity' ? '项' : goal.type === 'count' ? '次' : '分钟'
       const percent = Math.min(100, goal.target ? current / goal.target * 100 : 0)
@@ -73,11 +73,13 @@ export default function GoalsPage() {
             <div className="min-w-0"><strong>{displayTitle}</strong><p className="mt-1 text-xs text-gray-500">{goal.tag?.name} · {periods[goal.period]}{goal.period === 'weekly' && goal.weekDay !== null ? `（${weekDayNames[goal.weekDay]}）` : ''} · {goal.kind === 'activity' ? '活动目标' : goal.type === 'count' ? '计次目标，不累计时长' : '时长目标'}</p></div>
             <span className={`shrink-0 text-sm ${current >= goal.target ? 'text-emerald-600' : 'text-gray-500'}`}>{current} / {goal.target} {unit}</span>
           </div>
-          <progress className="habit-result-progress mt-3" style={{ accentColor: goal.tag?.color ?? '#0f766e' }} value={percent} max="100" aria-label={`${goal.title}完成进度`} />
+          <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800" role="progressbar" aria-valuenow={Math.round(percent)} aria-valuemin={0} aria-valuemax={100} aria-label={`${goal.title}完成进度`}>
+            <div className="h-full rounded-full bg-brand-600 transition-[width] duration-300 dark:bg-brand-500" style={{ width: `${percent}%` }} />
+          </div>
         </div>
       </article>
     })}{goals.length === 0 && <p className="py-8 text-gray-400 text-sm">标签中还没有设置目标。</p>}</section>
-    <section className="habits-history page-card max-h-[calc(100vh-10rem)] overflow-y-auto p-4 sm:p-5"><h2 className="text-sm font-semibold text-gray-500 mb-3">已完成活动</h2>{completed.map(todo => <div key={todo.id} className="py-3 border-b border-gray-200 last:border-0 dark:border-gray-800 flex justify-between gap-4"><span className="min-w-0">{todo.title}</span><time className="shrink-0 text-xs text-gray-500">{todo.completedAt ? new Date(todo.completedAt).toLocaleDateString('zh-CN') : '已完成'}</time></div>)}{!completed.length && <p className="text-sm text-gray-400 py-6">暂无已完成活动。</p>}</section>
+    <section className="habits-history page-card min-w-0 max-h-[calc(100vh-10rem)] overflow-y-auto p-4 sm:p-5"><h2 className="text-sm font-semibold text-gray-500 mb-3">已完成活动</h2>{completed.map(todo => <div key={todo.id} className="py-3 border-b border-gray-200 last:border-0 dark:border-gray-800 flex justify-between gap-4"><span className="min-w-0">{todo.title}</span><time className="shrink-0 text-xs text-gray-500">{todo.completedAt ? new Date(todo.completedAt).toLocaleDateString('zh-CN') : '已完成'}</time></div>)}{!completed.length && <p className="text-sm text-gray-400 py-6">暂无已完成活动。</p>}</section>
     </div>
   </div>
 }

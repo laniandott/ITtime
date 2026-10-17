@@ -43,6 +43,31 @@ const localDateKey = (date = new Date()) => {
 
 
 
+/**
+ * 快速开始的标签按钮。
+ * 遵循「三色法则」：标签色只作为 5px 色点出现，文字/边框/底色一律中性；
+ * 只有「正在计时」这一种状态才允许整块上主色浅底。
+ */
+function QuickStartTagButton({ tag, isRunning, onClick }: { tag: Tag; isRunning: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={isRunning}
+      className={`timer-tag inline-flex items-center gap-2 border px-3 py-2.5 text-sm font-medium transition-colors ${
+        isRunning
+          ? 'border-brand-600 bg-brand-50 text-brand-800 dark:border-brand-500 dark:bg-brand-900/30 dark:text-brand-200'
+          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:border-gray-600 dark:hover:bg-gray-700'
+      } ${tag.trackType === 'count' ? 'border-dashed' : ''}`}
+    >
+      <span className="h-[5px] w-[5px] shrink-0 rounded-full" style={{ background: tag.color }} aria-hidden="true" />
+      <span className="whitespace-nowrap">{tag.icon ? `${tag.icon} ` : ''}{tag.name}</span>
+      {isRunning && <span className="text-[11px] font-semibold text-brand-700 dark:text-brand-300">· 停止</span>}
+      {tag.trackType === 'count' && <span className="text-[11px] text-gray-400" aria-hidden="true">✓</span>}
+    </button>
+  )
+}
+
 export default function TimerPage() {
   const {
     tags,
@@ -247,6 +272,8 @@ export default function TimerPage() {
     tags: orderedTags(tags.filter((t) => t.categoryId === cat.id && !t.parentId)),
   }))
   const uncategorized = orderedTags(tags.filter((t) => !t.categoryId && !t.parentId))
+  // 空分类不渲染，因此「首块跨整行」需要基于实际可见的分组来判断
+  const visibleCategoryGroups = tagsByCategory.filter((group) => group.tags.length > 0)
 
   // 按结束时间倒序排序（进行中的在最上方，即 endTime 为 null 当作无穷大，已结束的按 endTime 倒序）
   const sortedRecent = useMemo(() => [...recent]
@@ -272,10 +299,11 @@ export default function TimerPage() {
   return (
     <div className="workspace-page timer-page space-y-6">
       {feedback && <div role="status" className="rounded-xl border border-green-200 bg-green-50 dark:bg-green-950/30 p-3 text-sm text-green-700 dark:text-green-300">{feedback}</div>}
-      <PageHeader title="打卡" description="时间记录" />
+      <PageHeader title="工作台" description="正在进行的计时、快速开始与最近记录" />
 
-      <div className="timer-workspace">
-      <div className="timer-session">
+      {/* 布局：运行中为「计时 + 时间线 | 快速开始」两栏，空闲时单栏（session 自身 hidden） */}
+      <div className={`timer-workspace grid items-start gap-5 ${running.length > 0 ? 'grid-cols-[minmax(0,1fr)_minmax(300px,360px)] max-lg:grid-cols-1' : 'grid-cols-1'}`}>
+      <div className={`timer-session min-w-0 ${running.length > 0 ? 'sticky top-4 max-lg:static' : 'hidden'}`}>
       {/* 暂存条 */}
       {pending.length > 0 && (
         <div className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4">
@@ -318,7 +346,7 @@ export default function TimerPage() {
 
       {/* 进行中的计时卡片 */}
       {running.length > 0 ? (
-        <div className="space-y-3">
+        <div className="min-w-0 space-y-3">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <span className="text-sm text-gray-500">
               {running.length > 1 ? `${running.length} 个计时进行中` : '正在计时'}
@@ -377,7 +405,7 @@ export default function TimerPage() {
       </div>
 
       {/* 标签选择器 + 补录入口 */}
-      <div className="timer-quickstart">
+      <div className={`timer-quickstart min-w-0 rounded-xl border border-[rgb(209_213_219_/_0.9)] bg-white p-4 dark:border-[rgb(55_65_81_/_0.9)] dark:bg-gray-900 xl:px-6 xl:py-5 ${running.length > 0 ? 'sticky top-4 max-h-[calc(100vh_-_2rem)] overflow-y-auto max-lg:static max-lg:max-h-none max-lg:overflow-visible' : ''}`}>
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
             快速开始
@@ -407,34 +435,25 @@ export default function TimerPage() {
             还没有标签，去 <a href="/tags" className="text-brand underline">标签管理</a> 创建一些吧
           </div>
         ) : (
-          <div className="space-y-4">
-            {tagsByCategory.map(({ category, tags: ts }) =>
-              ts.length === 0 ? null : (
-                <div key={category.id} draggable={sortingQuickStart} onDragStart={(event) => { event.dataTransfer.setData('text/plain', category.id); event.dataTransfer.effectAllowed = 'move'; setDraggedQuickStartId(category.id) }} onDragOver={(event) => { if (sortingQuickStart) event.preventDefault() }} onDrop={(event) => { event.preventDefault(); const sourceId = event.dataTransfer.getData('text/plain'); if (sourceId) void saveOrder(orderedCategories, sourceId, category.id, (id, sortOrder) => api.categories.update(id, { sortOrder })) }} onDragEnd={() => setDraggedQuickStartId(null)} className={`timer-category rounded-lg border p-4 sm:p-5 ${draggedQuickStartId === category.id ? 'opacity-40' : ''}`} style={{ borderColor: `${category.color}45`, background: `${category.color}0a` }}>
-                  <div className="flex items-center gap-2 mb-3">
+          <div className={`grid gap-x-6 gap-y-5 ${running.length > 0 ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'}`}>
+            {visibleCategoryGroups.map(({ category, tags: ts }, groupIndex) =>
+              (
+                <div key={category.id} draggable={sortingQuickStart} onDragStart={(event) => { event.dataTransfer.setData('text/plain', category.id); event.dataTransfer.effectAllowed = 'move'; setDraggedQuickStartId(category.id) }} onDragOver={(event) => { if (sortingQuickStart) event.preventDefault() }} onDrop={(event) => { event.preventDefault(); const sourceId = event.dataTransfer.getData('text/plain'); if (sourceId) void saveOrder(orderedCategories, sourceId, category.id, (id, sortOrder) => api.categories.update(id, { sortOrder })) }} onDragEnd={() => setDraggedQuickStartId(null)} className={`timer-category min-w-0 ${groupIndex === 0 && running.length === 0 ? 'lg:col-span-full' : ''} ${draggedQuickStartId === category.id ? 'opacity-40' : ''}`}>
+                  <div className="mb-2 flex items-center gap-2">
                     <span
-                      className="w-3 h-3 rounded-full ring-4"
-                      style={{ background: category.color, boxShadow: `0 0 0 4px ${category.color}20` }}
+                      className="h-[6px] w-[6px] shrink-0 rounded-full"
+                      style={{ background: category.color }}
                     />
-                    <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
                       {category.name}
                     </span>
-                    {sortingQuickStart && <GripVertical className="ml-2 h-4 w-4 cursor-grab text-gray-500 active:cursor-grabbing" aria-label="拖动分类排序" />}
-                    <span className="ml-auto text-xs text-gray-500 dark:text-gray-400">{ts.length} 个标签</span>
+                    <span className="text-[11px] text-gray-400">{ts.length}</span>
+                    {sortingQuickStart && <GripVertical className="ml-auto h-4 w-4 cursor-grab text-gray-400 active:cursor-grabbing" aria-label="拖动分类排序" />}
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-1.5">
                     {ts.map((tag) => (
-                      <div key={tag.id} draggable={sortingQuickStart} onDragStart={(event) => { event.stopPropagation(); event.dataTransfer.setData('text/plain', tag.id); event.dataTransfer.effectAllowed = 'move'; setDraggedQuickStartId(tag.id) }} onDragOver={(event) => { if (sortingQuickStart) event.preventDefault() }} onDrop={(event) => { event.preventDefault(); event.stopPropagation(); const sourceId = event.dataTransfer.getData('text/plain'); if (sourceId) void saveOrder(ts, sourceId, tag.id, (id, sortOrder) => api.tags.update(id, { sortOrder })) }} onDragEnd={() => setDraggedQuickStartId(null)} className={`flex items-center gap-0.5 ${draggedQuickStartId === tag.id ? 'opacity-40' : ''}`}>
-                      <button
-                        onClick={() => handleStart(tag.id)}
-                        aria-pressed={running.some(entry => entry.tagId === tag.id)}
-                        className={`timer-tag px-4 py-2.5 border font-medium text-sm transition-all hover:-translate-y-0.5 ${tag.trackType === 'count' ? 'border-dashed' : ''}`}
-                        style={{ borderColor: tag.color, color: tag.color, backgroundColor: `${tag.color}18`, boxShadow: running.some(entry => entry.tagId === tag.id) ? `inset 0 0 0 2px ${tag.color}, 0 7px 18px ${tag.color}24` : `0 2px 7px ${tag.color}12` }}
-                      >
-                        {running.some(entry => entry.tagId === tag.id) ? '■ ' : '▶ '}{tag.icon ? `${tag.icon} ` : ''}{tag.name}
-                        {running.some(entry => entry.tagId === tag.id) && <span className="ml-1 text-[11px] font-semibold">· 停止</span>}
-                        {tag.trackType === 'count' && <span className="ml-1 text-xs opacity-60">✓</span>}
-                      </button>
+                      <div key={tag.id} draggable={sortingQuickStart} onDragStart={(event) => { event.stopPropagation(); event.dataTransfer.setData('text/plain', tag.id); event.dataTransfer.effectAllowed = 'move'; setDraggedQuickStartId(tag.id) }} onDragOver={(event) => { if (sortingQuickStart) event.preventDefault() }} onDrop={(event) => { event.preventDefault(); event.stopPropagation(); const sourceId = event.dataTransfer.getData('text/plain'); if (sourceId) void saveOrder(ts, sourceId, tag.id, (id, sortOrder) => api.tags.update(id, { sortOrder })) }} onDragEnd={() => setDraggedQuickStartId(null)} className={`flex items-center gap-1 ${draggedQuickStartId === tag.id ? 'opacity-40' : ''}`}>
+                      <QuickStartTagButton tag={tag} isRunning={running.some(entry => entry.tagId === tag.id)} onClick={() => handleStart(tag.id)} />
                       {sortingQuickStart && <GripVertical className="h-4 w-4 cursor-grab text-gray-400 active:cursor-grabbing" aria-label="拖动标签排序" />}
                       </div>
                     ))}
@@ -443,20 +462,16 @@ export default function TimerPage() {
               )
             )}
             {uncategorized.length > 0 && (
-              <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/50 p-4 sm:p-5">
-                <div className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-3">未分类 <span className="font-normal text-gray-400">· {uncategorized.length} 个标签</span></div>
-                <div className="flex flex-wrap gap-2">
+              <div className="timer-category min-w-0">
+                <div className="mb-2 flex items-center gap-2">
+                  <span className="h-[6px] w-[6px] shrink-0 rounded-full bg-gray-300 dark:bg-gray-600" />
+                  <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">未分类</span>
+                  <span className="text-[11px] text-gray-400">{uncategorized.length}</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
                   {uncategorized.map((tag) => (
-                    <div key={tag.id} draggable={sortingQuickStart} onDragStart={(event) => { event.dataTransfer.setData('text/plain', tag.id); event.dataTransfer.effectAllowed = 'move'; setDraggedQuickStartId(tag.id) }} onDragOver={(event) => { if (sortingQuickStart) event.preventDefault() }} onDrop={(event) => { event.preventDefault(); const sourceId = event.dataTransfer.getData('text/plain'); if (sourceId) void saveOrder(uncategorized, sourceId, tag.id, (id, sortOrder) => api.tags.update(id, { sortOrder })) }} onDragEnd={() => setDraggedQuickStartId(null)} className={`flex items-center gap-0.5 ${draggedQuickStartId === tag.id ? 'opacity-40' : ''}`}>
-                    <button
-                      onClick={() => handleStart(tag.id)}
-                        className={`timer-tag px-4 py-2.5 border font-medium text-sm transition-colors ${tag.trackType === 'count' ? 'border-dashed' : ''}`}
-                        style={{ borderColor: tag.color, color: tag.color, backgroundColor: `${tag.color}18`, boxShadow: running.some(entry => entry.tagId === tag.id) ? `inset 0 0 0 2px ${tag.color}` : undefined }}
-                      >
-                        {running.some(entry => entry.tagId === tag.id) ? '■ ' : '▶ '}{tag.icon ? `${tag.icon} ` : ''}{tag.name}
-                        {running.some(entry => entry.tagId === tag.id) && <span className="ml-1 text-[11px] font-semibold">· 停止</span>}
-                      {tag.trackType === 'count' && <span className="ml-1 text-xs opacity-60">✓</span>}
-                    </button>
+                    <div key={tag.id} draggable={sortingQuickStart} onDragStart={(event) => { event.dataTransfer.setData('text/plain', tag.id); event.dataTransfer.effectAllowed = 'move'; setDraggedQuickStartId(tag.id) }} onDragOver={(event) => { if (sortingQuickStart) event.preventDefault() }} onDrop={(event) => { event.preventDefault(); const sourceId = event.dataTransfer.getData('text/plain'); if (sourceId) void saveOrder(uncategorized, sourceId, tag.id, (id, sortOrder) => api.tags.update(id, { sortOrder })) }} onDragEnd={() => setDraggedQuickStartId(null)} className={`flex items-center gap-1 ${draggedQuickStartId === tag.id ? 'opacity-40' : ''}`}>
+                    <QuickStartTagButton tag={tag} isRunning={running.some(entry => entry.tagId === tag.id)} onClick={() => handleStart(tag.id)} />
                     {sortingQuickStart && <GripVertical className="h-4 w-4 cursor-grab text-gray-400 active:cursor-grabbing" aria-label="拖动标签排序" />}
                     </div>
                   ))}
@@ -1062,7 +1077,7 @@ function FullscreenClockOverlay({ onClose }: { onClose: () => void }) {
         ) : (
           running.map((entry, i) => {
             const elapsed = Math.max(0, (now - clockOffset) - new Date(entry.startTime).getTime())
-            const color = entry.tag?.color ?? '#6d5efc'
+            const color = entry.tag?.color ?? '#0f766e'
             return (
               <div
                 key={entry.id}
@@ -1160,27 +1175,23 @@ function RunningTimer({ entry, stopping, todos, onStop, onTodoChange, onTerminat
   }
 
   return (
-    <div className="rounded-xl border border-brand-300 dark:border-brand-700 bg-brand-50 dark:bg-brand-900/20 p-3 sm:p-4 text-center relative">
-      <div className="text-xs text-gray-500 dark:text-gray-400 mb-1 flex items-center justify-center gap-2">
-        <span>正在计时</span>
+    <div className="rounded-xl border border-gray-200 bg-white p-3 text-center relative dark:border-gray-800 dark:bg-gray-900 sm:p-4">
+      <div className="mb-1 flex items-center justify-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+        <span className="inline-flex items-center gap-1.5 font-medium text-brand-700 dark:text-brand-300">
+          <span className="h-1.5 w-1.5 rounded-full bg-brand-600 dark:bg-brand-400" aria-hidden="true" />
+          正在计时
+        </span>
         {entry.tag?.category && (
-          <span
-            className="text-[10px] px-2 py-0.5 rounded-full font-medium border"
-            style={{
-              backgroundColor: `${entry.tag.category.color}18`,
-              color: entry.tag.category.color,
-              borderColor: `${entry.tag.category.color}40`,
-            }}
-          >
+          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">
             {entry.tag.category.icon ? `${entry.tag.category.icon} ` : ''}
             {entry.tag.category.name}
           </span>
         )}
       </div>
-      <div className="text-lg font-bold leading-tight" style={{ color: entry.tag?.color }}>
+      <div className="text-lg font-semibold leading-tight text-gray-900 dark:text-gray-50">
         {entry.tag?.name}
       </div>
-      <div className="text-2xl sm:text-3xl font-mono font-bold tabular-nums text-brand my-1.5">
+      <div className="clock-hero my-1.5 font-mono text-4xl font-semibold tabular-nums tracking-tight text-gray-900 sm:text-5xl">
         {formatClock(elapsed)}
       </div>
       <div className="text-[10px] text-gray-400 mb-2">
@@ -1208,7 +1219,7 @@ function RunningTimer({ entry, stopping, todos, onStop, onTodoChange, onTerminat
         />
         <button
           onClick={saveNote}
-          className="px-2.5 py-1 rounded-lg text-xs bg-brand-200 dark:bg-brand-800 text-brand-700 dark:text-brand-200 hover:bg-brand-300 whitespace-nowrap"
+          className="whitespace-nowrap rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-gray-700"
         >
           {noteSaved ? '✓ 已存' : '存备注'}
         </button>
@@ -1218,33 +1229,33 @@ function RunningTimer({ entry, stopping, todos, onStop, onTodoChange, onTerminat
         <button
           type="button"
           onClick={onAddPointRecord}
-          className="px-3 py-1.5 rounded-lg border border-blue-300 dark:border-blue-700 text-blue-600 dark:text-blue-400 font-medium hover:bg-blue-50 dark:hover:bg-blue-900/40 text-xs transition-colors flex items-center gap-1.5"
+          className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
         >
-          📍 点记录
+          点记录
         </button>
 
         <button
           type="button"
           onClick={onAddMemo}
-          className="px-3 py-1.5 rounded-lg border border-brand-300 dark:border-brand-700 text-brand font-medium hover:bg-brand-100 dark:hover:bg-brand-900/40 text-xs transition-colors flex items-center gap-1.5"
+          className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"
         >
-          📝 记日记
+          记日记
         </button>
 
         <button
           onClick={() => onStop(note)}
           disabled={stopping}
-          className="px-5 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white text-xs font-semibold disabled:opacity-50 transition-colors flex items-center gap-1.5"
+          className="flex items-center gap-1.5 rounded-lg bg-red-600 px-5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-red-700 disabled:opacity-50"
         >
-          {stopping ? '停止中…' : '⏹ 停止'}
+          {stopping ? '停止中…' : '停止'}
         </button>
         <button
           type="button"
           onClick={onTerminate}
-          className="px-3 py-2.5 rounded-xl border border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 text-sm transition-colors"
+          className="rounded-lg px-2 py-1.5 text-xs text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-400"
           title="终止当前活动及其接管链，必须填写原因"
         >
-          ⚠ 终止链路
+          终止链路
         </button>
       </div>
     </div>
@@ -1287,7 +1298,7 @@ function TimelineEntryItem({
       {/* 时间线节点图标/圆圈 (Node Dot / Icon) */}
       <div
         className={`absolute -left-[1px] top-1.5 w-6 h-6 rounded-full border-2 border-white dark:border-gray-900 shadow-sm z-10 flex items-center justify-center text-xs transition-transform ${isRunning ? 'animate-pulse ring-2 ring-brand' : ''}`}
-        style={{ background: entry.tag?.color ?? '#6d5efc' }}
+        style={{ background: entry.tag?.color ?? '#0f766e' }}
       >
         {entry.tag?.icon ? (
           <span className="text-[11px] leading-none">{entry.tag.icon}</span>
@@ -1306,14 +1317,7 @@ function TimelineEntryItem({
                 {entry.tag?.icon ? `${entry.tag.icon} ` : ''}{entry.tag?.name}
               </span>
               {entry.tag?.category && (
-                <span
-                  className="text-xs px-2.5 py-0.5 rounded-full font-medium border"
-                  style={{
-                    backgroundColor: `${entry.tag.category.color}18`,
-                    color: entry.tag.category.color,
-                    borderColor: `${entry.tag.category.color}40`,
-                  }}
-                >
+                <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">
                   {entry.tag.category.icon ? `${entry.tag.category.icon} ` : ''}
                   {entry.tag.category.name}
                 </span>
@@ -1324,7 +1328,7 @@ function TimelineEntryItem({
                 </span>
               )}
               {isRunning && (
-                <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 font-medium animate-pulse">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 dark:bg-brand-900/40 dark:text-brand-300 font-medium">
                   ● 进行中
                 </span>
               )}
