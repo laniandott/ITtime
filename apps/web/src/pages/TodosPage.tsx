@@ -849,18 +849,18 @@ function TodoEditModal({ todo, categories, tags, onClose, onSaved }: {
       <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
         <h3 id="todo-edit-title" className="text-lg font-semibold mb-4">编辑待办</h3>
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm text-gray-500 mb-1">标题</label>
-            <input value={title} onChange={(e) => setTitle(e.target.value)} className="input" autoFocus />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-500 mb-1">描述（可选）</label>
-            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className="input" />
-          </div>
+          <label className="block text-sm text-gray-500">
+            标题
+            <input value={title} onChange={(e) => setTitle(e.target.value)} className="input mt-1" autoFocus />
+          </label>
+          <label className="block text-sm text-gray-500">
+            描述（可选）
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className="input mt-1" />
+          </label>
           <div className="flex gap-4">
             <div className="flex-1">
-              <label className="block text-sm text-gray-500 mb-1">优先级</label>
-              <div className="flex gap-2">
+              <div className="block text-sm text-gray-500 mb-1">优先级</div>
+              <div className="flex gap-2" role="group" aria-label="优先级">
                 {PRIORITY.map((p) => (
                   <button
                     key={p.value}
@@ -877,11 +877,11 @@ function TodoEditModal({ todo, categories, tags, onClose, onSaved }: {
               </div>
             </div>
             <div className="flex-1">
-              <label className="block text-sm text-gray-500 mb-1">状态</label>
+              <div className="block text-sm text-gray-500 mb-1">状态</div>
               {todo.status === 'done' ? (
                 <div className="text-sm text-green-600 dark:text-green-400">已完成（点击复选框可恢复，并填写原因）</div>
               ) : (
-                <div className="flex gap-2">
+                <div className="flex gap-2" role="group" aria-label="状态">
                   <button
                     onClick={() => setStatus('pending')}
                     className={`px-3 py-1 rounded-full text-xs border ${
@@ -904,22 +904,26 @@ function TodoEditModal({ todo, categories, tags, onClose, onSaved }: {
           </div>
           <div className="flex gap-4">
             <div className="flex-1">
-              <label className="block text-sm text-gray-500 mb-1">关联分类</label>
-              <select value={categoryId} onChange={(e) => { setCategoryId(e.target.value); setTagId('') }} className="input">
-                <option value="">无分类</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
+              <label className="block text-sm text-gray-500">
+                关联分类
+                <select value={categoryId} onChange={(e) => { setCategoryId(e.target.value); setTagId('') }} className="input mt-1">
+                  <option value="">无分类</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </label>
             </div>
             <div className="flex-1">
-              <label className="block text-sm text-gray-500 mb-1">活动标签</label>
-              <select value={tagId} onChange={(e) => setTagId(e.target.value)} className="input" disabled={!categoryId}>
-                <option value="">无活动标签</option>
-                {tags.filter((tag) => tag.categoryId === categoryId).map((tag) => (
-                  <option key={tag.id} value={tag.id}>{tag.name}</option>
-                ))}
-              </select>
+              <label className="block text-sm text-gray-500">
+                活动标签
+                <select value={tagId} onChange={(e) => setTagId(e.target.value)} className="input mt-1" disabled={!categoryId}>
+                  <option value="">无活动标签</option>
+                  {tags.filter((tag) => tag.categoryId === categoryId).map((tag) => (
+                    <option key={tag.id} value={tag.id}>{tag.name}</option>
+                  ))}
+                </select>
+              </label>
             </div>
           </div>
           {todo.goalId ? (
@@ -929,18 +933,22 @@ function TodoEditModal({ todo, categories, tags, onClose, onSaved }: {
           ) : (
             <div className="flex gap-4">
               <div className="flex-1">
-                <label className="block text-sm text-gray-500 mb-1">循环</label>
-                <select value={repeatType} onChange={(e) => setRepeatType(e.target.value as Todo['repeatType'])} className="input">
-                  <option value="none">不循环</option>
-                  <option value="workday">工作日</option>
-                  <option value="daily">每日</option>
-                  <option value="weekly">每周</option>
-                  <option value="monthly">每月</option>
-                </select>
+                <label className="block text-sm text-gray-500">
+                  循环
+                  <select value={repeatType} onChange={(e) => setRepeatType(e.target.value as Todo['repeatType'])} className="input mt-1">
+                    <option value="none">不循环</option>
+                    <option value="workday">工作日</option>
+                    <option value="daily">每日</option>
+                    <option value="weekly">每周</option>
+                    <option value="monthly">每月</option>
+                  </select>
+                </label>
               </div>
               <div className="flex-1">
-                <label className="block text-sm text-gray-500 mb-1">截止日期</label>
-                <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="input" />
+                <label className="block text-sm text-gray-500">
+                  截止日期
+                  <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="input mt-1" />
+                </label>
               </div>
             </div>
           )}

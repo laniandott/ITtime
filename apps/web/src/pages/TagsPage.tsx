@@ -167,13 +167,13 @@ export default function TagsPage({ embedded = false }: { embedded?: boolean } = 
               <div className="flex shrink-0 items-center gap-2 whitespace-nowrap">
                 <button
                   onClick={() => { setEditingCat(cat); setShowCatForm(true) }}
-                  className="text-sm text-gray-400 hover:text-brand"
+                  className="relative after:absolute after:left-1/2 after:top-1/2 after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] text-sm text-gray-400 hover:text-brand"
                 >
                   编辑
                 </button>
                 <button
                   onClick={() => setPendingRemoveCategory(cat)}
-                  className="text-sm text-gray-400 hover:text-red-500"
+                  className="relative after:absolute after:left-1/2 after:top-1/2 after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] text-sm text-gray-400 hover:text-red-500"
                 >
                   删除
                 </button>
@@ -255,13 +255,13 @@ export default function TagsPage({ embedded = false }: { embedded?: boolean } = 
                 )}
                 <button
                   onClick={() => { setEditingTag(tag); setShowTagForm(true) }}
-                  className="text-sm text-gray-400 hover:text-brand"
+                  className="relative after:absolute after:left-1/2 after:top-1/2 after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] text-sm text-gray-400 hover:text-brand"
                 >
                   编辑
                 </button>
                 <button
                   onClick={() => setPendingRemoveTag(tag)}
-                  className="text-sm text-gray-400 hover:text-red-500"
+                  className="relative after:absolute after:left-1/2 after:top-1/2 after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] text-sm text-gray-400 hover:text-red-500"
                 >
                   删除
                 </button>
@@ -317,13 +317,13 @@ export default function TagsPage({ embedded = false }: { embedded?: boolean } = 
                   <div className="flex shrink-0 items-center gap-2 whitespace-nowrap">
                     <button
                       onClick={() => tag && setEditingGoal({ goal, tag })}
-                      className="text-sm text-gray-400 hover:text-brand"
+                      className="relative after:absolute after:left-1/2 after:top-1/2 after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] text-sm text-gray-400 hover:text-brand"
                     >
                       编辑
                     </button>
                     <button
                       onClick={() => setPendingRemoveGoal(goal)}
-                      className="text-sm text-gray-400 hover:text-red-500"
+                      className="relative after:absolute after:left-1/2 after:top-1/2 after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] text-sm text-gray-400 hover:text-red-500"
                     >
                       删除
                     </button>
@@ -436,7 +436,7 @@ function CategoryForm({ category, onClose, onSaved }: {
           <input value={icon} onChange={(e) => setIcon(e.target.value)} placeholder="emoji 如：🏠"
             className="input" />
         </Field>
-        <Field label="颜色">
+        <Field label="颜色" as="div">
           <ColorPicker value={color} onChange={setColor} />
         </Field>
       </div>
@@ -519,7 +519,7 @@ function TagForm({ tag, categories, tags, onClose, onSaved }: {
           </Field>
         </div>
         <div className="space-y-4">
-          <Field label="记录方式">
+          <Field label="记录方式" as="div">
           <div className="flex gap-2">
             <button
               onClick={() => setTrackType('time')}
@@ -536,7 +536,7 @@ function TagForm({ tag, categories, tags, onClose, onSaved }: {
             </div>
           </Field>
           {trackType === 'time' && (
-            <Field label="专注模式">
+            <Field label="专注模式" as="div">
             <div className="flex gap-2">
               <button
                 onClick={() => setMode('chaos')}
@@ -559,7 +559,7 @@ function TagForm({ tag, categories, tags, onClose, onSaved }: {
           <Field label="图标（可选）">
             <input value={icon} onChange={(e) => setIcon(e.target.value)} placeholder="emoji" className="input" />
           </Field>
-          <Field label="颜色">
+          <Field label="颜色" as="div">
             <ColorPicker value={color} onChange={setColor} />
           </Field>
         </div>
@@ -641,12 +641,15 @@ function Modal({ title, children, onClose, size = 'default' }: { title: string; 
   )
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+// 通用字段：默认包裹式 label（文字 + 单控件同关联，读屏可播报）；
+// children 为按钮组 / 多控件（如颜色选择器）时传 as="div" 退为纯视觉分组，
+// 避免一个 label 内含多个可标注控件造成关联歧义。
+function Field({ label, children, as: Tag = 'label' }: { label: string; children: React.ReactNode; as?: 'label' | 'div' }) {
   return (
-    <div>
-      <label className="block text-sm text-gray-500 mb-1">{label}</label>
+    <Tag className="block">
+      <span className="mb-1 block text-sm text-gray-500">{label}</span>
       {children}
-    </div>
+    </Tag>
   )
 }
 
@@ -767,7 +770,7 @@ function GoalForm({ goal, tag, onClose, onSaved }: {
           <input value={title} onChange={(e) => { setCustomTitle(true); setTitle(e.target.value) }} placeholder="根据用途和周期自动生成"
             className="input" autoFocus />
         </Field>
-        <Field label="目标用途">
+        <Field label="目标用途" as="div">
           <div className="flex gap-2">
             <button
               onClick={() => {
@@ -794,7 +797,7 @@ function GoalForm({ goal, tag, onClose, onSaved }: {
           </div>
           <p className="mt-1.5 text-xs text-gray-500">统计目标按打卡记录累计；活动目标会在待办中生成可勾选的任务。</p>
         </Field>
-        {kind === 'tracking' && <Field label="目标类型">
+        {kind === 'tracking' && <Field label="目标类型" as="div">
           <div className="flex gap-2">
             <button
               onClick={() => setType('count')}

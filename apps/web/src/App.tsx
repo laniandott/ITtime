@@ -5,7 +5,7 @@ import AuthGate from './components/AuthGate'
 import { useStore } from './store'
 import { announce, registerLiveRegions } from './announce'
 import { syncNativeStatusBarTheme } from './nativeStatusBar'
-import { autoStartConfiguredSync } from './couchSync'
+import GalleryPanel from './components/GalleryPanel'
 import { applyFontSizePreference } from './fontSettings'
 
 const TimerPage = lazy(() => import('./pages/TimerPage'))
@@ -83,7 +83,7 @@ function SystemRedirect() {
 
 /** 分区页各 tab 的播报标题：子页面 embedded 时不渲染 h1，只能静态映射（与上方路由表同源）。 */
 const SECTION_TAB_TITLES: Record<string, Record<string, string>> = {
-  '/time': { calendar: '日历', plans: '计划', diary: '日记' },
+  '/time': { calendar: '日历', plans: '计划', diary: '日记', gallery: '图库' },
   '/tasks': { todos: '待办', habits: '习惯' },
 }
 
@@ -167,7 +167,9 @@ export default function App() {
   }, [loadAll])
 
   useEffect(() => {
-    void autoStartConfiguredSync()
+    // 动态导入：couchSync→localData→pouchdb-browser 全家桶不再进主包（主包 378KB→目标 -100KB+）。
+    // 函数内部自行判断同步是否已配置，未配置时是 no-op。
+    void import('./couchSync').then((m) => m.autoStartConfiguredSync()).catch(() => {})
   }, [])
 
   return (
@@ -191,9 +193,14 @@ export default function App() {
                     { id: 'calendar', label: '日历' },
                     { id: 'plans', label: '计划' },
                     { id: 'diary', label: '日记' },
+                    { id: 'gallery', label: '图库' },
                   ]}
                 >
-                  {(tab) => tab === 'calendar' ? <CalendarPage /> : tab === 'plans' ? <PlansPage /> : <DiaryPage />}
+                  {(tab) =>
+                    tab === 'calendar' ? <CalendarPage />
+                    : tab === 'plans' ? <PlansPage />
+                    : tab === 'diary' ? <DiaryPage />
+                    : <GalleryPanel />}
                 </SectionPage>
               }
             />

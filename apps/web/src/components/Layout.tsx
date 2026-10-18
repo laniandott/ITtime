@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { Timer, ListTodo, ChartColumn, Settings, CalendarDays, LogOut, Wifi, Tags } from 'lucide-react'
 import { type DomainKey } from '../domainTheme'
+import CommandPalette from './CommandPalette'
 
 const navItems = [
   { to: '/', label: '工作台', icon: Timer, domain: 'work' },
@@ -37,35 +38,39 @@ export default function Layout({ children, username, onLogout }: { children: Rea
 
   return (
     <div className="app-shell min-h-screen pb-24 lg:pl-[17.75rem] lg:pb-0" data-domain={domain}>
+      {/* WCAG 2.4.1：仅键盘用户可见的「跳到主要内容」，Tab 第一站 */}
+      <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-3 focus:z-[60] focus:rounded-ctl focus:bg-brand focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-white">跳到主要内容</a>
+      {/* ⌘/Ctrl+K 命令面板：自管理开关与快捷键，Portal 到 body */}
+      <CommandPalette />
       {/* 悬浮玻璃侧栏（用户提案）：四周留空 + 圆角 + 面板阴影，不再通顶贴边。
           半透明底 + blur(24px) 由 .desktop-sidebar（index.css）提供，
           极光背景从面板四周与半透明底透出。内容区让位 = left 0.75rem + w-64 + 右隙 1rem。 */}
       <aside className="desktop-sidebar fixed inset-y-3 left-3 z-40 hidden w-64 flex-col rounded-panel border px-3 py-4 lg:flex">
         <div className="flex items-center gap-3 px-3 pb-7">
           <div aria-hidden="true" className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-gradient-to-br from-teal-500 to-sky-400 text-[0.867rem] font-extrabold text-[#04121a] shadow-[0_0_22px_rgba(20,184,166,.45)]">IT</div>
-          <div className="min-w-0"><div className="font-semibold text-gray-900 dark:text-gray-100">ITtime</div><div className="text-[0.667rem] uppercase tracking-[0.14em] text-gray-400 dark:text-gray-500">Aurora workspace</div></div>
+          <div className="min-w-0"><div className="font-semibold text-gray-900 dark:text-gray-100">ITtime</div><div className="text-[0.75rem] uppercase tracking-[0.14em] text-gray-500 dark:text-gray-400">Aurora workspace</div></div>
         </div>
         <nav aria-label="主导航" className="space-y-5">
           {[
             { label: '日常', items: navItems.filter((item) => ['/', '/time', '/tasks'].includes(item.to)) },
             { label: '回顾与整理', items: navItems.filter((item) => ['/insights', '/tags'].includes(item.to)) },
           ].map((group) => <section key={group.label} className="space-y-1">
-            <h2 className="px-3 pb-1 text-[0.733rem] font-medium text-gray-400">{group.label}</h2>
-            {group.items.map((item) => <NavLink key={item.to} to={item.to} end={item.to === '/'} className={({ isActive }) => `group relative flex min-h-10 items-center gap-3 rounded-lg px-3 text-sm transition-colors before:absolute before:inset-y-2 before:left-0 before:w-[3px] before:rounded-full before:bg-transparent ${isActive ? 'bg-brand-50 font-medium text-brand-800 before:bg-brand-700 dark:bg-gradient-to-br dark:from-brand-500/15 dark:to-brand-400/10 dark:text-brand-200 dark:before:bg-brand-300 dark:shadow-[inset_0_0_18px_rgb(var(--d-400-rgb)/.10)]' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-100'}`}>
+            <h2 className="px-3 pb-1 text-[0.8125rem] font-medium text-gray-500 dark:text-gray-400">{group.label}</h2>
+            {group.items.map((item) => <NavLink key={item.to} to={item.to} end={item.to === '/'} className={({ isActive }) => `group relative flex min-h-10 items-center gap-3 rounded-lg px-3 text-sm transition-colors before:absolute before:inset-y-2 before:left-0 before:w-[3px] before:rounded-full before:bg-transparent ${isActive ? 'bg-brand-50 font-medium text-brand-800 before:bg-brand-700 dark:bg-brand-900/30 dark:bg-none dark:text-brand-200 dark:before:bg-brand-300 dark:shadow-[inset_0_0_18px_rgb(var(--d-400-rgb)/.10)]' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-100'}`}>
               {({ isActive }) => <><item.icon aria-hidden="true" className={`h-[18px] w-[18px] ${isActive ? 'text-brand-700 dark:text-brand-300' : 'text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-200'}`} strokeWidth={1.8} /><span>{item.label}</span></>}
             </NavLink>)}
           </section>)}
         </nav>
         <div className="mt-auto space-y-3 border-t border-gray-200 pt-3 dark:border-gray-800">
-          <NavLink to="/settings" className={({ isActive }) => `group relative flex min-h-10 items-center gap-3 rounded-lg px-3 text-sm transition-colors before:absolute before:inset-y-2 before:left-0 before:w-[3px] before:rounded-full before:bg-transparent ${isActive ? 'bg-brand-50 font-medium text-brand-800 before:bg-brand-700 dark:bg-gradient-to-br dark:from-brand-500/15 dark:to-brand-400/10 dark:text-brand-200 dark:before:bg-brand-300 dark:shadow-[inset_0_0_18px_rgb(var(--d-400-rgb)/.10)]' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-100'}`}>
+          <NavLink to="/settings" className={({ isActive }) => `group relative flex min-h-10 items-center gap-3 rounded-lg px-3 text-sm transition-colors before:absolute before:inset-y-2 before:left-0 before:w-[3px] before:rounded-full before:bg-transparent ${isActive ? 'bg-brand-50 font-medium text-brand-800 before:bg-brand-700 dark:bg-brand-900/30 dark:bg-none dark:text-brand-200 dark:before:bg-brand-300 dark:shadow-[inset_0_0_18px_rgb(var(--d-400-rgb)/.10)]' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-100'}`}>
             {({ isActive }) => <><Settings aria-hidden="true" className={`h-[18px] w-[18px] ${isActive ? 'text-brand-700 dark:text-brand-300' : 'text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-200'}`} strokeWidth={1.8} /><span>设置</span></>}
           </NavLink>
-          <div className="rounded-xl border border-teal-500/25 bg-gradient-to-br from-teal-500/10 to-sky-500/5 px-3 py-2.5 text-xs text-teal-200 backdrop-blur-sm"><div className="flex items-center gap-2 font-medium"><Wifi className="h-3.5 w-3.5" />本机即时保存</div><div className="mt-1 text-[0.733rem] text-teal-300/70">数据优先保留在当前设备</div></div>
+          <div className="rounded-xl border border-teal-500/25 bg-gradient-to-br from-teal-500/10 to-sky-500/5 px-3 py-2.5 text-xs text-teal-800 dark:text-teal-200 backdrop-blur-sm"><div className="flex items-center gap-2 font-medium"><Wifi className="h-3.5 w-3.5" />本机即时保存</div><div className="mt-1 text-[0.733rem] text-teal-700/90 dark:text-teal-300/70">数据优先保留在当前设备</div></div>
           {username && <div className="flex items-center justify-between gap-2 rounded-xl px-3 py-2 text-xs text-gray-500 dark:text-gray-400"><span className="min-w-0 truncate">{username}</span>{onLogout && <button type="button" onClick={onLogout} className="rounded-lg p-1.5 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-800 dark:hover:text-gray-100" title="退出登录" aria-label="退出登录"><LogOut className="h-4 w-4" /></button>}</div>}
         </div>
       </aside>
       <div className="min-h-screen">
-      <main key={location.pathname} className="app-main mx-auto w-full max-w-[1440px] flex-1 px-4 py-5 motion-safe:animate-page-in sm:py-8 lg:px-8">{children}</main>
+      <main id="main" tabIndex={-1} key={location.pathname} className="app-main mx-auto w-full max-w-[1440px] flex-1 px-4 py-5 motion-safe:animate-page-in sm:py-8 lg:px-8">{children}</main>
       <nav aria-label="底部导航" className="mobile-nav fixed inset-x-0 bottom-0 z-20 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden">
         <div className="mx-auto grid h-[4.35rem] max-w-3xl grid-cols-5 px-1 sm:px-2">
           {navItems.map((item) => (

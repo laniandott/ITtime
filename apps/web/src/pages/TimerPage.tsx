@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { useStore, formatClock, formatDuration, toIsoSafe } from '../store'
 import { api, resolveUploadUrl } from '../api'
-import type { TimeEntry, Tag, Todo, Memo, LinkedNoteEntry, PlanBlock } from '../types'
+import type { TimeEntry, Tag, Todo, Memo, PlanBlock } from '../types'
 import { DateTimeSecondPicker } from '../components/DateTimeSecondPicker'
 import { PageHeader } from '../components/PageHeader'
 import { CategoryBadge } from '../components/CategoryBadge'
@@ -515,7 +515,7 @@ export default function TimerPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="搜索活动/待办/备注/打点…"
-                className="w-full text-xs border border-gray-200 dark:border-gray-800 rounded-lg pl-7 pr-2 py-1 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 sm:w-36 sm:focus:w-48 transition-all focus:outline-none focus:border-brand"
+                className="w-full text-xs border border-gray-200 dark:border-gray-800 rounded-lg pl-7 pr-2 py-1 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 sm:w-36 sm:focus:w-48 transition-[width] focus:outline-none focus:border-brand"
               />
               <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">🔍</span>
             </div>
@@ -575,10 +575,11 @@ export default function TimerPage() {
         {/* 最近活动时间线列表 */}
         {sortedRecent.length > 0 ? (
           <div className="pt-2">
-            {sortedRecent.map((e) => (
+            {sortedRecent.map((e, index) => (
               <TimelineEntryItem
                 key={e.id}
                 entry={e}
+                animationDelay={Math.min(index, 5) * 40}
                 onAddMemo={(entry) => setMemoTargetEntry(entry)}
                 onAddPoint={(entry) => setPointTargetEntry(entry)}
                 onEdit={(entry) => setEditingEntry(entry)}
@@ -1037,19 +1038,19 @@ function PlanDeferDialog({ plan, onClose, onSubmit }: {
   return (
     <ModalShell title="推迟计划" onClose={onClose}>
       <div className="space-y-4">
-        <div>
-          <label className="mb-1 block text-xs text-gray-500">推迟到哪一天</label>
-          <input type="date" value={date} onChange={(event) => setDate(event.target.value)} className="input" />
-        </div>
+        <label className="block text-xs text-gray-500">
+          推迟到哪一天
+          <input type="date" value={date} onChange={(event) => setDate(event.target.value)} className="input mt-1" />
+        </label>
         <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="mb-1 block text-xs text-gray-500">新的开始时间</label>
-            <input type="time" value={start} onChange={(event) => setStart(event.target.value)} className="input" />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs text-gray-500">新的结束时间</label>
-            <input type="time" value={end} onChange={(event) => setEnd(event.target.value)} className="input" />
-          </div>
+          <label className="block text-xs text-gray-500">
+            新的开始时间
+            <input type="time" value={start} onChange={(event) => setStart(event.target.value)} className="input mt-1" />
+          </label>
+          <label className="block text-xs text-gray-500">
+            新的结束时间
+            <input type="time" value={end} onChange={(event) => setEnd(event.target.value)} className="input mt-1" />
+          </label>
         </div>
         {error && <p role="alert" className="text-sm text-red-500">{error}</p>}
         <div className="flex justify-end gap-2 pt-2">
@@ -1382,6 +1383,7 @@ function TimelineEntryItem({
   onEdit,
   onDelete,
   onReload,
+  animationDelay,
 }: {
   entry: TimeEntry
   onAddMemo: (e: TimeEntry) => void
@@ -1389,6 +1391,8 @@ function TimelineEntryItem({
   onEdit: (e: TimeEntry) => void
   onDelete: (id: string) => void
   onReload: () => void
+  /** 列表错峰延迟：40ms/项，最多错 6 项，第 7 项起齐出（同 TodosPage 范式）。 */
+  animationDelay?: number
 }) {
   const pointMemos = useMemo(() => (entry.memos || []).filter((m) => m.type === 'point'), [entry.memos])
   const diaryMemos = useMemo(() => (entry.memos || []).filter((m) => m.type !== 'point'), [entry.memos])
@@ -1420,7 +1424,10 @@ function TimelineEntryItem({
   }
 
   return (
-    <div className="relative pl-8 pb-6 group last:pb-0">
+    <div
+      className={`relative pl-8 pb-6 group last:pb-0 ${animationDelay !== undefined ? 'motion-safe:animate-list-in' : ''}`}
+      style={animationDelay !== undefined ? { animationDelay: `${animationDelay}ms` } : undefined}
+    >
       {/* 时间线连接轴 (Vertical Line Stem) */}
       <div className="absolute left-3 top-3 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-800 group-last:hidden" />
 
@@ -1437,7 +1444,7 @@ function TimelineEntryItem({
       </div>
 
       {/* 时间线主体卡片 */}
-      <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200/80 dark:border-gray-800 p-4 shadow-sm hover:shadow-md transition-all">
+      <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200/80 dark:border-gray-800 p-4 shadow-sm hover:shadow-md transition-shadow">
         {error && <p role="alert" className="mb-2 text-xs text-red-500">{error}</p>}
         {/* 卡片头部信息 */}
         <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -1749,22 +1756,22 @@ export function PointRecordModal({
   return (
     <ModalShell title={`添加点记录 · ${entry.tag?.name ?? ''}`} onClose={onClose}>
       <div className="space-y-4">
-        <div>
-          <label className="block text-sm text-gray-500 mb-1">打点时刻 (精准到秒)</label>
+        <label className="block text-sm text-gray-500">
+          打点时刻 (精准到秒)
           <DateTimeSecondPicker value={pointTime} onChange={setPointTime} />
-        </div>
+        </label>
 
-        <div>
-          <label className="block text-sm text-gray-500 mb-1">这个时间点做了什么事？</label>
+        <label className="block text-sm text-gray-500">
+          这个时间点做了什么事？
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
             rows={3}
             placeholder="如：拉了个屎、看了下邮件、洗了个手..."
-            className="input"
+            className="input mt-1"
             autoFocus
           />
-        </div>
+        </label>
 
         {error && <div className="text-sm text-red-500">{error}</div>}
       </div>
@@ -1826,9 +1833,9 @@ function ManualEntryModal({ tags, categories, todos, onClose, onSaved }: {
   return (
     <ModalShell title="补录时间记录" onClose={onClose}>
       <div className="space-y-4">
-        <div>
-          <label className="block text-sm text-gray-500 mb-1">标签</label>
-          <select value={tagId} onChange={(e) => setTagId(e.target.value)} className="input">
+        <label className="block text-sm text-gray-500">
+          标签
+          <select value={tagId} onChange={(e) => setTagId(e.target.value)} className="input mt-1">
             <option value="">请选择…</option>
             {categories.map((c) => (
               <optgroup key={c.id} label={c.name}>
@@ -1845,41 +1852,41 @@ function ManualEntryModal({ tags, categories, todos, onClose, onSaved }: {
               </optgroup>
             )}
           </select>
-        </div>
+        </label>
         <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm text-gray-500 mb-1">开始时间 (带秒)</label>
+          <label className="block text-sm text-gray-500">
+            开始时间 (带秒)
             <input
               type="datetime-local"
               step="1"
               value={startTime}
               onChange={(e) => setStartTime(e.target.value)}
-              className="input font-mono text-sm"
+              className="input font-mono text-sm mt-1"
             />
-          </div>
-          <div>
-            <label className="block text-sm text-gray-500 mb-1">结束时间 (带秒)</label>
+          </label>
+          <label className="block text-sm text-gray-500">
+            结束时间 (带秒)
             <input
               type="datetime-local"
               step="1"
               value={endTime}
               onChange={(e) => setEndTime(e.target.value)}
-              className="input font-mono text-sm"
+              className="input font-mono text-sm mt-1"
             />
-          </div>
+          </label>
         </div>
-        <div>
-          <label className="block text-sm text-gray-500 mb-1">备注（可选）</label>
-          <input value={note} onChange={(e) => setNote(e.target.value)} className="input" placeholder="如：完成了 XX 任务" />
-        </div>
+        <label className="block text-sm text-gray-500">
+          备注（可选）
+          <input value={note} onChange={(e) => setNote(e.target.value)} className="input mt-1" placeholder="如：完成了 XX 任务" />
+        </label>
         {todos.length > 0 && (
-          <div>
-            <label className="block text-sm text-gray-500 mb-1">关联待办（可选）</label>
-            <select value={todoId} onChange={(e) => setTodoId(e.target.value)} className="input">
+          <label className="block text-sm text-gray-500">
+            关联待办（可选）
+            <select value={todoId} onChange={(e) => setTodoId(e.target.value)} className="input mt-1">
               <option value="">不关联待办</option>
               {todos.map((todo) => <option key={todo.id} value={todo.id}>{todo.title}</option>)}
             </select>
-          </div>
+          </label>
         )}
         {error && <div className="text-sm text-red-500">{error}</div>}
       </div>
@@ -1949,22 +1956,22 @@ function EntryEditModal({ entry, tags, todos, onClose, onSaved }: {
   return (
     <ModalShell title="编辑时间记录" onClose={onClose}>
       <div className="space-y-4">
-        <div>
-          <label className="block text-sm text-gray-500 mb-1">标签</label>
-          <select value={tagId} onChange={(e) => setTagId(e.target.value)} className="input">
+        <label className="block text-sm text-gray-500">
+          标签
+          <select value={tagId} onChange={(e) => setTagId(e.target.value)} className="input mt-1">
             {tags.map((t) => (
               <option key={t.id} value={t.id}>{t.name}</option>
             ))}
           </select>
-        </div>
+        </label>
         <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-sm text-gray-500 mb-1">开始时间 (带秒)</label>
+          <label className="block text-sm text-gray-500">
+            开始时间 (带秒)
             <DateTimeSecondPicker value={startTime} onChange={handleStartChange} />
-          </div>
-          <div>
+          </label>
+          <div role="group" aria-label="结束时间 (带秒)">
             <div className="flex items-center justify-between mb-1">
-              <label className="block text-sm text-gray-500">结束时间 (带秒)</label>
+              <span className="block text-sm text-gray-500">结束时间 (带秒)</span>
               {endTime && (
                 <button
                   onClick={() => setEndTime('')}
@@ -1992,18 +1999,18 @@ function EntryEditModal({ entry, tags, todos, onClose, onSaved }: {
             )}
           </div>
         </div>
-        <div>
-          <label className="block text-sm text-gray-500 mb-1">备注</label>
-          <input value={note} onChange={(e) => setNote(e.target.value)} className="input" />
-        </div>
+        <label className="block text-sm text-gray-500">
+          备注
+          <input value={note} onChange={(e) => setNote(e.target.value)} className="input mt-1" />
+        </label>
         {todos.length > 0 && (
-          <div>
-            <label className="block text-sm text-gray-500 mb-1">关联待办（可选）</label>
-            <select value={todoId} onChange={(e) => setTodoId(e.target.value)} className="input">
+          <label className="block text-sm text-gray-500">
+            关联待办（可选）
+            <select value={todoId} onChange={(e) => setTodoId(e.target.value)} className="input mt-1">
               <option value="">不关联待办</option>
               {todos.map((todo) => <option key={todo.id} value={todo.id}>{todo.title}</option>)}
             </select>
-          </div>
+          </label>
         )}
         {error && <div className="text-sm text-red-500">{error}</div>}
       </div>
@@ -2099,35 +2106,35 @@ export function MemoCreateModal({
   return (
     <ModalShell title={`添加日记 / 随手记 · ${entry.tag?.name ?? ''}`} onClose={onClose}>
       <div className="space-y-4">
-        <div>
-          <label className="block text-sm text-gray-500 mb-1">记事时间 (精准到秒)</label>
+        <label className="block text-sm text-gray-500">
+          记事时间 (精准到秒)
           <DateTimeSecondPicker value={memoTime} onChange={setMemoTime} />
-        </div>
+        </label>
 
-        <div>
-          <label className="block text-sm text-gray-500 mb-1">感悟 / 记事内容</label>
+        <label className="block text-sm text-gray-500">
+          感悟 / 记事内容
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
             rows={4}
             placeholder="写下当前计时时间段内的想法、收获或日志..."
-            className="input"
+            className="input mt-1"
             autoFocus
           />
-        </div>
+        </label>
 
-        <div>
-          <label className="block text-sm text-gray-500 mb-1">多媒体附件（图片 / 视频）</label>
+        <label className="block text-sm text-gray-500">
+          多媒体附件（图片 / 视频）
           <input
             type="file"
             accept="image/*,video/*"
             multiple
             onChange={handleFileUpload}
             disabled={uploading}
-            className="block w-full text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand dark:file:bg-brand-900/40 dark:file:text-brand-300 hover:file:bg-brand-100"
+            className="block w-full text-xs text-gray-500 mt-1 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand dark:file:bg-brand-900/40 dark:file:text-brand-300 hover:file:bg-brand-100"
           />
           {uploading && <div className="text-xs text-brand mt-1">文件上传中...</div>}
-        </div>
+        </label>
 
         {attachments.length > 0 && (
           <div className="grid grid-cols-3 gap-2 pt-2">
@@ -2165,12 +2172,10 @@ export function MemoEditModal({
   memo,
   onClose,
   onSaved,
-  onOpenNote,
 }: {
   memo: Memo
   onClose: () => void
   onSaved: () => void
-  onOpenNote?: (id: string) => void
 }) {
   const [content, setContent] = useState(memo.content)
   const [memoTime, setMemoTime] = useState(toLocalInputWithSeconds(memo.createdAt))
@@ -2184,17 +2189,6 @@ export function MemoEditModal({
     }))
   )
   const [error, setError] = useState('')
-  const [linkedNotes, setLinkedNotes] = useState<LinkedNoteEntry[]>([])
-  const linkedNotesRequest = useRef(0)
-
-  // 反查：挂靠到本日记 [[memo:<id>]] 的笔记
-  useEffect(() => {
-    const sequence = ++linkedNotesRequest.current
-    setLinkedNotes([])
-    api.notes.linked('memo', memo.id)
-      .then((notes) => { if (sequence === linkedNotesRequest.current) setLinkedNotes(notes) })
-      .catch(() => { if (sequence === linkedNotesRequest.current) setLinkedNotes([]) })
-  }, [memo.id])
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
@@ -2238,34 +2232,34 @@ export function MemoEditModal({
   return (
     <ModalShell title="编辑记事" onClose={onClose}>
       <div className="space-y-4">
-        <div>
-          <label className="block text-sm text-gray-500 mb-1">记事时间 (精准到秒)</label>
+        <label className="block text-sm text-gray-500">
+          记事时间 (精准到秒)
           <DateTimeSecondPicker value={memoTime} onChange={setMemoTime} />
-        </div>
+        </label>
 
-        <div>
-          <label className="block text-sm text-gray-500 mb-1">感悟 / 记事内容</label>
+        <label className="block text-sm text-gray-500">
+          感悟 / 记事内容
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
             rows={4}
-            className="input"
+            className="input mt-1"
             autoFocus
           />
-        </div>
+        </label>
 
-        <div>
-          <label className="block text-sm text-gray-500 mb-1">多媒体附件（图片 / 视频）</label>
+        <label className="block text-sm text-gray-500">
+          多媒体附件（图片 / 视频）
           <input
             type="file"
             accept="image/*,video/*"
             multiple
             onChange={handleFileUpload}
             disabled={uploading}
-            className="block w-full text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand dark:file:bg-brand-900/40 dark:file:text-brand-300 hover:file:bg-brand-100"
+            className="block w-full text-xs text-gray-500 mt-1 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand dark:file:bg-brand-900/40 dark:file:text-brand-300 hover:file:bg-brand-100"
           />
           {uploading && <div className="text-xs text-brand mt-1">文件上传中...</div>}
-        </div>
+        </label>
 
         {attachments.length > 0 && (
           <div className="grid grid-cols-3 gap-2 pt-2">
@@ -2292,25 +2286,6 @@ export function MemoEditModal({
         )}
 
         {error && <div className="text-sm text-red-500">{error}</div>}
-
-        {linkedNotes.length > 0 && (
-          <div>
-            <label className="block text-sm text-gray-500 mb-1">📝 关联笔记</label>
-            <div className="flex flex-wrap gap-1.5">
-              {linkedNotes.map((n) => (
-                <button
-                  key={n.id}
-                  type="button"
-                  onClick={() => onOpenNote?.(n.id)}
-                  className="text-xs text-brand hover:underline bg-brand/5 rounded px-2 py-1 truncate max-w-[200px]"
-                  title={n.title}
-                >
-                  {n.title}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
       <FormActions onCancel={onClose} onSave={save} saveLabel="保存修改" />
     </ModalShell>
@@ -2365,9 +2340,9 @@ function ActivityPickerDialog({ categories, tags, todos, interruptedFromId, onCl
         <p className="text-sm text-gray-500 dark:text-gray-400">
           原活动已经暂存，可以现在开始下一项，也可以稍后再处理。
         </p>
-        <div>
-          <label className="block text-sm text-gray-500 mb-1">活动</label>
-          <select value={tagId} onChange={(e) => setTagId(e.target.value)} className="input">
+        <label className="block text-sm text-gray-500">
+          活动
+          <select value={tagId} onChange={(e) => setTagId(e.target.value)} className="input mt-1">
             <option value="">请选择活动…</option>
             {groupedTags.map(({ category, tags: categoryTags }) => (
               <optgroup key={category.id} label={`${category.icon ? `${category.icon} ` : ''}${category.name}`}>
@@ -2384,15 +2359,15 @@ function ActivityPickerDialog({ categories, tags, todos, interruptedFromId, onCl
               </optgroup>
             )}
           </select>
-        </div>
+        </label>
         {todos.length > 0 && (
-          <div>
-            <label className="block text-sm text-gray-500 mb-1">关联待办（可选）</label>
-            <select value={todoId} onChange={(e) => setTodoId(e.target.value)} className="input">
+          <label className="block text-sm text-gray-500">
+            关联待办（可选）
+            <select value={todoId} onChange={(e) => setTodoId(e.target.value)} className="input mt-1">
               <option value="">不关联待办</option>
               {todos.map((todo) => <option key={todo.id} value={todo.id}>{todo.title}</option>)}
             </select>
-          </div>
+          </label>
         )}
         {timeTags.length === 0 && <div className="text-sm text-gray-500">当前没有可计时的时长型活动。</div>}
         {error && <div className="text-sm text-red-500">{error}</div>}
@@ -2449,10 +2424,12 @@ function RecoveryDialog({ entries, onClose, onResume, onFinish, onStartAnother }
         </p>
         {entries.length > 1 && (
           <div>
-            <label className="block text-sm text-gray-500 mb-1">选择待续活动</label>
-            <select value={selected.id} onChange={(e) => setSelectedId(e.target.value)} className="input">
-              {entries.map((entry) => <option key={entry.id} value={entry.id}>{entry.tag?.name} · {entry.note || '无续接备注'}</option>)}
-            </select>
+            <label className="block text-sm text-gray-500">
+              选择待续活动
+              <select value={selected.id} onChange={(e) => setSelectedId(e.target.value)} className="input mt-1">
+                {entries.map((entry) => <option key={entry.id} value={entry.id}>{entry.tag?.name} · {entry.note || '无续接备注'}</option>)}
+              </select>
+            </label>
           </div>
         )}
         <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 p-3">
@@ -2508,11 +2485,11 @@ function TerminateDialog({ entry, onClose, onConfirm }: {
           这会结束当前活动，并一并结束它接管过的上游活动。已有时间记录会保留，但这条链路不会再自动回收。
         </div>
         <div className="text-sm text-gray-600 dark:text-gray-300">当前活动：{entry.tag?.name}</div>
-        <div>
-          <label className="block text-sm text-gray-500 mb-1">具体原因 *</label>
-          <textarea value={reason} onChange={(e) => { setReason(e.target.value); setError('') }} rows={3} className="input resize-y" placeholder="例如：需求取消，今天不再继续这组工作" autoFocus />
+        <label className="block text-sm text-gray-500">
+          具体原因 *
+          <textarea value={reason} onChange={(e) => { setReason(e.target.value); setError('') }} rows={3} className="input resize-y mt-1" placeholder="例如：需求取消，今天不再继续这组工作" autoFocus />
           {error && <p role="alert" className="mt-1 text-xs text-red-500">{error}</p>}
-        </div>
+        </label>
         <div className="flex gap-2 pt-2">
           <button onClick={() => void handleConfirm()} disabled={loading} className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 disabled:opacity-50">{loading ? '终止中…' : '确认终止链路'}</button>
           <button onClick={onClose} disabled={loading} className="px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">取消</button>
@@ -2559,16 +2536,16 @@ function StopDialog({ entryId, tag, onClose, onConfirm }: {
           <span className="font-medium">{tag.name}</span>
           <span className="text-xs px-2 py-0.5 rounded bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-400">有序模式</span>
         </div>
-        <div>
-          <label className="block text-sm text-gray-500 mb-1">下一步怎么续（暂停时必填）</label>
+        <label className="block text-sm text-gray-500">
+          下一步怎么续（暂停时必填）
           <textarea
             value={note}
             onChange={(e) => { setNote(e.target.value); setError('') }}
             placeholder="写一句回来后马上能接上的提示…"
-            className="input min-h-20 resize-y"
+            className="input min-h-20 resize-y mt-1"
           />
-          {error && <p role="alert" className="mt-1 text-xs text-red-500">{error}</p>}
-        </div>
+        </label>
+        {error && <p role="alert" className="mt-1 text-xs text-red-500">{error}</p>}
         <div className="flex flex-col gap-2 pt-2">
           <button
             onClick={() => handleConfirm(true)}
@@ -2628,7 +2605,7 @@ function ResumeDialog({ entry, onClose, onConfirm }: {
           <span className="font-medium">{entry.tag?.name}</span>
         </div>
         <div>
-          <label className="block text-sm text-gray-500 mb-1">接下来怎么续</label>
+          <div className="block text-sm text-gray-500 mb-1">接下来怎么续</div>
           <div className="input min-h-20 whitespace-pre-wrap text-gray-600 dark:text-gray-300">
             {entry.note || '（没有备注）'}
           </div>
@@ -2690,16 +2667,16 @@ function DismissDialog({ entry, onClose, onConfirm }: {
           <span className="w-3 h-3 rounded-full" style={{ background: entry.tag?.color }} />
           <span className="font-medium">{entry.tag?.name}</span>
         </div>
-        <div>
-          <label className="block text-sm text-gray-500 mb-1">原因 *</label>
+        <label className="block text-sm text-gray-500">
+          原因 *
           <input
             value={reason}
             onChange={(e) => { setReason(e.target.value); setError('') }}
             placeholder="如：不重要、已完成、计划变更…"
-            className="input"
+            className="input mt-1"
           />
-          {error && <p role="alert" className="mt-1 text-xs text-red-500">{error}</p>}
-        </div>
+        </label>
+        {error && <p role="alert" className="mt-1 text-xs text-red-500">{error}</p>}
         <div className="flex gap-2 pt-2">
           <button
             onClick={handleConfirm}

@@ -96,7 +96,7 @@ export function CalendarSyncModal({ onClose }: { onClose: () => void }) {
           <div className="font-semibold text-gray-700 dark:text-gray-300">⚙️ 订阅设置与过滤</div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-gray-500 mb-1">同步时间范围</label>
+              <div className="text-gray-500 mb-1">同步时间范围</div>
               <div className="flex gap-1">
                 {[
                   { value: '30', label: '近30天' },
@@ -119,8 +119,7 @@ export function CalendarSyncModal({ onClose }: { onClose: () => void }) {
             </div>
 
             <div>
-              <label className="block text-gray-500 mb-1">分类过滤</label>
-              <select
+              <label className="block text-gray-500"><span className="block mb-1">分类过滤</span><select
                 value={selectedCat}
                 onChange={(e) => setSelectedCat(e.target.value)}
                 className="w-full py-1.5 px-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-200 focus:outline-none focus:border-brand"
@@ -132,7 +131,7 @@ export function CalendarSyncModal({ onClose }: { onClose: () => void }) {
                   </option>
                 ))}
                 <option value="none">未分类</option>
-              </select>
+              </select></label>
             </div>
           </div>
         </div>

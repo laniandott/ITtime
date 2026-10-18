@@ -239,14 +239,14 @@ html.dark {
 
 body {
   margin: 0;
-  @apply bg-slate-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100;
+  /* 背景单一真相源：.app-shell 的 var(--shell-bg)（Aurora 段定义，亮 #edf2f8 / 暗 #070b14）。
+     body 不再自设背景，避免双源打架导致暗色下透出浅色。 */
+  @apply text-gray-900 dark:text-gray-100;
   text-rendering: optimizeLegibility;
   overscroll-behavior-y: none;
 }
 
-.app-main { max-width: 1480px; }
-
-.app-shell { background: #f8fafc; }
+.app-shell { background: var(--shell-bg); }
 
 /* 悬浮玻璃侧栏：阴影随主题分流（暗色加深）。圆角/边框由 Layout 的
    rounded-panel + border 类提供，半透明底 + blur 在下方 .desktop-sidebar 块。 */
@@ -258,7 +258,7 @@ body {
    两种模式下配白字都 ≥4.5:1，不必改 PageHeader.tsx。 */
 .page-header-mark { background: var(--d-600); }
 .page-header-icon { background: var(--d-600); }
-.page-header-kicker { margin-bottom: .2rem; color: #94a3b8; font-size: .64rem; font-weight: 700; letter-spacing: .12em; line-height: 1; }
+.page-header-kicker { margin-bottom: .2rem; color: #4b5563; font-size: .75rem; font-weight: 700; letter-spacing: .12em; line-height: 1; }
 .page-header {
   flex-wrap: wrap;
   align-items: center;
@@ -267,7 +267,7 @@ body {
   border-bottom: 1px solid rgb(203 213 225 / .72);
 }
 .dark .page-header { border-color: rgb(51 65 85 / .72); }
-.dark .page-header-kicker { color: #64748b; }
+.dark .page-header-kicker { color: #9ca3af; }
 
 .workspace-page { min-width: 0; }
 
@@ -345,6 +345,22 @@ body {
 @keyframes modal-in {
   from { opacity: 0; transform: translateY(14px) scale(.985); }
   to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ── 弹窗退场（MOTION_SPEC：退场必须比进场短，进场从容、退场利落）──
+   --ease-exit 令牌此前定义了但零使用，此处为首个落地。
+   关闭流程：JS 先给容器置 data-closing="true"，等 animationend 后再真正卸载。 */
+@keyframes overlay-out { to { opacity: 0; } }
+@keyframes modal-out { to { opacity: 0; transform: translateY(8px) scale(.98); } }
+
+[data-closing="true"] {
+  animation: overlay-out 180ms var(--ease-exit) both !important;
+}
+.modal-panel[data-closing="true"] {
+  animation: modal-out 180ms var(--ease-exit) both !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-closing="true"] { animation-duration: .01ms !important; }
 }
 
 .dark .modal-panel {

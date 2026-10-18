@@ -136,30 +136,30 @@ export function SubscriptionManager({ onClose }: { onClose: () => void }) {
         {showAdd ? (
           <div className="border-t border-gray-200 dark:border-gray-800 pt-4 space-y-3">
             <div className="text-sm font-semibold text-gray-700 dark:text-gray-200">添加新订阅</div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">名称</label>
+            <label className="block text-xs text-gray-500">
+              名称
               <input
                 type="text" value={newName} onChange={(e) => setNewName(e.target.value)}
                 placeholder="例如：中国节假日"
-                className="input text-sm"
+                className="input text-sm mt-1"
               />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">ICS URL</label>
+            </label>
+            <label className="block text-xs text-gray-500">
+              ICS URL
               <input
                 type="url" value={newUrl} onChange={(e) => setNewUrl(e.target.value)}
                 placeholder="https://example.com/calendar.ics"
-                className="input text-sm"
+                className="input text-sm mt-1"
               />
-            </div>
+            </label>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">颜色</label>
-              <div className="flex gap-2">
+              <div className="text-xs text-gray-500 mb-1">颜色</div>
+              <div className="flex gap-2" role="group" aria-label="颜色">
                 {PRESET_COLORS.map((c) => (
                   <button
                     key={c}
                     onClick={() => setNewColor(c)}
-                    className={`relative after:absolute after:-inset-1 after:content-[''] w-7 h-7 rounded-full transition-all ${newColor === c ? 'ring-2 ring-offset-2 ring-offset-white dark:ring-offset-gray-900 scale-110' : 'hover:scale-105'}`}
+                    className={`relative after:absolute after:-inset-1 after:content-[''] w-7 h-7 rounded-full transition-[transform,box-shadow] ${newColor === c ? 'ring-2 ring-offset-2 ring-offset-white dark:ring-offset-gray-900 scale-110' : 'hover:scale-105'}`}
                     style={{ backgroundColor: c, ...(newColor === c ? { boxShadow: `0 0 0 2px white, 0 0 0 4px ${c}` } : {}) }}
                   />
                 ))}

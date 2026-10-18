@@ -132,7 +132,9 @@ export default function DiaryPanel() {
           </div>
         )}
 
-        {loading ? (
+        {/* 加载时保留旧列表（RefreshErrorBanner 同思路），仅加半透明遮罩，
+            避免整块换成一行"加载日记"导致内容高度跳变；首帧无数据时才显示加载文案 */}
+        {loading && filteredMemos.length === 0 ? (
           <div className="text-center py-8 text-gray-400 text-sm">加载日记...</div>
         ) : filteredMemos.length === 0 ? (
           <div className="rounded-xl border border-dashed border-gray-200 dark:border-gray-800 p-8 text-center text-gray-400 text-sm">
@@ -143,7 +145,7 @@ export default function DiaryPanel() {
                 : `近 ${days === 1 ? '1 天' : `${days} 天`}暂无日记。`}
           </div>
         ) : (
-          <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-gray-200 dark:before:bg-gray-800">
+          <div className={`relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-gray-200 dark:before:bg-gray-800 ${loading ? 'opacity-50 pointer-events-none transition-opacity' : ''}`}>
             {filteredMemos.map((memo) => {
               const timeStr = new Date(memo.createdAt).toLocaleString('zh-CN', {
                 month: 'numeric',
@@ -349,42 +351,50 @@ function NewJournalModal({ onClose, onSaved }: { onClose: () => void; onSaved: (
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-gray-500 mb-1">日记时间（精准到秒）</label>
-          <DateTimeSecondPicker value={memoTime} onChange={setMemoTime} />
+          <label className="block">
+            <span className="block text-xs font-semibold text-gray-500 mb-1">日记时间（精准到秒）</span>
+            <DateTimeSecondPicker value={memoTime} onChange={setMemoTime} />
+          </label>
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-gray-500 mb-1">关联标签（可选）</label>
-          <select value={tagId} onChange={(event) => setTagId(event.target.value)} className="input text-sm">
-            <option value="">独立日记（不绑定标签）</option>
-            {tags.map((tag) => (
-              <option key={tag.id} value={tag.id}>{tag.icon ? `${tag.icon} ` : ''}{tag.name}</option>
-            ))}
-          </select>
+          <label className="block">
+            <span className="block text-xs font-semibold text-gray-500 mb-1">关联标签（可选）</span>
+            <select value={tagId} onChange={(event) => setTagId(event.target.value)} className="input text-sm">
+              <option value="">独立日记（不绑定标签）</option>
+              {tags.map((tag) => (
+                <option key={tag.id} value={tag.id}>{tag.icon ? `${tag.icon} ` : ''}{tag.name}</option>
+              ))}
+            </select>
+          </label>
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-gray-500 mb-1">日记内容 / 感悟与照片</label>
-          <textarea
-            value={content}
-            onChange={(event) => setContent(event.target.value)}
-            rows={4}
-            placeholder="写下今天的想法、生活随笔、感悟或日志..."
-            className="input"
-            autoFocus
-          />
+          <label className="block">
+            <span className="block text-xs font-semibold text-gray-500 mb-1">日记内容 / 感悟与照片</span>
+            <textarea
+              value={content}
+              onChange={(event) => setContent(event.target.value)}
+              rows={4}
+              placeholder="写下今天的想法、生活随笔、感悟或日志..."
+              className="input"
+              autoFocus
+            />
+          </label>
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-gray-500 mb-1">图片 / 视频附件</label>
-          <input
-            type="file"
-            accept="image/*,video/*"
-            multiple
-            onChange={handleFileUpload}
-            disabled={uploading}
-            className="block w-full text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand dark:file:bg-brand-900/40 dark:file:text-brand-300 hover:file:bg-brand-100"
-          />
+          <label className="block">
+            <span className="block text-xs font-semibold text-gray-500 mb-1">图片 / 视频附件</span>
+            <input
+              type="file"
+              accept="image/*,video/*"
+              multiple
+              onChange={handleFileUpload}
+              disabled={uploading}
+              className="block w-full text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand dark:file:bg-brand-900/40 dark:file:text-brand-300 hover:file:bg-brand-100"
+            />
+          </label>
           {uploading && <div className="text-xs text-brand mt-1">上传中...</div>}
         </div>
 

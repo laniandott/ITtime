@@ -14,7 +14,8 @@
     "build": "npm run build -w apps/server && npm run build -w apps/web",
     "start": "npm run start -w apps/server",
     "db:push": "npm run db:push -w apps/server",
-    "db:studio": "npm run db:studio -w apps/server"
+    "db:studio": "npm run db:studio -w apps/server",
+    "verify:design": "node scripts/verify-motion.cjs && node scripts/verify-domains.cjs"
   },
   "devDependencies": {
     "concurrently": "^9.1.0"

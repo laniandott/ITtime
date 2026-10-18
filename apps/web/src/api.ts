@@ -11,14 +11,6 @@ import type {
   Memo,
   CalendarSubscription,
   CalendarEvent,
-  NoteListEntry,
-  NoteDetail,
-  NoteVault,
-  NoteAutocompleteEntry,
-  GraphData,
-  RelatedEntities,
-  EntityLinkType,
-  LinkedNoteEntry,
   PlanBlock,
 } from './types'
 import { getAuthHeaders, getAuthToken } from './auth'
@@ -435,54 +427,5 @@ export const api = {
       const qs = q.toString()
       return req<CalendarEvent[]>(`/calendars/external-events${qs ? `?${qs}` : ''}`)
     },
-  },
-  notes: {
-    vault: () => req<NoteVault>('/notes/vault'),
-    setVault: (path: string) =>
-      req<NoteVault>('/notes/vault', { method: 'POST', body: JSON.stringify({ path }) }),
-    list: (q?: string) => {
-      const qs = q ? `?q=${encodeURIComponent(q)}` : ''
-      return req<NoteListEntry[]>(`/notes${qs}`)
-    },
-    get: (id: string) => req<NoteDetail>(`/notes/${id}`),
-    create: (data: { title: string; content?: string; folder?: string }) =>
-      req<{ id: string; path: string; revision: number }>('/notes', {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
-    update: (id: string, data: { content: string; revision: number }) =>
-      req<{ id: string; path: string; revision: number }>(`/notes/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify(data),
-      }),
-    rename: (id: string, data: { title?: string; folder?: string }) =>
-      req<{ id: string; path: string; title: string; revision: number }>(`/notes/${id}`, {
-        method: 'PATCH',
-        body: JSON.stringify(data),
-      }),
-    folders: () => req<{ folders: string[] }>('/notes/folders'),
-    createFolder: (path: string) =>
-      req<{ path: string }>('/notes/folders', { method: 'POST', body: JSON.stringify({ path }) }),
-    removeFolder: (path: string) =>
-      req<{ ok: boolean }>(`/notes/folders?path=${encodeURIComponent(path)}`, { method: 'DELETE' }),
-    remove: (id: string) => req<{ ok: boolean }>(`/notes/${id}`, { method: 'DELETE' }),
-    autocomplete: (q: string) => {
-      const qs = q ? `?q=${encodeURIComponent(q)}` : ''
-      return req<NoteAutocompleteEntry[]>(`/notes/autocomplete${qs}`)
-    },
-    globalGraph: (params?: { q?: string; dir?: string; recent?: number; limit?: number }) => {
-      const q = new URLSearchParams()
-      if (params?.q) q.set('q', params.q)
-      if (params?.dir) q.set('dir', params.dir)
-      if (params?.recent != null) q.set('recent', String(params.recent))
-      if (params?.limit != null) q.set('limit', String(params.limit))
-      const qs = q.toString()
-      return req<GraphData>(`/notes/graph${qs ? `?${qs}` : ''}`)
-    },
-    localGraph: (id: string, depth = 1) =>
-      req<GraphData>(`/notes/${id}/graph?depth=${depth}`),
-    entities: (id: string) => req<RelatedEntities>(`/notes/${id}/entities`),
-    linked: (type: EntityLinkType, key: string) =>
-      req<LinkedNoteEntry[]>(`/notes/linked?type=${encodeURIComponent(type)}&key=${encodeURIComponent(key)}`),
   },
 }

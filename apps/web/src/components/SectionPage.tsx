@@ -69,7 +69,7 @@ export default function SectionPage({ tabs, children: render, label = '分区' }
             onClick={() => switchTo(tab.id)}
             className={`whitespace-nowrap rounded-ctl px-4 py-1.5 text-sm font-medium transition-all ${
               tab.id === active
-                ? 'bg-brand-50 text-brand-800 dark:bg-gradient-to-br dark:from-teal-500/20 dark:to-sky-500/10 dark:text-teal-100 dark:shadow-[inset_0_0_12px_rgba(20,184,166,.14)]'
+                ? 'bg-brand-50 text-brand-800 dark:bg-brand-900/30 dark:bg-none dark:text-brand-100 dark:shadow-[inset_0_0_12px_rgb(var(--d-400-rgb)/.12)]'
                 : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-100'
             }`}
           >

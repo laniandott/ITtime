@@ -1,13 +1,15 @@
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
-import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { api } from '../api'
 import { formatDuration, useStore, toIsoSafe } from '../store'
-import type { TimeEntry, Memo, Todo, Tag, PlanBlock, LinkedNoteEntry } from '../types'
+import type { TimeEntry, Memo, Todo, Tag, PlanBlock } from '../types'
 import { DateTimeSecondPicker } from '../components/DateTimeSecondPicker'
 import { CalendarSyncModal } from '../components/CalendarSyncModal'
 import { SubscriptionManager } from '../components/SubscriptionManager'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { PageHeader } from '../components/PageHeader'
+import { CalendarDays } from 'lucide-react'
 import { CategoryBadge } from '../components/CategoryBadge'
 import type { CalendarEvent } from '../types'
 import { Solar } from 'lunar-javascript'
@@ -275,19 +277,7 @@ export default function CalendarPage() {
   const [dataRevision, setDataRevision] = useState(0)
   const [calendarError, setCalendarError] = useState('')
   const [externalEventsCachedAt, setExternalEventsCachedAt] = useState<string | null>(null)
-  const [dayLinkedNotes, setDayLinkedNotes] = useState<LinkedNoteEntry[]>([])
-  const dayNotesRequest = useRef(0)
-  const goNote = useNavigate()
 
-  // 月视图右侧日详情回显关联笔记 [[date:YYYY-MM-DD]]
-  useEffect(() => {
-    const sequence = ++dayNotesRequest.current
-    if (view !== 'month') { setDayLinkedNotes([]); return }
-    const iso = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`
-    api.notes.linked('date', iso)
-      .then((notes) => { if (sequence === dayNotesRequest.current) setDayLinkedNotes(notes) })
-      .catch(() => { if (sequence === dayNotesRequest.current) setDayLinkedNotes([]) })
-  }, [view, currentDate])
   // 每分钟更新当前时间（用于"现在"指示线）
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 60000)
@@ -497,35 +487,60 @@ export default function CalendarPage() {
 
   return (
     <div className="workspace-page calendar-page space-y-4">
-      {/* 头部：Google Calendar 风格导航栏 */}
-      <div className="calendar-toolbar">
-        <div className="calendar-toolbar-date flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-1 max-md:w-full max-md:overflow-x-auto">
-          <button
-            onClick={() => navigate(-1)}
-            className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors"
-          >
-            ‹
-          </button>
-          <button
-            onClick={() => navigate(1)}
-            className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors"
-          >
-            ›
-          </button>
-          <button
-            onClick={() => setCurrentDate(new Date())}
-            className="px-4 py-1.5 rounded-full text-sm border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-          >
-            今天
-          </button>
-          <h1 className="text-lg sm:text-xl font-semibold ml-2 text-gray-800 dark:text-gray-100 truncate">{title}</h1>
-          </div>
-          <div className="flex shrink-0 items-center gap-2 max-md:ml-auto">
-            <button type="button" onClick={() => setPlanCreateDate(currentDate)} className="btn-secondary border border-gray-300 px-3 text-sm dark:border-gray-700">新建计划</button>
-            <button type="button" onClick={() => setQuickCreateForDate(currentDate)} className="btn-primary bg-brand px-3 text-sm text-white hover:bg-brand-600">新建记录</button>
-          </div>
-        </div>
+      {/* 头部：与其他 9 个页面统一走 PageHeader（kicker + 图标块 + h1）；
+          翻页/今天/新建/视图切换等控件全部迁入 actions 插槽，功能与相对顺序不变。
+          工具栏自带 border-bottom 会与 PageHeader 的分隔线叠成双线，
+          而 .calendar-toolbar 的边框定义在 @tailwind utilities 之后（同特异性下后者优先），
+          需用 !important 工具类覆盖，同时去掉为分隔线预留的 padding-bottom。 */}
+      <PageHeader
+        title={title}
+        description="计时记录、日程安排与日历订阅"
+        icon={<CalendarDays size={19} />}
+        actions={
+          <>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => navigate(-1)}
+                className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors"
+              >
+                ‹
+              </button>
+              <button
+                onClick={() => navigate(1)}
+                className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300 transition-colors"
+              >
+                ›
+              </button>
+              <button
+                onClick={() => setCurrentDate(new Date())}
+                className="px-4 py-1.5 rounded-full text-sm border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              >
+                今天
+              </button>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              <button type="button" onClick={() => setPlanCreateDate(currentDate)} className="btn-secondary border border-gray-300 px-3 text-sm dark:border-gray-700">新建计划</button>
+              <button type="button" onClick={() => setQuickCreateForDate(currentDate)} className="btn-primary bg-brand px-3 text-sm text-white hover:bg-brand-600">新建记录</button>
+            </div>
+            <div className="flex shrink-0 bg-gray-100 dark:bg-gray-800 rounded-full p-0.5">
+              {(['month', 'week', 'four'] as const).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setView(v)}
+                  className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors duration-200 ${
+                    view === v
+                      ? 'bg-white dark:bg-gray-700 text-brand shadow-sm'
+                      : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                  }`}
+                >
+                  {v === 'month' ? '月' : v === 'week' ? '周' : '4天'}
+                </button>
+              ))}
+            </div>
+          </>
+        }
+      />
+      <div className="calendar-toolbar !border-b-0 !pb-0">
         <div className="calendar-toolbar-options flex w-full items-center gap-2 overflow-x-auto pb-1 sm:w-auto sm:overflow-visible sm:pb-0">
           {periodTotal > 0 && (
             <span className="text-xs text-gray-400 mr-1">
@@ -603,21 +618,6 @@ export default function CalendarPage() {
                 </div>
               </div>
             )}
-          </div>
-          <div className="flex shrink-0 bg-gray-100 dark:bg-gray-800 rounded-full p-0.5">
-            {(['month', 'week', 'four'] as const).map((v) => (
-              <button
-                key={v}
-                onClick={() => setView(v)}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
-                  view === v
-                    ? 'bg-white dark:bg-gray-700 text-brand shadow-sm'
-                    : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-                }`}
-              >
-                {v === 'month' ? '月' : v === 'week' ? '周' : '4天'}
-              </button>
-            ))}
           </div>
           <button
             onClick={() => setShowSyncModal(true)}
@@ -700,12 +700,10 @@ export default function CalendarPage() {
         plans={visiblePlans}
         dayMemos={memosByDay.get(startOfDay(dayDetailDate).toISOString()) ?? []}
         externalEvents={externalEvents}
-        linkedNotes={dayLinkedNotes}
         now={now}
         onClose={() => setDayDetailDate(null)}
         onEntryClick={(entry) => { setDayDetailDate(null); setSelectedEntry(entry) }}
         onCreate={(start, end) => { setDayDetailDate(null); setQuickCreateForDate(start, start, end) }}
-        onOpenNote={(id) => { setDayDetailDate(null); goNote(`/notes/${id}`) }}
       />}
 
       {/* 条目详情弹窗 */}
@@ -834,7 +832,7 @@ function PlanCreateModal({ date, plan, tags, todos, onClose, onSaved }: {
 
 // ===== 日视图 =====
 
-function DayView({ date, entries, activities, plans, dayMemos, externalEvents, now, onEntryClick, onCreate, linkedNotes = [], onOpenNote }: {
+function DayView({ date, entries, activities, plans, dayMemos, externalEvents, now, onEntryClick, onCreate }: {
   date: Date
   entries: TimeEntry[]
   activities: Todo[]
@@ -844,8 +842,6 @@ function DayView({ date, entries, activities, plans, dayMemos, externalEvents, n
   now: Date
   onEntryClick: (e: TimeEntry) => void
   onCreate: (start: Date, end: Date) => void
-  linkedNotes?: LinkedNoteEntry[]
-  onOpenNote?: (id: string) => void
 }) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const dayStart = startOfDay(date).getTime()
@@ -887,22 +883,6 @@ function DayView({ date, entries, activities, plans, dayMemos, externalEvents, n
       className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 overflow-y-auto"
       style={{ maxHeight: 'calc(100vh - 180px)' }}
     >
-      {/* 笔记回显：挂靠到本日期的 [[date:...]] 笔记 */}
-      {linkedNotes.length > 0 && (
-        <div className="flex items-center flex-wrap gap-1 px-2 py-1 border-b border-gray-200 dark:border-gray-800">
-          <span className="text-[0.667rem] font-semibold text-gray-400 mr-1">📝 关联笔记</span>
-          {linkedNotes.map((n) => (
-            <button
-              key={n.id}
-              onClick={() => onOpenNote?.(n.id)}
-              className="text-[0.733rem] text-brand hover:underline bg-brand/5 rounded px-1.5 py-0.5 truncate max-w-[180px]"
-              title={n.title}
-            >
-              {n.title}
-            </button>
-          ))}
-        </div>
-      )}
       {/* 外部 ICS 事件和次数打卡栏，避免占用时间轴 */}
       {(dayActivities.length > 0 || topExternal.length > 0 || countEntries.length > 0) && (
         <div className="flex border-b border-gray-200 dark:border-gray-800 px-2 py-1 gap-1 flex-wrap">
@@ -970,7 +950,7 @@ function DayView({ date, entries, activities, plans, dayMemos, externalEvents, n
               <button
                 key={entry.id}
                 onClick={() => onEntryClick(entry)}
-                className="absolute z-[1] rounded-lg text-left overflow-hidden hover:z-10 hover:shadow-md transition-all duration-150 group"
+                className="absolute z-[1] rounded-lg text-left overflow-hidden hover:z-10 hover:shadow-md transition-shadow duration-150 group"
                 style={{
                   top: top + 1,
                   height: height - 2,
@@ -1200,7 +1180,7 @@ function WeekView({ days, selectedDate, entries, activities, plans, memosByDay, 
                   <button
                     key={entry.id}
                     onClick={() => onEntryClick(entry)}
-                    className="absolute z-[1] rounded-md text-left overflow-hidden hover:z-10 hover:shadow-md transition-all duration-150"
+                    className="absolute z-[1] rounded-md text-left overflow-hidden hover:z-10 hover:shadow-md transition-shadow duration-150"
                     style={{
                       top: top + 1,
                       height: height - 2,
@@ -1424,16 +1404,13 @@ function EntryDetail({ entry, onClose, onChanged }: {
         {editing ? (
           <div className="space-y-3 mb-4">
             <div>
-              <label className="block text-xs text-gray-400 mb-1">开始时间</label>
-              <DateTimeSecondPicker value={editStart} onChange={setEditStart} />
+              <label className="block text-xs text-gray-400"><span className="block mb-1">开始时间</span><DateTimeSecondPicker value={editStart} onChange={setEditStart} /></label>
             </div>
             <div>
-              <label className="block text-xs text-gray-400 mb-1">结束时间（留空表示进行中）</label>
-              <DateTimeSecondPicker value={editEnd} onChange={setEditEnd} />
+              <label className="block text-xs text-gray-400"><span className="block mb-1">结束时间（留空表示进行中）</span><DateTimeSecondPicker value={editEnd} onChange={setEditEnd} /></label>
             </div>
             <div>
-              <label className="block text-xs text-gray-400 mb-1">备注</label>
-              <textarea value={editNote} onChange={(event) => setEditNote(event.target.value)} rows={3} className="input text-sm" />
+              <label className="block text-xs text-gray-400"><span className="block mb-1">备注</span><textarea value={editNote} onChange={(event) => setEditNote(event.target.value)} rows={3} className="input text-sm" /></label>
             </div>
           </div>
         ) : (
@@ -1583,7 +1560,7 @@ function QuickCreateModal({ defaultDate, defaultStartTime, defaultEndTime, onClo
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-gray-500 mb-1.5">标签 *</label>
+          <div className="text-xs font-semibold text-gray-500 mb-1.5">标签 *</div>
           <div className="max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-xl p-2 space-y-2">
             {groupedTags.map((g) => (
               <div key={g.category?.id ?? '_none'}>
@@ -1597,7 +1574,7 @@ function QuickCreateModal({ defaultDate, defaultStartTime, defaultEndTime, onClo
                     <button
                       key={t.id}
                       onClick={() => setTagId(t.id)}
-                      className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all duration-150 ${
+                      className={`px-2.5 py-1 rounded-full text-xs font-medium transition-shadow duration-150 ${
                         tagId === t.id
                           ? 'ring-2 ring-offset-1 ring-offset-white dark:ring-offset-gray-900 shadow-sm'
                           : 'hover:shadow-sm'
@@ -1618,34 +1595,31 @@ function QuickCreateModal({ defaultDate, defaultStartTime, defaultEndTime, onClo
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-gray-500 mb-1">开始时间</label>
-          <DateTimeSecondPicker value={startTime} onChange={setStartTime} />
+          <label className="block text-xs font-semibold text-gray-500"><span className="block mb-1">开始时间</span><DateTimeSecondPicker value={startTime} onChange={setStartTime} /></label>
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-gray-500 mb-1">
-            结束时间 <span className="text-gray-400 font-normal">（留空 = 开始计时）</span>
+          <label className="block text-xs font-semibold text-gray-500">
+            <span className="block mb-1">结束时间 <span className="text-gray-400 font-normal">（留空 = 开始计时）</span></span>
+            <DateTimeSecondPicker value={endTime} onChange={setEndTime} />
           </label>
-          <DateTimeSecondPicker value={endTime} onChange={setEndTime} />
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-gray-500 mb-1">备注</label>
-          <input
+          <label className="block text-xs font-semibold text-gray-500"><span className="block mb-1">备注</span><input
             type="text"
             value={note}
             onChange={(e) => setNote(e.target.value)}
             placeholder="可选备注…"
             className="input text-sm"
-          />
+          /></label>
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-gray-500 mb-1">关联待办（可选）</label>
-          <select value={todoId} onChange={(event) => setTodoId(event.target.value)} className="input text-sm">
+          <label className="block text-xs font-semibold text-gray-500"><span className="block mb-1">关联待办（可选）</span><select value={todoId} onChange={(event) => setTodoId(event.target.value)} className="input text-sm">
             <option value="">不关联待办</option>
             {todos.map((todo) => <option key={todo.id} value={todo.id}>{todo.title}</option>)}
-          </select>
+          </select></label>
         </div>
 
         {error && <div className="text-xs text-red-500">{error}</div>}
@@ -1801,19 +1775,17 @@ function DayDetailPopupLegacy({ date, entries, activities, dayMemos, externalEve
   )
 }
 
-function DayDetailPopup({ date, entries, activities, plans, dayMemos, externalEvents, linkedNotes, now, onClose, onEntryClick, onCreate, onOpenNote }: {
+function DayDetailPopup({ date, entries, activities, plans, dayMemos, externalEvents, now, onClose, onEntryClick, onCreate }: {
   date: Date
   entries: TimeEntry[]
   activities: Todo[]
   plans: PlanBlock[]
   dayMemos: Memo[]
   externalEvents: CalendarEvent[]
-  linkedNotes: LinkedNoteEntry[]
   now: Date
   onClose: () => void
   onEntryClick: (entry: TimeEntry) => void
   onCreate: (start: Date, end: Date) => void
-  onOpenNote: (id: string) => void
 }) {
   const dateLabel = date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })
   const dayKey = startOfDay(date).toISOString()
@@ -1836,8 +1808,6 @@ function DayDetailPopup({ date, entries, activities, plans, dayMemos, externalEv
             now={now}
             onEntryClick={onEntryClick}
             onCreate={onCreate}
-            linkedNotes={linkedNotes}
-            onOpenNote={onOpenNote}
           />
           {dayMemos.length === 0 && entries.length === 0 && activities.filter((todo) => activityIsOnDay(todo, date)).length === 0 && plans.filter((plan) => plan.date === localDateKey(date)).length === 0 && externalEvents.every((event) => !externalEventOverlapsDay(event, startOfDay(date).getTime(), endOfDay(date).getTime())) && (
             <div className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 rounded-xl bg-white/90 px-4 py-2 text-xs text-gray-400 shadow-sm dark:bg-gray-900/90">当天还没有记录</div>

@@ -1,5 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { announce } from '../announce'
+import { useClosing } from './ConfirmDialog'
 
 /**
  * 应用内输入对话框，替代原生 prompt()。
@@ -36,6 +38,7 @@ export function PromptDialog({
   const inputId = useId()
   const inputRef = useRef<HTMLInputElement>(null)
   const [value, setValue] = useState(defaultValue)
+  const { closing, close, request } = useClosing(onCancel)
 
   // 每次打开重置默认值并聚焦选中
   useEffect(() => {
@@ -48,15 +51,15 @@ export function PromptDialog({
     }
   }, [open, defaultValue])
 
-  // Esc = 取消（仅在打开时监听）
+  // Esc = 取消（仅在打开时监听）；走两段式关闭先播退场
   useEffect(() => {
     if (!open) return
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onCancel()
+      if (event.key === 'Escape') close()
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [open, onCancel])
+  }, [open, close])
 
   // 打开时播报一次标题
   useEffect(() => {
@@ -65,8 +68,10 @@ export function PromptDialog({
 
   if (!open) return null
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onCancel}>
+  // Portal 到 body（同 ConfirmDialog）：脱离 space-y-* 容器，避免
+  // `> * + * { margin-top }` 命中 fixed 遮罩造成顶部缺口；样式全显式类，无继承依赖。
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" data-closing={closing || undefined} onClick={close}>
       <form
         className="modal-panel w-full max-w-sm space-y-4 rounded-panel border border-gray-200 bg-white p-5 shadow-xl dark:border-gray-800 dark:bg-gray-900"
         role="dialog"
@@ -75,7 +80,8 @@ export function PromptDialog({
         onClick={(event) => event.stopPropagation()}
         onSubmit={(event) => {
           event.preventDefault()
-          void onConfirm(value)
+          // 确认与取消同一套两段式关闭：closing 期间防重入，退场结束后再提交
+          request(() => onConfirm(value))
         }}
       >
         <h2 id={titleId} className="text-base font-semibold text-gray-900 dark:text-gray-100">{title}</h2>
@@ -97,7 +103,7 @@ export function PromptDialog({
           />
         </div>
         <div className="flex justify-end gap-2 pt-1">
-          <button type="button" onClick={onCancel} className="btn-secondary px-4 py-2 text-sm">
+          <button type="button" onClick={close} className="btn-secondary px-4 py-2 text-sm">
             {cancelLabel}
           </button>
           <button
@@ -108,6 +114,7 @@ export function PromptDialog({
           </button>
         </div>
       </form>
-    </div>
+    </div>,
+    document.body,
   )
 }

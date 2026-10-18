@@ -42,7 +42,11 @@ export default {
           900: 'rgb(var(--d-900-rgb) / <alpha-value>)',
         },
 
-        /* ── 中性色阶 n-*：替代 gray/slate 混用，统一冷倾 ── */
+        /* ── 中性色阶 n-*：已定义、未启用 ──
+           实测（2026-10 审查）：n-* 比同档 gray 更浅，对比度全面更差
+           （400 档 n-*=1.69:1 vs gray=2.26:1 on #edf2f8），且当前 gray 中性色
+           OKLCH 色度 C=0.003–0.030，肉眼不可辨冷暖差异。
+           ⚠ 勿把 gray-* 机械替换为 n-*（会让对比度变差）。如需启用必须先重新标定亮度。 */
         n: {
           0:   'rgb(var(--n-0-rgb)   / <alpha-value>)',
           25:  'rgb(var(--n-25-rgb)  / <alpha-value>)',
@@ -154,12 +158,13 @@ export default {
            纯淡入在玻璃拟态 + 极光背景下几乎不可感知（MOTION_SPEC §2 L3）。 */
         'page-in': {
           from: { opacity: '0', transform: 'translateY(12px) scale(.99)' },
-          /* to 帧必须 transform:none：animate-page-in 挂在 <main> 且 fill-mode
-             both——若 to 帧保留 transform（哪怕 identity 的 scale(1)），动画结束
-             后 transform 常驻，<main> 成为 containing block，页内所有 fixed
-             弹窗的 inset-0 变成相对 main 定位，遮罩只剩内容区高度（实测：
-             弹窗+遮罩只显示半屏）。none 在动画结束后完全移除 transform，
-             运行中的 300ms 内仍照常插值，转场观感不变。 */
+          /* to 帧必须 transform:none：animate-page-in 挂在 <main>，且 animation
+             不带 fill-mode（见下方 animation 段）——若 to 帧保留 transform
+             （哪怕 identity 的 scale(1)）且动画结束后 transform 常驻，
+             <main> 成为 containing block，页内所有 fixed 弹窗的 inset-0 变成
+             相对 main 定位，遮罩只剩内容区高度（实测：弹窗+遮罩只显示半屏）。
+             none 在动画结束后完全移除 transform，运行中的 300ms 内仍照常
+             插值，转场观感不变。 */
           to:   { opacity: '1', transform: 'none' },
         },
         /* ── L4 数据层 ── */
@@ -184,7 +189,10 @@ export default {
         'sheet-in':  'sheet-in 260ms cubic-bezier(.16,1,.3,1) both',
         'cmdk-in':   'cmdk-in 200ms cubic-bezier(.16,1,.3,1) both',
         /* L3 */
-        'page-in':   'page-in 300ms cubic-bezier(.16,1,.3,1) both',
+        /* ⚠ 勿加 fill-mode（both/forwards）：transform 残留会使 <main> 成为
+           fixed 包含块，全站弹窗遮罩错位（commit 7c46939 修过的回归，
+           scripts/verify-motion.cjs 会校验）。page-in 无 delay，不需要 both。 */
+        'page-in':   'page-in 300ms cubic-bezier(.16,1,.3,1)',
         /* L4 */
         'bar-grow':  'bar-grow 700ms cubic-bezier(.16,1,.3,1) both',
         'ring-draw': 'ring-draw 900ms cubic-bezier(.2,.8,.2,1) both',

@@ -1,6 +1,8 @@
 // 手机友好的秒级时间选择器
 // 将 YYYY-MM-DDTHH:mm:ss 字符串拆分为 日期 + 时 + 分 + 秒 分别输入
 // 避免手机浏览器的 datetime-local 不支持秒的问题
+import { useId } from 'react'
+
 export function DateTimeSecondPicker({
   value,
   onChange,
@@ -8,6 +10,10 @@ export function DateTimeSecondPicker({
   value: string          // YYYY-MM-DDTHH:mm:ss
   onChange: (v: string) => void
 }) {
+  // 无障碍：内部 4 个 input 各自派生稳定 id；
+  // 日期框不加 aria-label——调用方均用外部 <label> 包裹本组件，implicit label
+  // 对第一个 input 生效（如「开始时间 (精准到秒)」），显式 aria-label 反而会覆盖它。
+  const baseId = useId()
   const [datePart, timePart = '00:00:00'] = value.split('T')
   const [hh = '00', mm = '00', ss = '00'] = timePart.split(':')
 
@@ -33,7 +39,9 @@ export function DateTimeSecondPicker({
         }}
       >▲</button>
       <input
+        id={`${baseId}-${label}`}
         type="number"
+        aria-label={label}
         min={min}
         max={max}
         value={val}
@@ -62,6 +70,7 @@ export function DateTimeSecondPicker({
       {/* 日期 */}
       <div className="flex-1 min-w-0">
         <input
+          id={`${baseId}-date`}
           type="date"
           value={datePart}
           onChange={(e) => update(e.target.value || datePart, hh, mm, ss)}

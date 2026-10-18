@@ -10,6 +10,7 @@ import { PageHeader } from '../components/PageHeader'
 import { ErrorBlockCard, RefreshErrorBanner } from '../components/StateViews'
 import { announceUrgent } from '../announce'
 import { useChartMotion } from '../hooks/useChartMotion'
+import { useReducedMotion } from '../hooks/useReducedMotion'
 import type { TimeEntry, PlanBlock } from '../types'
 
 // 四态状态机（EMPTY_LOADING_ERROR.md §2.1）：loading 与 empty 绝不能用 data.length===0 混推——
@@ -60,6 +61,33 @@ function StatsSkeleton() {
         <div className="flex items-center justify-between gap-3"><h2 className="font-semibold text-sm">计划遵循</h2><span className="text-xs text-gray-400">计划不计入投入时长</span></div>
         <div className="skeleton mt-4 h-32 w-full rounded-lg" />
       </section>
+    </div>
+  )
+}
+
+/** 排行条生长动画：宽度始终保持终值不变，入场用 scaleX(0→1) + origin-left 过渡
+ *  （transform 不触发 layout，避免逐行 reflow 抖动，优于改 width 的方案）。
+ *  双 rAF 确保浏览器先绘制出 scaleX(0) 首帧，再过渡到 scaleX(1)。
+ *  reduce 下初始即终态、且不带 transition——降级是「跳到终态」而非「加速」。 */
+function RankBar({ percent, color }: { percent: number; color: string }) {
+  const reduced = useReducedMotion()
+  const [grown, setGrown] = useState(reduced)
+  useEffect(() => {
+    if (grown) return
+    const frame = requestAnimationFrame(() => requestAnimationFrame(() => setGrown(true)))
+    return () => cancelAnimationFrame(frame)
+  }, [grown])
+  return (
+    <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+      <div
+        className="h-full w-full origin-left rounded-full"
+        style={{
+          backgroundColor: color,
+          width: `${percent}%`,
+          transform: grown ? 'scaleX(1)' : 'scaleX(0)',
+          transition: reduced ? undefined : 'transform 700ms cubic-bezier(.16,1,.3,1)',
+        }}
+      />
     </div>
   )
 }
@@ -215,9 +243,7 @@ export default function StatsPage() {
                       <strong className="shrink-0 font-medium tabular-nums">{formatDuration(row.ms)}</strong>
                     </div>
                     {/* 进度条改用标签色：原先固定 brand-600，与左侧色点对不上，色弱用户无法把条和标签关联起来 */}
-                    <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
-                      <div className="h-full rounded-full" style={{ width: `${topMs ? row.ms / topMs * 100 : 0}%`, backgroundColor: row.color }} />
-                    </div>
+                    <RankBar percent={topMs ? row.ms / topMs * 100 : 0} color={row.color} />
                   </div>
                 ))}
                 {!ranking.length && (altRange ? (

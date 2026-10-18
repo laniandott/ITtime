@@ -6,6 +6,15 @@
     <link rel="icon" type="image/png" href="/favicon.png" />
     <link rel="apple-touch-icon" href="/logo.png" />
     <title>ITtime · 标签时间追踪</title>
+    <!-- 首帧兜底背景：html/body 不设背景是 index.css 的单一真相源设计，
+         这里只兜「壳渲染前」的画布色，避免暗色下白→深色跳变闪白。
+         亮/暗两值分别与 --shell-bg（index.css 亮色态）与暗色画布值一致。 -->
+    <style>
+      html { background: #edf2f8; }
+      @media (prefers-color-scheme: dark) {
+        html { background: #070b14; }
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
