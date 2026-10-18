@@ -387,6 +387,18 @@ button:disabled {
   background: rgb(var(--d-500-rgb) / .24);
 }
 
+/* ── Recharts 域感知 ── */
+/* Tooltip hover 光标：Recharts 把 cursor.fill 写成 presentation attribute
+   （teal 硬编码 rgba(13,148,136,.08)，五域分色漏网）。presentation attribute
+   特异性为 0，CSS 规则天然覆盖，且 fill 走 CSS 后可直接吃 var()。
+   图形元素对比度门槛 3:1 对高亮底色不适用（它是背景层不是数据），取 8% 域色。 */
+.recharts-tooltip-cursor {
+  fill: rgb(var(--d-500-rgb) / .08);
+}
+.dark .recharts-tooltip-cursor {
+  fill: rgb(var(--d-400-rgb) / .14);
+}
+
 .stats-overview { display: grid; gap: 8px; padding: 20px 22px; border: 1px solid rgb(203 213 225 / .8); border-left: 3px solid var(--d); border-radius: var(--radius-ctl); background: #fff; box-shadow: none; }
 .stats-overview span, .stats-overview small { color: #62756f; font-size: 12px; }
 .stats-overview strong { color: var(--d-fg); font-size: 28px; font-variant-numeric: tabular-nums; }
