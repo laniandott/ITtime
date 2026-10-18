@@ -4,7 +4,7 @@ import { useStore } from '../store'
 import { PageHeader } from '../components/PageHeader'
 import { api } from '../api'
 import type { Category, Tag, Goal } from '../types'
-import { GripVertical } from 'lucide-react'
+import { ChevronDown, ChevronRight, GripVertical } from 'lucide-react'
 
 const COLORS = ['#0f766e', '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#8b5cf6', '#14b8a6', '#64748b']
 const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
@@ -29,9 +29,19 @@ export default function TagsPage({ embedded = false }: { embedded?: boolean } = 
   const [error, setError] = useState('')
   const [draggedId, setDraggedId] = useState<string | null>(null)
   const [draggedGoalId, setDraggedGoalId] = useState<string | null>(null)
+  const [collapsedTagIds, setCollapsedTagIds] = useState<Set<string>>(() => new Set())
 
   const orderedCategories = [...categories].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name))
   const orderedTags = [...tags].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name))
+  const childrenByParent = new Map<string, Tag[]>()
+  for (const tag of orderedTags) {
+    if (!tag.parentId) continue
+    const children = childrenByParent.get(tag.parentId) ?? []
+    children.push(tag)
+    childrenByParent.set(tag.parentId, children)
+  }
+  const rootTags = orderedTags.filter((tag) => !tag.parentId || !tags.some((parent) => parent.id === tag.parentId))
+  const visibleTags = rootTags.flatMap((tag) => [tag, ...(collapsedTagIds.has(tag.id) ? [] : (childrenByParent.get(tag.id) ?? []))])
   const persistOrder = async <T extends { id: string }>(items: T[], update: (id: string, sortOrder: number) => Promise<unknown>) => {
     try {
       await Promise.all(items.map((item, order) => update(item.id, order * 10)))
@@ -154,7 +164,10 @@ export default function TagsPage({ embedded = false }: { embedded?: boolean } = 
           </button>
         </div>
         <div className="tag-rows">
-          {orderedTags.map((tag) => {
+          {visibleTags.map((tag) => {
+            const childTags = childrenByParent.get(tag.id) ?? []
+            const isChild = Boolean(tag.parentId)
+            const parent = tag.parentId ? tags.find((item) => item.id === tag.parentId) : null
             return (
             <div
               key={tag.id}
@@ -163,17 +176,34 @@ export default function TagsPage({ embedded = false }: { embedded?: boolean } = 
               onDragOver={(event) => event.preventDefault()}
               onDrop={(event) => { event.preventDefault(); dropInOrder(orderedTags, event.dataTransfer.getData('text/plain'), tag.id, (id, sortOrder) => api.tags.update(id, { sortOrder })) }}
               onDragEnd={() => setDraggedId(null)}
-              className={`flex min-w-0 items-center justify-between gap-3 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 px-4 py-2.5 ${draggedId === tag.id ? 'opacity-40' : ''}`}
+              className={`flex min-w-0 items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-4 py-2.5 dark:border-gray-800 dark:bg-gray-900 ${isChild ? 'ml-8 border-l-2 border-l-gray-300 dark:border-l-gray-700' : ''} ${draggedId === tag.id ? 'opacity-40' : ''}`}
             >
               <div className="flex min-w-0 flex-1 items-center gap-3">
+                {!isChild && childTags.length > 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => setCollapsedTagIds((current) => {
+                      const next = new Set(current)
+                      if (next.has(tag.id)) next.delete(tag.id)
+                      else next.add(tag.id)
+                      return next
+                    })}
+                    className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+                    aria-label={collapsedTagIds.has(tag.id) ? `展开${tag.name}的子标签` : `收起${tag.name}的子标签`}
+                    title={collapsedTagIds.has(tag.id) ? '展开子标签' : '收起子标签'}
+                  >
+                    {collapsedTagIds.has(tag.id) ? <ChevronRight className="h-4 w-4" aria-hidden="true" /> : <ChevronDown className="h-4 w-4" aria-hidden="true" />}
+                  </button>
+                ) : isChild ? <span className="w-6 shrink-0" aria-hidden="true" /> : <span className="w-6 shrink-0" aria-hidden="true" />}
                 <GripVertical className="h-4 w-4 shrink-0 cursor-grab text-gray-400 active:cursor-grabbing" aria-label="拖动排序" />
                 <span className="h-3 w-3 shrink-0 rounded-full" style={{ background: tag.color }} />
                 <span
                   className="shrink-0 whitespace-nowrap font-medium"
-                  title={tag.parentId ? `上级：${tags.find((parent) => parent.id === tag.parentId)?.name ?? '未知'}` : undefined}
+                  title={parent ? `上级：${parent.name}` : undefined}
                 >
-                  {tag.parentId ? '↳ ' : ''}{tag.icon ? `${tag.icon} ` : ''}{tag.name}
+                  {tag.icon ? `${tag.icon} ` : ''}{tag.name}
                 </span>
+                {!isChild && childTags.length > 0 && <span className="shrink-0 text-xs text-gray-400">{childTags.length} 个子标签</span>}
                 <span className="shrink-0 whitespace-nowrap rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500 dark:bg-gray-800 dark:text-gray-400">
                   {tag.category?.name ?? '未分类'}
                 </span>
