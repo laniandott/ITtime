@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { useEffect, useMemo, useRef, useState, type RefObject } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Clock } from 'lucide-react'
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis } from 'recharts'
 import { api } from '../api'
@@ -7,7 +7,8 @@ import { formatDuration } from '../store'
 import { elapsed, periodBounds } from '../localStats'
 import { planAdherence } from '../planStats'
 import { PageHeader } from '../components/PageHeader'
-import { announce, announceUrgent } from '../announce'
+import { ErrorBlockCard, RefreshErrorBanner } from '../components/StateViews'
+import { announceUrgent } from '../announce'
 import { useChartMotion } from '../hooks/useChartMotion'
 import type { TimeEntry, PlanBlock } from '../types'
 
@@ -25,11 +26,13 @@ type StatsState =
 
 const RANGE_LABELS: Record<string, string> = { daily: '今日', weekly: '本周', monthly: '本月' }
 
-/** 首屏加载骨架：宽高贴近真实内容（概览 3 行 / 趋势 168px / 排行 5 行 / 遵循 4 数字 + 4 行），
- *  数据到达时布局不跳动（CLS）。骨架整体 aria-hidden，由外层 aria-busy 表达「正在加载」。 */
+/** 首屏加载骨架：宽高贴近真实内容（概览 3 行 / 趋势 168px / 排行 5 行 / 遵循整块），
+ *  数据到达时布局不跳动（CLS）。MOTION_SPEC §5.2 三件套：role="status" + aria-busy + aria-label，
+ *  加载播报由骨架自身承担，完成播报走全局永久 live region。骨架元素压在 ≤12 个（视觉规范上限），
+ *  .skeleton 语义类在 reduce 下自动退化为静态灰块，无需任何前缀。 */
 function StatsSkeleton() {
   return (
-    <div className="stats-layout items-stretch" aria-busy="true">
+    <div className="stats-layout items-stretch" role="status" aria-busy="true" aria-label="正在加载投入统计">
       <div className="stats-primary min-w-0 space-y-4" aria-hidden="true">
         <div className="stats-overview">
           <span className="skeleton h-3 w-20 rounded" />
@@ -45,49 +48,19 @@ function StatsSkeleton() {
         </section>
         <section className="page-card p-5">
           <h2 className="mb-4 text-sm font-semibold">标签投入排行</h2>
-          <div className="space-y-5">
-            {[0, 1, 2, 3, 4].map(row => (
-              <div key={row} className="flex items-center gap-3">
-                <span className="skeleton h-1.5 w-1.5 shrink-0 rounded-full" />
-                <span className="skeleton h-3 w-24 rounded" />
-                <span className="skeleton ml-auto h-3 w-14 rounded" />
-                <span className="skeleton h-2 w-full rounded-full" />
-              </div>
+          {/* 一行一根、宽度递减：既暗示「排行」的形状，又把骨架元素数压在上限内 */}
+          <div className="space-y-6">
+            {['w-full', 'w-11/12', 'w-4/5', 'w-2/3', 'w-1/2'].map(width => (
+              <div key={width} className={`skeleton h-3 ${width} rounded`} />
             ))}
           </div>
         </section>
       </div>
       <section className="page-card p-5" aria-hidden="true">
         <div className="flex items-center justify-between gap-3"><h2 className="font-semibold text-sm">计划遵循</h2><span className="text-xs text-gray-400">计划不计入投入时长</span></div>
-        <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-5">
-          {[0, 1, 2, 3].map(cell => (
-            <div key={cell}>
-              <div className="skeleton h-2.5 w-16 rounded" />
-              <div className="skeleton mt-2 h-4 w-20 rounded" />
-            </div>
-          ))}
-        </div>
-        <div className="mt-5 space-y-2.5 border-t border-gray-200 pt-4 dark:border-gray-800">
-          {[0, 1, 2, 3].map(row => <div key={row} className="skeleton h-2.5 w-full rounded" />)}
-        </div>
+        <div className="skeleton mt-4 h-32 w-full rounded-lg" />
       </section>
     </div>
-  )
-}
-
-/** E-Block：整页无数据可用时的错误卡片。用琥珀色不用红色——红色会和「删除/危险」混淆；
- *  技术原文进次要的 mono 行，主文案只告诉用户「该做什么」。 */
-function StatsErrorBlock({ error, buttonRef, onRetry }: { error: string; buttonRef: RefObject<HTMLButtonElement>; onRetry: () => void }) {
-  return (
-    <section className="page-card flex flex-col items-center gap-3 px-6 py-12 text-center">
-      <span className="text-3xl text-amber-500" aria-hidden="true">⚠</span>
-      <h2 className="text-base font-semibold text-gray-800 dark:text-gray-100">没能加载投入统计</h2>
-      <p className="text-sm text-gray-500 dark:text-gray-400">可能是网络或本地数据库的问题，请稍后重试。</p>
-      <p className="max-h-24 w-full overflow-y-auto break-all rounded-lg bg-gray-50 p-3 text-left font-mono text-xs text-gray-500 dark:bg-gray-800/40 dark:text-gray-400">{error}</p>
-      <button ref={buttonRef} type="button" onClick={onRetry} className="btn-primary mt-1 inline-flex items-center gap-2">
-        重新加载
-      </button>
-    </section>
   )
 }
 
@@ -99,7 +72,6 @@ export default function StatsPage() {
   // 重试计数：变化即重跑加载 effect（同时换 seq 号，作废上一轮在途请求，防竞态）
   const [reloadTick, setReloadTick] = useState(0)
   const seqRef = useRef(0)
-  const loadedOnceRef = useRef(false)
   const retryButtonRef = useRef<HTMLButtonElement>(null)
   // 图表入场动画（MOTION_SPEC §6.4）：reduce 下 isAnimationActive=false，
   // 直接呈现终态——CSS 全局降级够不到 Recharts 的 JS 时序动画。
@@ -117,7 +89,6 @@ export default function StatsPage() {
       Promise.all([api.timer.list(), api.plans.list()])
         .then(([nextEntries, nextPlans]) => {
           if (seq !== seqRef.current) return
-          loadedOnceRef.current = true
           setState({ kind: 'ready', data: { entries: nextEntries, plans: nextPlans } })
         })
         .catch(e => {
@@ -128,8 +99,6 @@ export default function StatsPage() {
           setState(prev => ({ kind: 'error', error: message, data: prev.kind === 'loading' ? null : prev.data }))
         })
     }
-    // 首次进入 loading 时播报一次；之后的 ittime-data-changed 都走 refreshing，不再播
-    if (!loadedOnceRef.current) announce('正在加载投入统计')
     void load()
     window.addEventListener('ittime-data-changed', load)
     return () => window.removeEventListener('ittime-data-changed', load)
@@ -186,17 +155,18 @@ export default function StatsPage() {
       {state.kind === 'loading' ? (
         <StatsSkeleton />
       ) : state.kind === 'error' && state.data === null ? (
-        <StatsErrorBlock error={state.error} buttonRef={retryButtonRef} onRetry={retry} />
+        <ErrorBlockCard
+          title="没能加载投入统计"
+          hint="可能是网络或本地数据库的问题，请稍后重试。"
+          error={state.error}
+          onRetry={retry}
+          buttonRef={retryButtonRef}
+        />
       ) : (
         <div className="space-y-4">
           {/* E-Banner：有旧数据时的刷新失败。错误类不自动消失，直到用户关闭或下次成功 */}
           {state.kind === 'error' && !bannerDismissed && (
-            <div role="alert" className="flex flex-wrap items-center gap-x-3 gap-y-3 rounded-lg border-l-[3px] border-amber-500 bg-amber-50/70 px-4 py-2.5 text-sm text-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
-              <span aria-hidden="true">⚠</span>
-              <span className="min-w-0 flex-1">刷新失败：{state.error}（下方显示的是上次成功加载的数据）</span>
-              <button type="button" onClick={retry} className="relative shrink-0 rounded px-3 py-2 text-xs font-medium after:absolute after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] hover:bg-amber-100 dark:hover:bg-amber-900/40">重试</button>
-              <button type="button" onClick={() => setBannerDismissed(true)} aria-label="关闭错误提示" className="relative shrink-0 rounded p-2 after:absolute after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] hover:bg-amber-100 dark:hover:bg-amber-900/40">✕</button>
-            </div>
+            <RefreshErrorBanner error={state.error} onRetry={retry} onDismiss={() => setBannerDismissed(true)} />
           )}
           <div className="stats-layout items-stretch" aria-busy={state.kind === 'refreshing' ? 'true' : undefined}>
             <div className="stats-primary min-w-0 space-y-4">
@@ -271,13 +241,13 @@ export default function StatsPage() {
               ) : (
               <>
               <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-5">
-                <div><div className="text-xs text-gray-400">计划时长</div><div className="mt-1 font-semibold">{formatDuration(adherence.plannedMs)}</div></div>
-                <div><div className="text-xs text-gray-400">计划内实际</div><div className="mt-1 font-semibold">{formatDuration(adherence.actualMs)}</div></div>
+                <div><div className="text-xs text-gray-400">计划时长</div><div className="mt-1 font-semibold tabular-nums">{formatDuration(adherence.plannedMs)}</div></div>
+                <div><div className="text-xs text-gray-400">计划内实际</div><div className="mt-1 font-semibold tabular-nums">{formatDuration(adherence.actualMs)}</div></div>
                 {/* 0% 与「无计划」必须可区分：有计划但 0% 时写明「未开始」，不甩一个光秃秃的 0% */}
-                <div><div className="text-xs text-gray-400">覆盖率</div><div className="mt-1 font-semibold">{adherence.coverageRate > 0 ? `${Math.round(adherence.coverageRate * 100)}%` : '0%（未开始）'}</div></div>
-                <div><div className="text-xs text-gray-400">未安排投入</div><div className="mt-1 font-semibold">{formatDuration(adherence.unplannedMs)}</div></div>
+                <div><div className="text-xs text-gray-400">覆盖率</div><div className="mt-1 font-semibold tabular-nums">{adherence.coverageRate > 0 ? `${Math.round(adherence.coverageRate * 100)}%` : '0%（未开始）'}</div></div>
+                <div><div className="text-xs text-gray-400">未安排投入</div><div className="mt-1 font-semibold tabular-nums">{formatDuration(adherence.unplannedMs)}</div></div>
               </div>
-              <div className="mt-5 border-t border-gray-200 pt-4 text-xs text-gray-500 dark:border-gray-800">
+              <div className="mt-5 border-t border-gray-200 pt-4 text-xs text-gray-500 tabular-nums dark:border-gray-800">
                 <div className="flex justify-between py-1"><span>按时开始</span><span>{Math.round(adherence.onTimeRate * 100)}%</span></div>
                 <div className="flex justify-between py-1"><span>漏执行</span><span>{adherence.missedCount}</span></div>
                 <div className="flex justify-between py-1"><span>已确认</span><span>{adherence.confirmedCount}</span></div>

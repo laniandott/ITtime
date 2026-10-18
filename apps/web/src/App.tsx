@@ -108,12 +108,17 @@ export default function App() {
   const tabParam = new URLSearchParams(location.search).get('tab')
   const routeKey = `${location.pathname}|${tabParam ?? ''}`
   const lastRouteKeyRef = useRef<string | null>(null)
+  const lastPathnameRef = useRef<string | null>(null)
   useEffect(() => {
     if (lastRouteKeyRef.current === routeKey) return
     const isFirstNavigation = lastRouteKeyRef.current === null
+    // 只切了 tab（pathname 没变）不算「进入新页面」：SectionPage 的 roving tabindex
+    // 让焦点跟随到新 tab，读屏器自己会播 tab 名与选中态，再播「已进入X」就重复了
+    const isTabSwitch = lastPathnameRef.current === location.pathname
     lastRouteKeyRef.current = routeKey
+    lastPathnameRef.current = location.pathname
     // 首次进入不播报：读屏器本身会朗读页面标题，避免重复
-    if (isFirstNavigation) return
+    if (isFirstNavigation || isTabSwitch) return
     const sectionTabs = SECTION_TAB_TITLES[location.pathname]
     const fallbackTitle = sectionTabs
       ? sectionTabs[tabParam ?? ''] ?? sectionTabs[Object.keys(sectionTabs)[0]]
@@ -181,6 +186,7 @@ export default function App() {
               path="/time"
               element={
                 <SectionPage
+                  label="时间"
                   tabs={[
                     { id: 'calendar', label: '日历' },
                     { id: 'plans', label: '计划' },
@@ -195,6 +201,7 @@ export default function App() {
               path="/tasks"
               element={
                 <SectionPage
+                  label="事项"
                   tabs={[
                     { id: 'todos', label: '待办' },
                     { id: 'habits', label: '习惯' },
