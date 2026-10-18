@@ -154,7 +154,13 @@ export default {
            纯淡入在玻璃拟态 + 极光背景下几乎不可感知（MOTION_SPEC §2 L3）。 */
         'page-in': {
           from: { opacity: '0', transform: 'translateY(12px) scale(.99)' },
-          to:   { opacity: '1', transform: 'translateY(0) scale(1)' },
+          /* to 帧必须 transform:none：animate-page-in 挂在 <main> 且 fill-mode
+             both——若 to 帧保留 transform（哪怕 identity 的 scale(1)），动画结束
+             后 transform 常驻，<main> 成为 containing block，页内所有 fixed
+             弹窗的 inset-0 变成相对 main 定位，遮罩只剩内容区高度（实测：
+             弹窗+遮罩只显示半屏）。none 在动画结束后完全移除 transform，
+             运行中的 300ms 内仍照常插值，转场观感不变。 */
+          to:   { opacity: '1', transform: 'none' },
         },
         /* ── L4 数据层 ── */
         'bar-grow': {
