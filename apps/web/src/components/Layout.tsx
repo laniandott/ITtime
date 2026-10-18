@@ -73,12 +73,12 @@ export default function Layout({ children, username, onLogout }: { children: Rea
               key={item.to}
               to={item.to}
               end={item.to === '/'}
-              className={({ isActive }) => `relative mx-1 my-1 flex flex-col items-center justify-center gap-1 rounded-lg text-[0.733rem] transition-colors ${isActive ? 'bg-gradient-to-br from-brand-500/20 to-brand-400/10 font-medium text-brand-700 dark:text-brand-200 shadow-[inset_0_0_14px_rgb(var(--d-400-rgb)/.12)]' : 'text-gray-500 hover:bg-black/5 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-200'}`}
+              className={({ isActive }) => `relative mx-1 my-1 flex flex-col items-center justify-center gap-0.5 rounded-xl text-[0.733rem] transition-colors ${isActive ? 'font-medium text-brand-700 dark:text-brand-200' : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200'}`}
             >
               {({ isActive }) => <>
                 <item.icon aria-hidden="true" className="h-5 w-5" strokeWidth={1.8} />
                 <span>{item.label}</span>
-                {isActive && <span className="absolute -top-1 h-0.5 w-5 rounded-full bg-gradient-to-r from-brand-400 to-brand-300" />}
+                {isActive && <span className="absolute -top-1 h-0.5 w-4 rounded-full bg-gradient-to-r from-brand-400 to-brand-300" />}
               </>}
             </NavLink>
           ))}

@@ -886,7 +886,7 @@ body.fullscreen-clock-active header {
   --glass-blur: blur(20px);
   --shell-bg: #edf2f8;
   --aurora-opacity: .13;
-  --sidebar-bg: rgba(255, 255, 255, .72);
+  --sidebar-bg: rgba(205, 221, 240, .24);
 }
 .dark {
   /* 暗色（深空）：白 4.5% 玻璃 + 深空底 */
@@ -896,7 +896,7 @@ body.fullscreen-clock-active header {
   --glass-line-strong: rgba(255, 255, 255, .16);
   --shell-bg: #070b14;
   --aurora-opacity: .15;
-  --sidebar-bg: rgba(10, 15, 25, .55);
+  --sidebar-bg: rgba(20, 32, 50, .28);
 }
 
 @keyframes aurora-drift { from { transform: translate(0, 0) scale(1) } to { transform: translate(-60px, 50px) scale(1.12) } }
@@ -996,9 +996,10 @@ body.fullscreen-clock-active header {
 /* ── 侧边栏 ── */
 .desktop-sidebar {
   background: var(--sidebar-bg);
-  border-color: var(--glass-line);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  border-color: var(--glass-line-strong);
+  backdrop-filter: blur(28px) saturate(155%);
+  -webkit-backdrop-filter: blur(28px) saturate(155%);
+  box-shadow: 0 16px 44px rgb(15 23 42 / .12), inset 0 1px 0 rgb(255 255 255 / .26);
 }
 .page-header-mark,
 .page-header-icon { background: var(--aurora-grad) }
@@ -1042,15 +1043,18 @@ body.fullscreen-clock-active header {
 
 /* ── 移动端底栏（双主题玻璃）── */
 .mobile-nav {
-  background: rgba(255, 255, 255, .78);
-  border-color: rgba(15, 23, 42, .06);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: rgba(211, 225, 242, .22);
+  border-color: rgba(255, 255, 255, .30);
+  box-shadow: 0 -10px 36px rgb(15 23 42 / .10), inset 0 1px 0 rgb(255 255 255 / .34);
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
 }
 .dark .mobile-nav {
-  background: rgba(10, 15, 25, .82);
-  border-color: rgba(255, 255, 255, .1);
+  background: rgba(17, 29, 47, .28);
+  border-color: rgba(255, 255, 255, .14);
+  box-shadow: 0 -10px 36px rgb(0 0 0 / .25), inset 0 1px 0 rgb(255 255 255 / .09);
 }
+
 
 .dark .clock-hero {
   background: var(--aurora-grad);
