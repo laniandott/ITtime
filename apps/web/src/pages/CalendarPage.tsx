@@ -369,7 +369,7 @@ export default function CalendarPage() {
       api.timer.list(params),
       loadExternalEvents(params),
       api.memos.list(params),
-      api.todos.list(),
+      api.todos.list({ status: 'pending' }),
       api.plans.list(),
     ]).then(([entryResult, externalResult, memoResult, activityResult, plansResult]) => {
       if (cancelled) return
@@ -811,7 +811,7 @@ function PlanCreateModal({ date, plan, tags, todos, onClose, onSaved }: {
         <div className="flex items-center justify-between"><div><h2 className="text-lg font-semibold">{plan ? '编辑计划' : '新建计划'}</h2><p className="mt-1 text-sm text-gray-500">{date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}</p></div><button type="button" onClick={onClose} className="relative after:absolute after:left-1/2 after:top-1/2 after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] grid h-8 w-8 place-items-center rounded hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="关闭">×</button></div>
         <label className="block text-sm font-medium">计划内容<textarea autoFocus required maxLength={2000} rows={4} value={content} onChange={(event) => setContent(event.target.value)} placeholder="写下这段时间具体要做什么" className="input mt-1 w-full resize-y" /></label>
         <div className="grid grid-cols-2 gap-3"><label className="text-sm">开始时间<input required type="time" value={start} onChange={(event) => setStart(event.target.value)} className="input mt-1 w-full" /></label><label className="text-sm">结束时间<input required type="time" value={end} onChange={(event) => setEnd(event.target.value)} className="input mt-1 w-full" /></label></div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><label className="text-sm">Tag（可选）<select value={tagId} onChange={(event) => setTagId(event.target.value)} className="input mt-1 w-full"><option value="">不挂 Tag</option>{tags.map((tag) => <option key={tag.id} value={tag.id}>{tag.name}</option>)}</select></label><label className="text-sm">Todo（可选）<select value={todoId} onChange={(event) => setTodoId(event.target.value)} className="input mt-1 w-full"><option value="">不关联 Todo</option>{todos.map((todo) => <option key={todo.id} value={todo.id}>{todo.title}</option>)}</select></label></div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><label className="text-sm">Tag（可选）<select value={tagId} onChange={(event) => setTagId(event.target.value)} className="input mt-1 w-full"><option value="">不挂 Tag</option>{tags.filter((tag) => !tag.parentId).map((tag) => <option key={tag.id} value={tag.id}>{tag.name}</option>)}</select></label><label className="text-sm">Todo（可选）<select value={todoId} onChange={(event) => setTodoId(event.target.value)} className="input mt-1 w-full"><option value="">不关联 Todo</option>{todos.map((todo) => <option key={todo.id} value={todo.id}>{todo.title}</option>)}</select></label></div>
         {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
         <div className="flex justify-between gap-2">{plan ? <button type="button" disabled={saving} onClick={() => setPendingDelete(true)} className="text-sm text-red-600">删除</button> : <span />}<div className="flex gap-2"><button type="button" onClick={onClose} className="btn-secondary px-3 py-2 text-sm">取消</button><button type="submit" disabled={saving || !content.trim()} className="btn-primary px-4 py-2 text-sm">{saving ? '保存中…' : '保存计划'}</button></div></div>
       </form>
@@ -1519,6 +1519,7 @@ function QuickCreateModal({ defaultDate, defaultStartTime, defaultEndTime, onClo
   const groupedTags = useMemo(() => {
     const groups = new Map<string, { category: typeof categories[0] | null; tags: typeof tags }>()
     for (const t of tags) {
+      if (t.parentId) continue
       const catId = t.categoryId ?? '_none'
       if (!groups.has(catId)) {
         const cat = categories.find((c) => c.id === t.categoryId) ?? null

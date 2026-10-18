@@ -362,7 +362,7 @@ function NewJournalModal({ onClose, onSaved }: { onClose: () => void; onSaved: (
             <span className="block text-xs font-semibold text-gray-500 mb-1">关联标签（可选）</span>
             <select value={tagId} onChange={(event) => setTagId(event.target.value)} className="input text-sm">
               <option value="">独立日记（不绑定标签）</option>
-              {tags.map((tag) => (
+              {tags.filter((tag) => !tag.parentId).map((tag) => (
                 <option key={tag.id} value={tag.id}>{tag.icon ? `${tag.icon} ` : ''}{tag.name}</option>
               ))}
             </select>
