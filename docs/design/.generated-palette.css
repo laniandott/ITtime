@@ -1,0 +1,147 @@
+/* ── 域色板（由 scripts/design-tokens.mjs 生成，勿手改）── */
+
+/* 工作台 品牌继承：主 CTA 沿用现有 teal，用户肌肉记忆不断；定为最亮一档，它是默认落地页 */
+--domain-work-50: #E5FAF7;
+--domain-work-100: #C1EBE5;
+--domain-work-200: #58A398;
+--domain-work-300: #33AD9B;
+--domain-work-400: #08B89E;
+--domain-work-500: #00A28A;
+--domain-work-600: #008672;
+--domain-work-700: #006A5A;
+--domain-work-800: #005044;
+--domain-work-900: #00382F;
+
+/* 时间 冷色秩序感；日历/计划以网格与时间块为主，蓝色降彩度不抢内容。600/700/800 需额外压暗：靛蓝在白底上同样 L 值天生比 teal 暗不上去 */
+--domain-time-50: #F4F5FF;
+--domain-time-100: #E7E9FF;
+--domain-time-200: #CFD4FF;
+--domain-time-300: #B4BBFD;
+--domain-time-400: #9CA5F0;
+--domain-time-500: #848DE2;
+--domain-time-600: #656EC5;
+--domain-time-700: #464F9C;
+--domain-time-800: #303778;
+--domain-time-900: #292E63;
+
+/* 事项 暖色行动感；与工作台 teal 形成冷暖对冲，待办/习惯天然偏暖 */
+--domain-tasks-50: #FFF8F1;
+--domain-tasks-100: #FFEBD7;
+--domain-tasks-200: #FFD1A4;
+--domain-tasks-300: #F4B06B;
+--domain-tasks-400: #D17F2C;
+--domain-tasks-500: #D56E07;
+--domain-tasks-600: #B25900;
+--domain-tasks-700: #8D4600;
+--domain-tasks-800: #6B3600;
+--domain-tasks-900: #4B2500;
+
+/* 洞察 分析/深度；与时间域拉开 48°，并压暗一档避免两块蓝紫在同一页打架 */
+--domain-insights-50: #F8EDFC;
+--domain-insights-100: #F3DEFC;
+--domain-insights-200: #E9C5F9;
+--domain-insights-300: #DBA8F1;
+--domain-insights-400: #C489DD;
+--domain-insights-500: #8E4DAB;
+--domain-insights-600: #833EA1;
+--domain-insights-700: #6A2A85;
+--domain-insights-800: #521B69;
+--domain-insights-900: #3A0E4D;
+
+/* 体系 收尾色相；标签/设置是低频后台域，最低彩度表达「不急」 */
+--domain-system-50: #FBEDF1;
+--domain-system-100: #FBDEE6;
+--domain-system-200: #F6C6D2;
+--domain-system-300: #EBA9BB;
+--domain-system-400: #D3889C;
+--domain-system-500: #98485E;
+--domain-system-600: #8F3C52;
+--domain-system-700: #762A3E;
+--domain-system-800: #5D1C2D;
+--domain-system-900: #44101E;
+
+/* ── 中性色阶 n-* ── */
+--n-0: #FFFFFF;
+--n-25: #FAFAFD;
+--n-50: #F6F6FB;
+--n-100: #F0F0F7;
+--n-200: #E5E5EE;
+--n-300: #D5D5DF;
+--n-400: #BBBBC6;
+--n-500: #93939F;
+--n-600: #757583;
+--n-700: #535364;
+--n-800: #343446;
+--n-900: #1C1C2F;
+--n-950: #0C0C20;
+
+/* ── 语义色（success / warning / danger / info）── */
+/* 成功 */
+--semantic-success-50: #E9FAF2;
+--semantic-success-100: #CBEEDD;
+--semantic-success-200: #7DB99D;
+--semantic-success-300: #489F76;
+--semantic-success-400: #2D9866;
+--semantic-success-500: #109758;
+--semantic-success-600: #008A4A;
+--semantic-success-700: #006D3A;
+--semantic-success-800: #00532C;
+--semantic-success-900: #003A1F;
+/* 警告 */
+--semantic-warning-50: #F8F4E2;
+--semantic-warning-100: #E9E0BC;
+--semantic-warning-200: #BFAF70;
+--semantic-warning-300: #B29A38;
+--semantic-warning-400: #BD990B;
+--semantic-warning-500: #AA8800;
+--semantic-warning-600: #8C7000;
+--semantic-warning-700: #6E5800;
+--semantic-warning-800: #534300;
+--semantic-warning-900: #392E00;
+/* 危险 */
+--semantic-danger-50: #FFF4F5;
+--semantic-danger-100: #FFE6E7;
+--semantic-danger-200: #FFC9CD;
+--semantic-danger-300: #FFA5AB;
+--semantic-danger-400: #ED838A;
+--semantic-danger-500: #CC565E;
+--semantic-danger-600: #A92F37;
+--semantic-danger-700: #8F1E26;
+--semantic-danger-800: #731219;
+--semantic-danger-900: #57080D;
+/* 信息 */
+--semantic-info-50: #EFF9FF;
+--semantic-info-100: #D9F1FF;
+--semantic-info-200: #AEE1FF;
+--semantic-info-300: #7CCBF9;
+--semantic-info-400: #47A6DD;
+--semantic-info-500: #188CCF;
+--semantic-info-600: #0079BF;
+--semantic-info-700: #006097;
+--semantic-info-800: #004972;
+--semantic-info-900: #003250;
+
+/* ── 数据可视化分类色板：同图序列 ≤ 6 为硬上限，超出改用分组/分面/表格 ── */
+/* 基色 = 图形边界（描边 / marker / 面积块），已验 ≥3:1 on 白底 */
+--viz-1: #AC402E;
+--viz-2: #DE723A;
+--viz-3: #69A13F;
+--viz-4: #009CD8;
+--viz-5: #6767C2;
+--viz-6: #C55898;
+
+/* 文字档 = 数据标签 / 图例文字 on 白底（AA 4.5:1）。6 个基色只有 2 个能直接当文字用，故另建 */
+--viz-1-ink: #902A19;
+--viz-2-ink: #973603;
+--viz-3-ink: #2E6B01;
+--viz-4-ink: #006389;
+--viz-5-ink: #6060BC;
+--viz-6-ink: #81235A;
+
+/* 暗色档 = on 深色卡片底（AA 4.5:1），暗色模式的图表专用 */
+--viz-1-on-dark: #FEA89A;
+--viz-2-on-dark: #F9AC85;
+--viz-3-on-dark: #6D9450;
+--viz-4-on-dark: #6ACAEF;
+--viz-5-on-dark: #B9B9FF;
+--viz-6-on-dark: #F4A8D4;

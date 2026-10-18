@@ -1,8 +1,9 @@
-import React, { lazy, Suspense, useEffect } from 'react'
-import { Navigate, Routes, Route, useSearchParams } from 'react-router-dom'
+import React, { lazy, Suspense, useEffect, useRef } from 'react'
+import { Navigate, Routes, Route, useSearchParams, useLocation } from 'react-router-dom'
 import SectionPage from './components/SectionPage'
 import AuthGate from './components/AuthGate'
 import { useStore } from './store'
+import { announce, registerLiveRegions } from './announce'
 import { syncNativeStatusBarTheme } from './nativeStatusBar'
 import { autoStartConfiguredSync } from './couchSync'
 import { applyFontSizePreference } from './fontSettings'
@@ -76,8 +77,66 @@ function SystemRedirect() {
   return <Navigate to={params.get('tab') === 'settings' ? '/settings' : '/tags'} replace />
 }
 
+/** 分区页各 tab 的播报标题：子页面 embedded 时不渲染 h1，只能静态映射（与上方路由表同源）。 */
+const SECTION_TAB_TITLES: Record<string, Record<string, string>> = {
+  '/time': { calendar: '日历', plans: '计划', diary: '日记' },
+  '/tasks': { todos: '待办', habits: '习惯' },
+}
+
 export default function App() {
   const loadAll = useStore((s) => s.loadAll)
+
+  // ── 无障碍播报：注册两个永久 live region（polite 非紧急 / assertive 紧急）──
+  // region 由下方 JSX 常驻挂载；卸载时清注册，避免热更新后往已销毁节点写文本。
+  const politeLiveRef = useRef<HTMLDivElement>(null)
+  const assertiveLiveRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    registerLiveRegions(politeLiveRef.current, assertiveLiveRef.current)
+    return () => registerLiveRegions(null, null)
+  }, [])
+
+  // 路由切换播报「已进入某页」。
+  // 分区页（/time、/tasks）的子页面 embedded 时不渲染 h1，且各 tab 面板常驻 DOM，
+  // querySelector 只会拿到第一个 tab 的标题——分区页一律用静态映射；
+  // 一级页面优先读懒加载完成后的 h1 文本（Suspense fallback 期间没有 h1，用 MutationObserver 等待）。
+  // ?view= 等筛选参数变化既不重挂页面也不改 tab，不会触发播报，避免与页面内筛选播报重复。
+  const location = useLocation()
+  const tabParam = new URLSearchParams(location.search).get('tab')
+  const routeKey = `${location.pathname}|${tabParam ?? ''}`
+  const lastRouteKeyRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (lastRouteKeyRef.current === routeKey) return
+    const isFirstNavigation = lastRouteKeyRef.current === null
+    lastRouteKeyRef.current = routeKey
+    // 首次进入不播报：读屏器本身会朗读页面标题，避免重复
+    if (isFirstNavigation) return
+    const sectionTabs = SECTION_TAB_TITLES[location.pathname]
+    const fallbackTitle = sectionTabs
+      ? sectionTabs[tabParam ?? ''] ?? sectionTabs[Object.keys(sectionTabs)[0]]
+      : ''
+    let observer: MutationObserver | null = null
+    let timer: number | undefined
+    const stop = () => {
+      observer?.disconnect()
+      if (timer !== undefined) window.clearTimeout(timer)
+    }
+    const speak = () => {
+      // 分区页不用 h1（面板常驻 DOM 会拿错标题），只信静态映射
+      const heading = sectionTabs ? null : document.querySelector('h1')
+      const title = heading?.textContent?.trim() || fallbackTitle
+      if (!title) return false
+      announce(`已进入${title}`)
+      stop()
+      return true
+    }
+    if (!speak()) {
+      observer = new MutationObserver(speak)
+      observer.observe(document.body, { childList: true, subtree: true })
+      // 懒加载页面 5s 内没出现标题就放弃，避免 observer 长期空转
+      timer = window.setTimeout(stop, 5000)
+    }
+    return stop
+  }, [routeKey, location.pathname, tabParam])
 
   useEffect(() => {
     applyFontSizePreference()
@@ -104,6 +163,11 @@ export default function App() {
 
   return (
     <ErrorBoundary>
+      {/* 无障碍：两个永久存在、永不卸载的 live region。
+          条件渲染的 role="status" 会被读屏器漏播（节点新建时不在可访问性树里），
+          所以由 App 根节点常驻，页面只通过 announce() / announceUrgent() 写入文本。 */}
+      <div ref={politeLiveRef} role="status" aria-live="polite" aria-atomic="true" className="sr-only" />
+      <div ref={assertiveLiveRef} role="alert" aria-live="assertive" aria-atomic="true" className="sr-only" />
       <AuthGate>
         <Suspense fallback={<PageFallback />}>
           <Routes>
@@ -113,7 +177,6 @@ export default function App() {
               path="/time"
               element={
                 <SectionPage
-                  label="时间"
                   tabs={[
                     { id: 'calendar', label: '日历' },
                     { id: 'plans', label: '计划' },
@@ -128,7 +191,6 @@ export default function App() {
               path="/tasks"
               element={
                 <SectionPage
-                  label="事项"
                   tabs={[
                     { id: 'todos', label: '待办' },
                     { id: 'habits', label: '习惯' },

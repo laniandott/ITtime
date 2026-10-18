@@ -1,11 +1,12 @@
 import { useEffect, useState, useMemo, useRef } from 'react'
+import { Link } from 'react-router-dom'
 import { useStore, formatClock, formatDuration, toIsoSafe } from '../store'
 import { api, resolveUploadUrl } from '../api'
 import type { TimeEntry, Tag, Todo, Memo, LinkedNoteEntry, PlanBlock } from '../types'
 import { DateTimeSecondPicker } from '../components/DateTimeSecondPicker'
 import { PageHeader } from '../components/PageHeader'
 import { syncNativeStatusBarTheme } from '../nativeStatusBar'
-import { GripVertical, ArrowUpDown } from 'lucide-react'
+import { ChevronDown, ChevronRight, GripVertical, ArrowUpDown } from 'lucide-react'
 
 // 辅助函数：格式化时间为 YYYY/MM/DD HH:mm:ss
 const formatDateTimeWithSeconds = (isoStr: string) => {
@@ -109,6 +110,7 @@ export default function TimerPage() {
   const [feedback, setFeedback] = useState('')
   const [sortingQuickStart, setSortingQuickStart] = useState(false)
   const [draggedQuickStartId, setDraggedQuickStartId] = useState<string | null>(null)
+  const [collapsedQuickTagIds, setCollapsedQuickTagIds] = useState<Set<string>>(() => new Set())
   const loadRecentSequence = useRef(0)
   const startingTagIds = useRef(new Set<string>())
 
@@ -267,6 +269,13 @@ export default function TimerPage() {
   // 按分类分组标签
   const orderedCategories = [...categories].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name))
   const orderedTags = (items: Tag[]) => [...items].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name))
+  const childrenByParent = new Map<string, Tag[]>()
+  for (const tag of tags) {
+    if (!tag.parentId) continue
+    const children = childrenByParent.get(tag.parentId) ?? []
+    children.push(tag)
+    childrenByParent.set(tag.parentId, orderedTags(children))
+  }
   const tagsByCategory = orderedCategories.map((cat) => ({
     category: cat,
     tags: orderedTags(tags.filter((t) => t.categoryId === cat.id && !t.parentId)),
@@ -432,7 +441,7 @@ export default function TimerPage() {
         )}
         {tags.length === 0 ? (
           <div className="text-center py-8 text-gray-400">
-            还没有标签，去 <a href="/tags" className="text-brand underline">标签管理</a> 创建一些吧
+            还没有标签，去 <Link to="/tags" className="text-brand underline">标签管理</Link> 创建一些吧
           </div>
         ) : (
           <div className={`grid gap-x-6 gap-y-5 ${running.length > 0 ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'}`}>
@@ -451,12 +460,23 @@ export default function TimerPage() {
                     {sortingQuickStart && <GripVertical className="ml-auto h-4 w-4 cursor-grab text-gray-400 active:cursor-grabbing" aria-label="拖动分类排序" />}
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    {ts.map((tag) => (
-                      <div key={tag.id} draggable={sortingQuickStart} onDragStart={(event) => { event.stopPropagation(); event.dataTransfer.setData('text/plain', tag.id); event.dataTransfer.effectAllowed = 'move'; setDraggedQuickStartId(tag.id) }} onDragOver={(event) => { if (sortingQuickStart) event.preventDefault() }} onDrop={(event) => { event.preventDefault(); event.stopPropagation(); const sourceId = event.dataTransfer.getData('text/plain'); if (sourceId) void saveOrder(ts, sourceId, tag.id, (id, sortOrder) => api.tags.update(id, { sortOrder })) }} onDragEnd={() => setDraggedQuickStartId(null)} className={`flex items-center gap-1 ${draggedQuickStartId === tag.id ? 'opacity-40' : ''}`}>
-                      <QuickStartTagButton tag={tag} isRunning={running.some(entry => entry.tagId === tag.id)} onClick={() => handleStart(tag.id)} />
-                      {sortingQuickStart && <GripVertical className="h-4 w-4 cursor-grab text-gray-400 active:cursor-grabbing" aria-label="拖动标签排序" />}
-                      </div>
-                    ))}
+                    {ts.map((tag) => {
+                      const childTags = childrenByParent.get(tag.id) ?? []
+                      const collapsed = collapsedQuickTagIds.has(tag.id)
+                      return (
+                        <div key={tag.id} className="space-y-1.5">
+                          <div draggable={sortingQuickStart} onDragStart={(event) => { event.stopPropagation(); event.dataTransfer.setData('text/plain', tag.id); event.dataTransfer.effectAllowed = 'move'; setDraggedQuickStartId(tag.id) }} onDragOver={(event) => { if (sortingQuickStart) event.preventDefault() }} onDrop={(event) => { event.preventDefault(); event.stopPropagation(); const sourceId = event.dataTransfer.getData('text/plain'); if (sourceId) void saveOrder(ts, sourceId, tag.id, (id, sortOrder) => api.tags.update(id, { sortOrder })) }} onDragEnd={() => setDraggedQuickStartId(null)} className={`flex items-center gap-1 ${draggedQuickStartId === tag.id ? 'opacity-40' : ''}`}>
+                            {childTags.length > 0 && <button type="button" onClick={() => setCollapsedQuickTagIds((current) => { const next = new Set(current); if (next.has(tag.id)) next.delete(tag.id); else next.add(tag.id); return next })} className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200" aria-label={collapsed ? `展开${tag.name}的子标签` : `收起${tag.name}的子标签`} title={collapsed ? '展开子标签' : '收起子标签'}>{collapsed ? <ChevronRight className="h-4 w-4" aria-hidden="true" /> : <ChevronDown className="h-4 w-4" aria-hidden="true" />}</button>}
+                            {childTags.length === 0 && <span className="w-7 shrink-0" aria-hidden="true" />}
+                            <QuickStartTagButton tag={tag} isRunning={running.some(entry => entry.tagId === tag.id)} onClick={() => handleStart(tag.id)} />
+                            {sortingQuickStart && <GripVertical className="h-4 w-4 cursor-grab text-gray-400 active:cursor-grabbing" aria-label="拖动标签排序" />}
+                          </div>
+                          {!collapsed && childTags.length > 0 && <div className="ml-7 space-y-1.5 border-l border-gray-200 pl-2 dark:border-gray-700">
+                            {childTags.map((child) => <div key={child.id} draggable={sortingQuickStart} onDragStart={(event) => { event.stopPropagation(); event.dataTransfer.setData('text/plain', child.id); event.dataTransfer.effectAllowed = 'move'; setDraggedQuickStartId(child.id) }} onDragOver={(event) => { if (sortingQuickStart) event.preventDefault() }} onDrop={(event) => { event.preventDefault(); event.stopPropagation(); const sourceId = event.dataTransfer.getData('text/plain'); if (sourceId) void saveOrder(childTags, sourceId, child.id, (id, sortOrder) => api.tags.update(id, { sortOrder })) }} onDragEnd={() => setDraggedQuickStartId(null)} className={`flex items-center gap-1 ${draggedQuickStartId === child.id ? 'opacity-40' : ''}`}><QuickStartTagButton tag={child} isRunning={running.some(entry => entry.tagId === child.id)} onClick={() => handleStart(child.id)} />{sortingQuickStart && <GripVertical className="h-4 w-4 cursor-grab text-gray-400 active:cursor-grabbing" aria-label="拖动标签排序" />}</div>)}
+                          </div>}
+                        </div>
+                      )
+                    })}
                   </div>
                 </div>
               )
