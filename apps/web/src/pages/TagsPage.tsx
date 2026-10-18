@@ -1,4 +1,5 @@
 import { useState, useEffect, useId } from 'react'
+import { Link } from 'react-router-dom'
 import { useStore } from '../store'
 import { PageHeader } from '../components/PageHeader'
 import { api } from '../api'
@@ -77,7 +78,8 @@ export default function TagsPage({ embedded = false }: { embedded?: boolean } = 
 
   return (
     <div className="workspace-page tags-page space-y-6">
-      {!embedded && <PageHeader title="标签与分类" description="管理标签体系、颜色与分类归属" />}
+      {/* 移动端底栏不放设置，这里是移动端唯一的设置入口；桌面端侧栏底部也有同一个链接。 */}
+      {!embedded && <PageHeader title="标签与分类" description="管理标签体系、颜色与分类归属" actions={<Link to="/settings" className="text-sm text-brand hover:underline">设置</Link>} />}
 
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300">{error}</div>}
 

@@ -7,7 +7,7 @@ const navItems = [
   { to: '/time', label: '时间', icon: CalendarDays },
   { to: '/tasks', label: '事项', icon: ListTodo },
   { to: '/insights', label: '洞察', icon: ChartColumn },
-  { to: '/system', label: '体系', icon: Tags },
+  { to: '/tags', label: '标签', icon: Tags },
 ] as const
 
 export default function Layout({ children, username, onLogout }: { children: React.ReactNode; username?: string; onLogout?: () => void }) {
@@ -22,7 +22,7 @@ export default function Layout({ children, username, onLogout }: { children: Rea
         <nav aria-label="主导航" className="space-y-5">
           {[
             { label: '日常', items: navItems.filter((item) => ['/', '/time', '/tasks'].includes(item.to)) },
-            { label: '回顾与整理', items: navItems.filter((item) => ['/insights', '/system'].includes(item.to)) },
+            { label: '回顾与整理', items: navItems.filter((item) => ['/insights', '/tags'].includes(item.to)) },
           ].map((group) => <section key={group.label} className="space-y-1">
             <h2 className="px-3 pb-1 text-[11px] font-medium text-gray-400">{group.label}</h2>
             {group.items.map((item) => <NavLink key={item.to} to={item.to} end={item.to === '/'} className={({ isActive }) => `group relative flex min-h-10 items-center gap-3 rounded-lg px-3 text-sm transition-colors before:absolute before:inset-y-2 before:left-0 before:w-[3px] before:rounded-full before:bg-transparent ${isActive ? 'bg-teal-50 font-medium text-teal-800 before:bg-teal-700 dark:bg-gradient-to-br dark:from-teal-500/15 dark:to-sky-500/10 dark:text-teal-200 dark:before:bg-teal-300 dark:shadow-[inset_0_0_18px_rgba(20,184,166,.10)]' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-gray-100'}`}>

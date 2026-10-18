@@ -1,5 +1,5 @@
 import React, { lazy, Suspense, useEffect } from 'react'
-import { Navigate, Routes, Route } from 'react-router-dom'
+import { Navigate, Routes, Route, useSearchParams } from 'react-router-dom'
 import SectionPage from './components/SectionPage'
 import AuthGate from './components/AuthGate'
 import { useStore } from './store'
@@ -66,6 +66,16 @@ function PageFallback() {
   )
 }
 
+/**
+ * 旧「体系」分区（/system）已拆成两个一级入口。
+ * 查询参数不参与路由匹配，/system?tab=settings 只会命中精确路由 /system，
+ * 所以必须在这里读 tab 参数分流：默认回标签页，tab=settings 的旧书签回设置页。
+ */
+function SystemRedirect() {
+  const [params] = useSearchParams()
+  return <Navigate to={params.get('tab') === 'settings' ? '/settings' : '/tags'} replace />
+}
+
 export default function App() {
   const loadAll = useStore((s) => s.loadAll)
 
@@ -97,7 +107,7 @@ export default function App() {
       <AuthGate>
         <Suspense fallback={<PageFallback />}>
           <Routes>
-            {/* ── 5 个一级入口 ── */}
+            {/* ── 一级入口：标签与设置从旧 /system 分区提出来，直接挂载 ── */}
             <Route path="/" element={<TimerPage />} />
             <Route
               path="/time"
@@ -127,19 +137,8 @@ export default function App() {
               }
             />
             <Route path="/insights" element={<StatsPage />} />
-            <Route
-              path="/system"
-              element={
-                <SectionPage
-                  tabs={[
-                    { id: 'tags', label: '标签与分类' },
-                    { id: 'settings', label: '设置' },
-                  ]}
-                >
-                  {(tab) => tab === 'tags' ? <TagsPage /> : <SettingsPage />}
-                </SectionPage>
-              }
-            />
+            <Route path="/tags" element={<TagsPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
 
             {/* ── 旧路径重定向：书签不落空 ── */}
             <Route path="/todos" element={<Navigate to="/tasks?tab=todos" replace />} />
@@ -148,8 +147,9 @@ export default function App() {
             <Route path="/plans" element={<Navigate to="/time?tab=plans" replace />} />
             <Route path="/diary" element={<Navigate to="/time?tab=diary" replace />} />
             <Route path="/stats" element={<Navigate to="/insights" replace />} />
-            <Route path="/tags" element={<Navigate to="/system?tab=tags" replace />} />
-            <Route path="/settings" element={<Navigate to="/system?tab=settings" replace />} />
+            <Route path="/system" element={<SystemRedirect />} />
+            {/* /system 下的其他历史子路径没有对应页面，兜底去设置页。 */}
+            <Route path="/system/*" element={<Navigate to="/settings" replace />} />
             {/* 旧版笔记链接平滑回到计时页，避免历史书签落到空白页。 */}
             <Route path="/notes/*" element={<Navigate to="/" replace />} />
           </Routes>
