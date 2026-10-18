@@ -10,12 +10,15 @@ export interface SectionTab {
 /**
  * 分区页：把几个相关页面收进同一个导航入口（如「时间 = 日历 / 计划 / 日记」）。
  * tab 状态写入 ?tab= 以便深链与刷新；首个 tab 不写入参数，保持 URL 干净。
+ * label 作为 tablist 的地标名：同一应用可能挂多个分区（时间/事项），
+ * 读屏地标列表里需要能区分，默认值仅为兜底。
  * 注意：这里只渲染 tab 条——各子页面保留自己的 PageHeader（含写计划、新建等操作按钮），
  * 分区层如果再包一层头部，就会把子页面的操作入口藏掉。
  */
-export default function SectionPage({ tabs, children: render }: {
+export default function SectionPage({ tabs, children: render, label = '分区' }: {
   tabs: SectionTab[]
   children: (tabId: string) => ReactNode
+  label?: string
 }) {
   const [params, setParams] = useSearchParams()
   const requested = params.get('tab')
@@ -49,7 +52,7 @@ export default function SectionPage({ tabs, children: render }: {
       <div
         ref={tablistRef}
         role="tablist"
-        aria-label="分区"
+        aria-label={label}
         onKeyDown={onTablistKeyDown}
         className="inline-flex max-w-full gap-1 overflow-x-auto rounded-ctl border border-gray-200 bg-white p-1 dark:border-white/10 dark:bg-white/5"
       >

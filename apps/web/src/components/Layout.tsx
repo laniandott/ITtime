@@ -40,7 +40,7 @@ export default function Layout({ children, username, onLogout }: { children: Rea
       </aside>
       <div className="min-h-screen">
       <main key={location.pathname} className="app-main mx-auto w-full max-w-[1440px] flex-1 px-4 py-5 motion-safe:animate-page-in sm:py-8 lg:px-8">{children}</main>
-      <nav aria-label="主导航" className="mobile-nav fixed inset-x-0 bottom-0 z-20 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden">
+      <nav aria-label="底部导航" className="mobile-nav fixed inset-x-0 bottom-0 z-20 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur-xl lg:hidden">
         <div className="mx-auto grid h-[4.35rem] max-w-3xl grid-cols-5 px-1 sm:px-2">
           {navItems.map((item) => (
             <NavLink

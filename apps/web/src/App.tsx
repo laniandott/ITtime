@@ -113,6 +113,7 @@ export default function App() {
               path="/time"
               element={
                 <SectionPage
+                  label="时间"
                   tabs={[
                     { id: 'calendar', label: '日历' },
                     { id: 'plans', label: '计划' },
@@ -127,6 +128,7 @@ export default function App() {
               path="/tasks"
               element={
                 <SectionPage
+                  label="事项"
                   tabs={[
                     { id: 'todos', label: '待办' },
                     { id: 'habits', label: '习惯' },

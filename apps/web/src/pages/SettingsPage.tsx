@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type KeyboardEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { getSyncStatus, SYNC_SETTINGS_KEY, subscribeSyncStatus, testConnection, startSync, stopSync, type SyncConfig, type SyncMode } from '../couchSync'
 import { importLegacyServerData } from '../legacyMigration'
@@ -18,6 +18,14 @@ export default function SettingsPage() {
   const [fontSize, setFontSize] = useState<FontSizePreference>(readFontSizePreference)
   useEffect(() => subscribeSyncStatus(setMessage), [])
   const update = (field: keyof SyncConfig, value: string) => setSettings(current => ({ ...current, [field]: value }))
+  // WAI-ARIA radiogroup 键盘模式：方向键在两项间切换并选中，焦点跟随（与 SectionPage 的 tabs 一致）。
+  const onSyncModeKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight' && event.key !== 'ArrowUp' && event.key !== 'ArrowDown') return
+    event.preventDefault()
+    const next: SyncMode = (settings.syncMode ?? 'live') === 'live' ? 'manual' : 'live'
+    update('syncMode', next)
+    event.currentTarget.querySelector<HTMLButtonElement>(`[data-sync-mode="${next}"]`)?.focus()
+  }
   const updateFontSize = (value: FontSizePreference) => {
     setFontSize(value)
     localStorage.setItem(FONT_SIZE_KEY, value)
@@ -60,7 +68,7 @@ export default function SettingsPage() {
         </select>
       </div>
       <p className="text-sm">设备时区：{Intl.DateTimeFormat().resolvedOptions().timeZone}</p>
-      <Link className="text-brand" to="/calendar">日历</Link>
+      <Link className="text-brand" to="/time?tab=calendar">前往日历</Link>
       <div className="border-t border-gray-200 pt-5 dark:border-gray-800"><GalleryPanel /></div>
     </div>}
     {page === 'sync' && <form onSubmit={event => { event.preventDefault(); void saveSettings() }} className="page-card max-w-2xl space-y-5 p-4 sm:p-5">
@@ -71,9 +79,9 @@ export default function SettingsPage() {
       <label className="block text-sm">密码<input className="input mt-2" type="password" value={settings.couchPassword} onChange={event => update('couchPassword', event.target.value)} autoComplete="current-password" /></label>
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium">同步方式</legend>
-        <div className="inline-flex rounded-lg border border-gray-200 p-1 dark:border-gray-700" role="radiogroup" aria-label="CouchDB 同步方式">
+        <div className="inline-flex rounded-lg border border-gray-200 p-1 dark:border-gray-700" role="radiogroup" aria-label="CouchDB 同步方式" onKeyDown={onSyncModeKeyDown}>
           {([['live', '实时同步'], ['manual', '手动同步']] as [SyncMode, string][]).map(([mode, label]) => (
-            <button key={mode} type="button" role="radio" aria-checked={(settings.syncMode ?? 'live') === mode} onClick={() => update('syncMode', mode)} className={`rounded-md px-3 py-2 text-sm ${(settings.syncMode ?? 'live') === mode ? 'bg-brand text-white' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
+            <button key={mode} type="button" role="radio" data-sync-mode={mode} aria-checked={(settings.syncMode ?? 'live') === mode} tabIndex={(settings.syncMode ?? 'live') === mode ? 0 : -1} onClick={() => update('syncMode', mode)} className={`rounded-md px-3 py-2 text-sm ${(settings.syncMode ?? 'live') === mode ? 'bg-brand text-white' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800'}`}>
               {label}
             </button>
           ))}
@@ -111,6 +119,14 @@ function AccountSettings() {
     return () => { active = false }
   }, [])
 
+  // 移动端没有侧栏，退出登录只能从设置页进。借 AuthGate 已有的 'ittime-auth-expired'
+  // 监听回到登录态（清 token + 显示登录页），不在这里重复实现一套登出状态机；
+  // 服务端会话照旧作废，与侧栏退出登录保持同等副作用。
+  const logout = () => {
+    void fetch(`${getServerHost()}/api/auth/logout`, { method: 'POST', headers: getAuthHeaders() }).catch(() => {})
+    window.dispatchEvent(new Event('ittime-auth-expired'))
+  }
+
   const save = async (event: React.FormEvent) => {
     event.preventDefault()
     setBusy(true); setError(''); setMessage('')
@@ -146,5 +162,9 @@ function AccountSettings() {
       {message && <p role="status" className="text-sm text-green-700 dark:text-green-400">{message}</p>}
       <button type="submit" disabled={busy || !username} className="btn-primary px-4 py-2 text-sm">{busy ? '保存中…' : '保存账户信息'}</button>
     </form>
+    <div className="border-t border-gray-200 pt-4 dark:border-gray-800">
+      <button type="button" onClick={logout} className="inline-flex min-h-11 items-center rounded-lg border border-gray-300 px-4 text-sm font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">退出登录</button>
+      <p className="mt-2 text-xs text-gray-500">退出后需要重新登录才能进入工作区。</p>
+    </div>
   </section>
 }

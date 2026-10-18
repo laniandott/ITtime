@@ -4,7 +4,7 @@ import { useStore } from '../store'
 import { PageHeader } from '../components/PageHeader'
 import { api } from '../api'
 import type { Category, Tag, Goal } from '../types'
-import { ChevronDown, ChevronRight, GripVertical } from 'lucide-react'
+import { ChevronDown, ChevronRight, GripVertical, Settings } from 'lucide-react'
 
 const COLORS = ['#0f766e', '#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#ec4899', '#8b5cf6', '#14b8a6', '#64748b']
 const WEEKDAYS = ['周日', '周一', '周二', '周三', '周四', '周五', '周六']
@@ -88,8 +88,9 @@ export default function TagsPage({ embedded = false }: { embedded?: boolean } = 
 
   return (
     <div className="workspace-page tags-page space-y-6">
-      {/* 移动端底栏不放设置，这里是移动端唯一的设置入口；桌面端侧栏底部也有同一个链接。 */}
-      {!embedded && <PageHeader title="标签与分类" description="管理标签体系、颜色与分类归属" actions={<Link to="/settings" className="text-sm text-brand hover:underline">设置</Link>} />}
+      {/* 移动端底栏不放设置，这里是移动端唯一设置入口；桌面端侧栏底部也有同一个链接。
+          触达区至少 44px 高：纯文字链在触屏上约 20px，密集点击时容易误触。 */}
+      {!embedded && <PageHeader title="标签与分类" description="管理标签体系、颜色与分类归属" actions={<Link to="/settings" className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-gray-300 px-4 text-sm font-medium text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800"><Settings className="h-4 w-4" aria-hidden="true" />设置</Link>} />}
 
       {error && <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-600 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-300">{error}</div>}
 
