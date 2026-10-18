@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import { formatDuration, useStore, toIsoSafe } from '../store'
@@ -1818,8 +1819,9 @@ function DayDetailPopup({ date, entries, activities, plans, dayMemos, externalEv
   const dateLabel = date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })
   const dayKey = startOfDay(date).toISOString()
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-3 backdrop-blur-sm sm:p-6" onClick={onClose}>
-      <section role="dialog" aria-modal="true" aria-label={`${dateLabel}日视图`} className="flex max-h-[calc(100vh-1.5rem)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/20 bg-gray-50 shadow-2xl shadow-gray-950/20 dark:bg-gray-950 sm:max-h-[calc(100vh-3rem)]" onClick={(event) => event.stopPropagation()}>
+    createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/45 p-3 backdrop-blur-sm sm:p-6" onClick={onClose}>
+      <section role="dialog" aria-modal="true" aria-label={`${dateLabel}日视图`} className="my-auto flex max-h-[calc(100dvh-1.5rem)] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-white/20 bg-gray-50 shadow-2xl shadow-gray-950/20 dark:bg-gray-950 sm:max-h-[calc(100dvh-3rem)]" onClick={(event) => event.stopPropagation()}>
         <header className="flex items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-3 dark:border-gray-800 dark:bg-gray-900 sm:px-5">
           <div className="min-w-0"><div className="truncate text-base font-semibold text-gray-900 dark:text-gray-100">{dateLabel}</div><div className="mt-0.5 text-xs text-gray-500">当天时间线 · 双击空白处补录时长</div></div>
           <button type="button" onClick={onClose} className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200" aria-label="关闭日视图">×</button>
@@ -1847,6 +1849,8 @@ function DayDetailPopup({ date, entries, activities, plans, dayMemos, externalEv
           <button type="button" onClick={onClose} className="btn-secondary px-3 py-1.5 text-xs">完成</button>
         </footer>
       </section>
-    </div>
+    </div>,
+    document.body,
+    )
   )
 }

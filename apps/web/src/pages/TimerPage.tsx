@@ -411,7 +411,7 @@ export default function TimerPage() {
         </div>
       ) : (
         <div className="timer-empty rounded-lg border border-gray-300 dark:border-gray-700 p-6 text-center">
-          <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-lg bg-teal-50 text-xl text-teal-700 dark:bg-teal-950/60 dark:text-teal-200">◷</div>
+          <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-lg bg-brand-50 text-xl text-brand-700 dark:bg-brand-900/40 dark:text-brand-300">◷</div>
           <div className="text-lg font-semibold mb-1 text-gray-800 dark:text-gray-100">现在还没有计时项目</div>
           <div className="text-sm text-gray-500">点下面任意标签即可开始。正在计时的标签会清楚标出来。</div>
         </div>
@@ -1301,7 +1301,7 @@ function RunningTimer({ entry, stopping, todos, onStop, onTodoChange, onTerminat
   }
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-3 text-center relative dark:border-gray-800 dark:bg-gray-900 sm:p-4">
+    <div className="timer-running-card relative rounded-xl border p-3 text-center sm:p-4">
       <div className="mb-1 flex items-center justify-center gap-2 text-xs text-gray-500 dark:text-gray-400">
         <span className="inline-flex items-center gap-1.5 font-medium text-brand-700 dark:text-brand-300">
           <span className="h-1.5 w-1.5 rounded-full bg-brand-600 dark:bg-brand-400" aria-hidden="true" />

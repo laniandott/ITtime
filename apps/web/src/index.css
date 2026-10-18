@@ -1013,6 +1013,18 @@ body.fullscreen-clock-active header {
   background-clip: text;
   color: transparent;
 }
+.timer-running-card {
+  background: linear-gradient(145deg, rgb(var(--d-500-rgb) / .09), rgb(var(--d-400-rgb) / .035) 58%, var(--glass-bg));
+  border-color: rgb(var(--d-500-rgb) / .26);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .42), 0 8px 24px rgb(var(--d-500-rgb) / .07);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+.dark .timer-running-card {
+  background: linear-gradient(145deg, rgb(var(--d-500-rgb) / .16), rgb(var(--d-400-rgb) / .08) 58%, rgb(10 15 25 / .58));
+  border-color: rgb(var(--d-400-rgb) / .32);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .08), 0 8px 24px rgb(var(--d-500-rgb) / .10);
+}
 .dark .timer-session > div > .page-card,
 .dark .timer-session .border-gray-200.bg-white.dark\:border-gray-800 {
   background: transparent;
