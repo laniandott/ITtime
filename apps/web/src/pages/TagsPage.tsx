@@ -619,13 +619,19 @@ function Modal({ title, children, onClose, size = 'default' }: { title: string; 
   }, [onClose])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/45 p-2" onClick={onClose}>
-      <div role="dialog" aria-modal="true" aria-labelledby={titleId} className={`modal-panel my-auto flex w-full flex-col overflow-y-auto rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900 ${size === 'wide' ? 'modal-panel-wide max-w-3xl' : 'max-h-[calc(100vh-2rem)] max-w-lg'}`} onClick={(e) => e.stopPropagation()}>
-        <header className="shrink-0 border-b border-gray-200 px-5 py-4 dark:border-gray-700 sm:px-6">
-          <h3 id={titleId} className="text-base font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
-        </header>
-        <div className="min-h-0 overflow-y-auto px-5 py-4 sm:px-6">
-          {children}
+    /* 可滚动居中的可靠结构（min-h-full 包裹层）：不能在滚动容器上直接
+       items-center——Chrome 会做 safe 对齐降级（内容可能溢出时顶部对齐），
+       弹窗就会贴顶（用户实测：弹窗下沿太高）。内层 min-h-full 撑满滚动
+       高度后 items-center 居中，长内容时自然变为可滚动，两端都安全。 */
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-black/45 p-2 sm:p-4" onClick={onClose}>
+      <div className="flex min-h-full items-center justify-center">
+        <div role="dialog" aria-modal="true" aria-labelledby={titleId} className={`modal-panel flex w-full flex-col overflow-y-auto rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900 ${size === 'wide' ? 'modal-panel-wide max-w-3xl' : 'max-h-[calc(100vh-2rem)] max-w-lg'}`} onClick={(e) => e.stopPropagation()}>
+          <header className="shrink-0 border-b border-gray-200 px-5 py-4 dark:border-gray-700 sm:px-6">
+            <h3 id={titleId} className="text-base font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
+          </header>
+          <div className="min-h-0 overflow-y-auto px-5 py-4 sm:px-6">
+            {children}
+          </div>
         </div>
       </div>
     </div>
