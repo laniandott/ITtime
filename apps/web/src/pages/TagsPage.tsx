@@ -218,7 +218,7 @@ export default function TagsPage({ embedded = false }: { embedded?: boolean } = 
                       else next.add(tag.id)
                       return next
                     })}
-                    className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+                    className="relative after:absolute after:left-1/2 after:top-1/2 after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] grid h-6 w-6 shrink-0 place-items-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800 dark:hover:text-gray-200"
                     aria-label={collapsedTagIds.has(tag.id) ? `展开${tag.name}的子标签` : `收起${tag.name}的子标签`}
                     title={collapsedTagIds.has(tag.id) ? '展开子标签' : '收起子标签'}
                   >
@@ -597,7 +597,7 @@ function ColorPicker({ value, onChange }: { value: string; onChange: (c: string)
             key={c}
             type="button"
             onClick={() => onChange(c)}
-            className={`w-6 h-6 rounded-full border transition-transform hover:scale-110 ${value.toLowerCase() === c ? 'ring-2 ring-offset-1 ring-gray-400 border-transparent' : 'border-gray-200 dark:border-gray-700'}`}
+            className={`relative after:absolute after:-inset-[3px] after:content-[''] w-6 h-6 rounded-full border transition-transform hover:scale-110 ${value.toLowerCase() === c ? 'ring-2 ring-offset-1 ring-gray-400 border-transparent' : 'border-gray-200 dark:border-gray-700'}`}
             style={{ background: c }}
             title={c}
           />

@@ -255,7 +255,7 @@ export default function NotesPage() {
           <button
             type="button"
             onClick={() => setSidebarOpen((open) => !open)}
-            className="flex h-8 w-8 items-center justify-center rounded-md text-sm text-gray-500 hover:bg-gray-200 hover:text-brand dark:hover:bg-gray-800"
+            className="relative after:absolute after:-inset-[2px] after:content-[''] flex h-8 w-8 items-center justify-center rounded-md text-sm text-gray-500 hover:bg-gray-200 hover:text-brand dark:hover:bg-gray-800"
             title={sidebarOpen ? '隐藏文件夹栏' : '显示文件夹栏'}
             aria-label={sidebarOpen ? '隐藏文件夹栏' : '显示文件夹栏'}
           >
@@ -264,7 +264,7 @@ export default function NotesPage() {
           <button
             type="button"
             onClick={() => searchInputRef.current?.focus()}
-            className="flex h-8 w-8 items-center justify-center rounded-md text-sm text-gray-400 hover:bg-gray-200 hover:text-brand dark:hover:bg-gray-800"
+            className="relative after:absolute after:-inset-[2px] after:content-[''] flex h-8 w-8 items-center justify-center rounded-md text-sm text-gray-400 hover:bg-gray-200 hover:text-brand dark:hover:bg-gray-800"
             title="搜索笔记"
             aria-label="搜索笔记"
           >

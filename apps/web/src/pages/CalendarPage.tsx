@@ -808,7 +808,7 @@ function PlanCreateModal({ date, plan, tags, todos, onClose, onSaved }: {
     <>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onClick={onClose}>
       <form onSubmit={submit} className="modal-panel w-full max-w-lg space-y-4 rounded-xl bg-white p-5 shadow-xl dark:bg-gray-900" onClick={(event) => event.stopPropagation()}>
-        <div className="flex items-center justify-between"><div><h2 className="text-lg font-semibold">{plan ? '编辑计划' : '新建计划'}</h2><p className="mt-1 text-sm text-gray-500">{date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}</p></div><button type="button" onClick={onClose} className="grid h-8 w-8 place-items-center rounded hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="关闭">×</button></div>
+        <div className="flex items-center justify-between"><div><h2 className="text-lg font-semibold">{plan ? '编辑计划' : '新建计划'}</h2><p className="mt-1 text-sm text-gray-500">{date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}</p></div><button type="button" onClick={onClose} className="relative after:absolute after:left-1/2 after:top-1/2 after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] grid h-8 w-8 place-items-center rounded hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="关闭">×</button></div>
         <label className="block text-sm font-medium">计划内容<textarea autoFocus required maxLength={2000} rows={4} value={content} onChange={(event) => setContent(event.target.value)} placeholder="写下这段时间具体要做什么" className="input mt-1 w-full resize-y" /></label>
         <div className="grid grid-cols-2 gap-3"><label className="text-sm">开始时间<input required type="time" value={start} onChange={(event) => setStart(event.target.value)} className="input mt-1 w-full" /></label><label className="text-sm">结束时间<input required type="time" value={end} onChange={(event) => setEnd(event.target.value)} className="input mt-1 w-full" /></label></div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><label className="text-sm">Tag（可选）<select value={tagId} onChange={(event) => setTagId(event.target.value)} className="input mt-1 w-full"><option value="">不挂 Tag</option>{tags.map((tag) => <option key={tag.id} value={tag.id}>{tag.name}</option>)}</select></label><label className="text-sm">Todo（可选）<select value={todoId} onChange={(event) => setTodoId(event.target.value)} className="input mt-1 w-full"><option value="">不关联 Todo</option>{todos.map((todo) => <option key={todo.id} value={todo.id}>{todo.title}</option>)}</select></label></div>
@@ -1579,7 +1579,7 @@ function QuickCreateModal({ defaultDate, defaultStartTime, defaultEndTime, onClo
       <div className="modal-panel bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-md mx-4 shadow-xl space-y-4" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-bold">⚡ 快速创建</h3>
-          <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 transition-colors">✕</button>
+          <button onClick={onClose} className="relative after:absolute after:left-1/2 after:top-1/2 after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 transition-colors">✕</button>
         </div>
 
         <div>
@@ -1713,7 +1713,7 @@ function DayDetailPopupLegacy({ date, entries, activities, dayMemos, externalEve
               </div>
               <div className="text-xs text-gray-400 mt-0.5">农历{lunarText}</div>
             </div>
-            <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 transition-colors">✕</button>
+            <button onClick={onClose} className="relative after:absolute after:left-1/2 after:top-1/2 after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 transition-colors">✕</button>
           </div>
           {totalMs > 0 && (
             <div className="text-xs text-gray-400 mt-2">

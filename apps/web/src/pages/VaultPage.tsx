@@ -446,11 +446,11 @@ export default function VaultPage() {
     <div className="vault-page">
       <div className="page-card flex h-[calc(100vh-7rem)] max-h-[calc(100vh-7rem)] overflow-hidden">
         <div className="flex w-10 shrink-0 flex-col items-center gap-2 border-r border-gray-200 bg-gray-50 py-2 dark:border-gray-800 dark:bg-gray-950">
-          <button type="button" onClick={() => setSidebarOpen((open) => !open)} className="flex h-8 w-8 items-center justify-center rounded-md text-sm text-gray-500 hover:bg-gray-200 hover:text-brand dark:hover:bg-gray-800" title={sidebarOpen ? '隐藏文件树' : '显示文件树'} aria-label={sidebarOpen ? '隐藏文件树' : '显示文件树'}>
+          <button type="button" onClick={() => setSidebarOpen((open) => !open)} className="relative after:absolute after:-inset-1 after:content-[''] flex h-8 w-8 items-center justify-center rounded-md text-sm text-gray-500 hover:bg-gray-200 hover:text-brand dark:hover:bg-gray-800" title={sidebarOpen ? '隐藏文件树' : '显示文件树'} aria-label={sidebarOpen ? '隐藏文件树' : '显示文件树'}>
             {sidebarOpen ? '◧' : '▣'}
           </button>
-          <button type="button" onClick={createNote} className="flex h-8 w-8 items-center justify-center rounded-md text-lg text-gray-500 hover:bg-gray-200 hover:text-brand dark:hover:bg-gray-800" title="新建笔记" aria-label="新建笔记">＋</button>
-          <button type="button" onClick={createFolder} className="flex h-8 w-8 items-center justify-center rounded-md text-sm text-gray-500 hover:bg-gray-200 hover:text-brand dark:hover:bg-gray-800" title="新建文件夹" aria-label="新建文件夹">📁</button>
+          <button type="button" onClick={createNote} className="relative after:absolute after:-inset-1 after:content-[''] flex h-8 w-8 items-center justify-center rounded-md text-lg text-gray-500 hover:bg-gray-200 hover:text-brand dark:hover:bg-gray-800" title="新建笔记" aria-label="新建笔记">＋</button>
+          <button type="button" onClick={createFolder} className="relative after:absolute after:-inset-1 after:content-[''] flex h-8 w-8 items-center justify-center rounded-md text-sm text-gray-500 hover:bg-gray-200 hover:text-brand dark:hover:bg-gray-800" title="新建文件夹" aria-label="新建文件夹">📁</button>
         </div>
 
         {sidebarOpen && (

@@ -92,7 +92,7 @@ export function SubscriptionManager({ onClose }: { onClose: () => void }) {
       <div className="modal-panel bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-lg mx-4 shadow-xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold">📡 日历订阅</h3>
-          <button onClick={onClose} className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 transition-colors">✕</button>
+          <button onClick={onClose} className="relative after:absolute after:left-1/2 after:top-1/2 after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 transition-colors">✕</button>
         </div>
 
         {error && <div className="mb-3 text-xs text-red-500">{error}</div>}
@@ -159,7 +159,7 @@ export function SubscriptionManager({ onClose }: { onClose: () => void }) {
                   <button
                     key={c}
                     onClick={() => setNewColor(c)}
-                    className={`w-7 h-7 rounded-full transition-all ${newColor === c ? 'ring-2 ring-offset-2 ring-offset-white dark:ring-offset-gray-900 scale-110' : 'hover:scale-105'}`}
+                    className={`relative after:absolute after:-inset-1 after:content-[''] w-7 h-7 rounded-full transition-all ${newColor === c ? 'ring-2 ring-offset-2 ring-offset-white dark:ring-offset-gray-900 scale-110' : 'hover:scale-105'}`}
                     style={{ backgroundColor: c, ...(newColor === c ? { boxShadow: `0 0 0 2px white, 0 0 0 4px ${c}` } : {}) }}
                   />
                 ))}
