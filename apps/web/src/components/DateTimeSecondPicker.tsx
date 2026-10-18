@@ -53,7 +53,7 @@ export function DateTimeSecondPicker({
           onCh(String(n).padStart(2, '0'))
         }}
       >▼</button>
-      <span className="text-[10px] text-gray-400">{label}</span>
+      <span className="text-[0.667rem] text-gray-400">{label}</span>
     </div>
   )
 

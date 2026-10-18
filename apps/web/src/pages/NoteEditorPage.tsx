@@ -331,7 +331,7 @@ export default function NoteEditorPage() {
     { label: '[ ]', title: '链接', action: () => runTool((v) => cmInsertAround(v, '[', '](https://)', '链接文字')) },
     { label: '```', title: '代码块', action: () => runTool((v) => cmInsertAround(v, '```\n', '\n```', '代码')) },
   ]
-  const modeButtonClass = (active: boolean) => `rounded-md ${compactHeader ? 'px-2 py-0.5 text-[11px]' : 'px-2.5 py-1'} ${active ? 'bg-brand text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`
+  const modeButtonClass = (active: boolean) => `rounded-md ${compactHeader ? 'px-2 py-0.5 text-[0.733rem]' : 'px-2.5 py-1'} ${active ? 'bg-brand text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`
 
   return (
     <div className="max-w-6xl mx-auto space-y-3">
@@ -623,7 +623,7 @@ function EntityGroup({ label, items, onGo }: {
             )}
             {e.type === 'memo' && e.timeEntry && (
               <span
-                className="text-[10px] text-gray-500 bg-gray-100 dark:bg-gray-800 rounded px-1 py-0.5 whitespace-nowrap"
+                className="text-[0.667rem] text-gray-500 bg-gray-100 dark:bg-gray-800 rounded px-1 py-0.5 whitespace-nowrap"
                 title="该日记关联的计时记录"
               >
                 ⏱{e.timeEntry.tagName || '记录'}{e.timeEntry.endTime ? '' : '·进行中'}

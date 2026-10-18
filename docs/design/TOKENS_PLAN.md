@@ -403,7 +403,11 @@ export default {
         // 新增三级
         xs:   'var(--radius-xs)',     // 4px  微型：圆点/指示条/复选框
         panel:'var(--radius-panel)',  // 18px 面板：page-card / modal（对齐现有玻璃覆盖值）
-        xl:   'var(--radius-xl)',     // 24px 英雄容器：计时盘外框
+        // ⚠ 禁止把英雄容器命名为 xl：theme.extend 是合并语义，定义 xl 会
+        // 静默覆盖 Tailwind 内置 rounded-xl（0.75rem），且 rounded-t-xl 等
+        // 方向变体一并污染——不报错，全站 68 处 rounded-xl 从 12px 变 24px。
+        // 新档位一律用无冲突自造名。verify-domains.cjs 第 5 段有防线。
+        hero: 'var(--radius-xl)',     // 24px 英雄容器：计时盘外框
       },
 
       boxShadow: {

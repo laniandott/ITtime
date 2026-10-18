@@ -122,7 +122,7 @@ export default function GalleryPanel() {
                         <video src={resolveUploadUrl(item.path)} muted preload="metadata" className="block h-auto max-h-72 w-full object-cover" aria-label="图库视频" />
                       )}
                     </button>
-                    <time className="block px-2.5 py-2 text-[10px] text-gray-400">
+                    <time className="block px-2.5 py-2 text-[0.667rem] text-gray-400">
                       {new Date(item.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
                     </time>
                   </article>

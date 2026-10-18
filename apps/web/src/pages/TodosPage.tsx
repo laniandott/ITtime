@@ -499,7 +499,7 @@ function TodoCard({
         <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
           isDone ? 'border-green-500 bg-green-500 text-white' : 'border-gray-300 dark:border-gray-600 hover:border-brand'
         }`}>
-          {isDone && <span className="text-[10px]">✓</span>}
+          {isDone && <span className="text-[0.667rem]">✓</span>}
         </span>
       </button>
       <div className="flex-1 min-w-0">
@@ -595,7 +595,7 @@ function TodoCard({
         {menuOpen && (
           <>
             <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} aria-hidden="true" />
-            <div className="absolute right-0 top-8 z-40 w-28 rounded-card border border-gray-200 bg-white py-1 shadow-float dark:border-gray-700 dark:bg-gray-800" role="menu">
+            <div className="absolute right-0 top-8 z-40 w-28 rounded-ctl border border-gray-200 bg-white py-1 shadow-float dark:border-gray-700 dark:bg-gray-800" role="menu">
               <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); onEdit(todo) }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700">
                 <Pencil className="h-3.5 w-3.5" aria-hidden="true" />编辑
               </button>

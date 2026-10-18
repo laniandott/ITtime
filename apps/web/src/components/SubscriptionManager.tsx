@@ -102,20 +102,20 @@ export function SubscriptionManager({ onClose }: { onClose: () => void }) {
                 <span className="w-4 h-4 rounded-full flex-shrink-0" style={{ background: sub.color }} />
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-sm truncate">{sub.name}</div>
-                  <div className="text-[10px] text-gray-400 truncate">{sub.url}</div>
-                  <div className="text-[10px] text-gray-400">最后同步: {formatTimeAgo(sub.lastSyncAt)}</div>
+                  <div className="text-[0.667rem] text-gray-400 truncate">{sub.url}</div>
+                  <div className="text-[0.667rem] text-gray-400">最后同步: {formatTimeAgo(sub.lastSyncAt)}</div>
                 </div>
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     onClick={() => syncSub(sub.id)}
                     disabled={syncing === sub.id}
-                    className="px-2 py-1 text-[10px] rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+                    className="px-2 py-1 text-[0.667rem] rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
                   >
                     {syncing === sub.id ? '同步中…' : '🔄 同步'}
                   </button>
                   <button
                     onClick={() => deleteSub(sub.id, sub.name)}
-                    className="px-2 py-1 text-[10px] rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                    className="px-2 py-1 text-[0.667rem] rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
                   >
                     删除
                   </button>

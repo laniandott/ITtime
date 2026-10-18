@@ -63,8 +63,8 @@ function QuickStartTagButton({ tag, isRunning, onClick }: { tag: Tag; isRunning:
     >
       <span className="h-[5px] w-[5px] shrink-0 rounded-full" style={{ background: tag.color }} aria-hidden="true" />
       <span className="whitespace-nowrap">{tag.icon ? `${tag.icon} ` : ''}{tag.name}</span>
-      {isRunning && <span className="text-[11px] font-semibold text-brand-700 dark:text-brand-300">· 停止</span>}
-      {tag.trackType === 'count' && <span className="text-[11px] text-gray-400" aria-hidden="true">✓</span>}
+      {isRunning && <span className="text-[0.733rem] font-semibold text-brand-700 dark:text-brand-300">· 停止</span>}
+      {tag.trackType === 'count' && <span className="text-[0.733rem] text-gray-400" aria-hidden="true">✓</span>}
     </button>
   )
 }
@@ -456,7 +456,7 @@ export default function TimerPage() {
                     <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
                       {category.name}
                     </span>
-                    <span className="text-[11px] text-gray-400">{ts.length}</span>
+                    <span className="text-[0.733rem] text-gray-400">{ts.length}</span>
                     {sortingQuickStart && <GripVertical className="ml-auto h-4 w-4 cursor-grab text-gray-400 active:cursor-grabbing" aria-label="拖动分类排序" />}
                   </div>
                   <div className="flex flex-wrap gap-1.5">
@@ -486,7 +486,7 @@ export default function TimerPage() {
                 <div className="mb-2 flex items-center gap-2">
                   <span className="h-[6px] w-[6px] shrink-0 rounded-full bg-gray-300 dark:bg-gray-600" />
                   <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">未分类</span>
-                  <span className="text-[11px] text-gray-400">{uncategorized.length}</span>
+                  <span className="text-[0.733rem] text-gray-400">{uncategorized.length}</span>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {uncategorized.map((tag) => (
@@ -949,7 +949,7 @@ function PlanPanel({
         const editing = editingId === plan.id && editDraft
         return <div key={plan.id} className={`rounded-xl border p-3 ${plan.disposition === 'skipped' ? 'border-gray-200 opacity-60 dark:border-gray-800' : 'border-gray-200 dark:border-gray-800'}`}>
           <div className="flex flex-wrap items-start gap-3">
-            <div className="w-24 shrink-0 text-xs font-medium text-gray-500">{timeFromMinute(plan.startMinute)} - {timeFromMinute(plan.endMinute)}<div className="mt-1 text-[11px]">{planStatusLabel[plan.executionStatus ?? 'upcoming'] ?? '待开始'}</div><div className="mt-0.5 text-[10px] text-gray-400">{planDispositionLabel[plan.disposition ?? 'planned']}{plan.confirmed ? ' · 已确认' : ''}</div></div>
+            <div className="w-24 shrink-0 text-xs font-medium text-gray-500">{timeFromMinute(plan.startMinute)} - {timeFromMinute(plan.endMinute)}<div className="mt-1 text-[0.733rem]">{planStatusLabel[plan.executionStatus ?? 'upcoming'] ?? '待开始'}</div><div className="mt-0.5 text-[0.667rem] text-gray-400">{planDispositionLabel[plan.disposition ?? 'planned']}{plan.confirmed ? ' · 已确认' : ''}</div></div>
             <div className="min-w-0 flex-1"><div className="whitespace-pre-wrap text-sm text-gray-900 dark:text-gray-100">{plan.content}</div><div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500"><select value={selectedTagId} onChange={(event) => void perform(plan, () => api.plans.update(plan.id, { tagId: event.target.value || null }))} className="input !w-auto !py-0.5 text-xs"><option value="">选择标签</option>{tags.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>{tag && <span>{tag.trackType === 'count' ? '次数型' : '时长型'}</span>}{plan.actualMs != null && <span>已记录 {formatDuration(plan.actualMs)}</span>}{plan.coverageRate != null && <span>覆盖 {Math.round(plan.coverageRate * 100)}%</span>}</div></div>
             <div className="flex shrink-0 flex-wrap justify-end gap-1.5">{plan.disposition !== 'skipped' && (selectedTagId ? <button type="button" disabled={actionId === plan.id || tag?.trackType === 'count'} onClick={() => tag?.trackType === 'time' && void perform(plan, () => onStart(plan, selectedTagId))} className="btn-primary px-2.5 py-1 text-xs">{tag?.trackType === 'count' ? '次数标签不可启动' : '开始'}</button> : startingPlanId === plan.id ? <select autoFocus aria-label="选择计划计时标签" defaultValue="" onChange={(event) => { const id = event.target.value; if (id) { setStartingPlanId(null); void perform(plan, () => onStart(plan, id)) } }} className="input !w-auto !py-1 text-xs"><option value="" disabled>选择时长型标签</option>{tags.filter((item) => item.trackType === 'time').map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select> : <button type="button" disabled={actionId === plan.id || !tags.some((item) => item.trackType === 'time')} onClick={() => setStartingPlanId(plan.id)} className="btn-primary px-2.5 py-1 text-xs">开始</button>)}{plan.disposition === 'skipped' ? <button type="button" disabled={actionId === plan.id} onClick={() => void perform(plan, () => api.plans.unskip(plan.id))} className="btn-secondary px-2.5 py-1 text-xs">恢复</button> : <button type="button" disabled={actionId === plan.id} onClick={() => void perform(plan, () => api.plans.skip(plan.id))} className="btn-secondary px-2.5 py-1 text-xs">跳过</button>}<button type="button" disabled={actionId === plan.id} onClick={() => void perform(plan, () => api.plans.confirm(plan.id))} className="btn-secondary px-2.5 py-1 text-xs">确认</button>{plan.disposition !== 'deferred' && <button type="button" disabled={actionId === plan.id} onClick={() => void deferPlan(plan)} className="btn-secondary px-2.5 py-1 text-xs">推迟</button>}<button type="button" onClick={() => beginEdit(plan)} className="btn-secondary px-2.5 py-1 text-xs">编辑</button><button type="button" disabled={actionId === plan.id} onClick={() => { if (window.confirm('删除这项计划？')) void perform(plan, () => api.plans.remove(plan.id)) }} className="btn-secondary px-2.5 py-1 text-xs text-red-500">删除</button></div>
           </div>
@@ -1202,7 +1202,7 @@ function RunningTimer({ entry, stopping, todos, onStop, onTodoChange, onTerminat
           正在计时
         </span>
         {entry.tag?.category && (
-          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">
+          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[0.667rem] font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">
             {entry.tag.category.icon ? `${entry.tag.category.icon} ` : ''}
             {entry.tag.category.name}
           </span>
@@ -1214,16 +1214,16 @@ function RunningTimer({ entry, stopping, todos, onStop, onTodoChange, onTerminat
       <div className="clock-hero my-1.5 font-mono text-4xl font-semibold tabular-nums tracking-tight text-gray-900 sm:text-5xl">
         {formatClock(elapsed)}
       </div>
-      <div className="text-[10px] text-gray-400 mb-2">
+      <div className="text-[0.667rem] text-gray-400 mb-2">
         开始于 {formatTimeWithSeconds(entry.startTime)}
       </div>
       <div className="flex items-center justify-center gap-2 mb-2">
-        <span className="text-[10px] text-gray-500 dark:text-gray-400">待办</span>
+        <span className="text-[0.667rem] text-gray-500 dark:text-gray-400">待办</span>
         <select
           value={entry.todoId ?? ''}
           disabled={todoSaving}
           onChange={(e) => void changeTodo(e.target.value)}
-          className="max-w-[min(22rem,80vw)] input !w-auto !py-1 text-[11px]"
+          className="max-w-[min(22rem,80vw)] input !w-auto !py-1 text-[0.733rem]"
         >
           <option value="">不关联待办</option>
           {todos.map((todo) => <option key={todo.id} value={todo.id}>{todo.title}</option>)}
@@ -1321,7 +1321,7 @@ function TimelineEntryItem({
         style={{ background: entry.tag?.color ?? '#0f766e' }}
       >
         {entry.tag?.icon ? (
-          <span className="text-[11px] leading-none">{entry.tag.icon}</span>
+          <span className="text-[0.733rem] leading-none">{entry.tag.icon}</span>
         ) : (
           <span className="w-1.5 h-1.5 rounded-full bg-white" />
         )}
@@ -1437,7 +1437,7 @@ function TimelineEntryItem({
           <div className="mt-3 rounded-xl border border-blue-100 dark:border-blue-900/50 bg-blue-50/40 dark:bg-blue-900/10 p-3 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-1">
-                <span className="text-[10px]">▼</span> 📍 点记录 ({pointMemos.length}条)
+                <span className="text-[0.667rem]">▼</span> 📍 点记录 ({pointMemos.length}条)
               </span>
               <button
                 onClick={() => onAddPoint(entry)}
@@ -1471,7 +1471,7 @@ function TimelineEntryItem({
           <div className="mt-3 rounded-xl border border-green-100 dark:border-green-900/50 bg-green-50/40 dark:bg-green-900/10 p-3 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-green-600 dark:text-green-400 flex items-center gap-1">
-                <span className="text-[10px]">▼</span> 📝 关联日记 ({diaryMemos.length}篇)
+                <span className="text-[0.667rem]">▼</span> 📝 关联日记 ({diaryMemos.length}篇)
               </span>
               <button
                 onClick={() => onAddMemo(entry)}
@@ -1590,7 +1590,7 @@ function MemoInlineItem({
                 className="w-12 h-12 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 bg-black flex items-center justify-center flex-shrink-0 relative"
               >
                 <span className="text-lg">🎬</span>
-                <span className="absolute bottom-0 inset-x-0 bg-black/60 text-[9px] text-white text-center">播放</span>
+                <span className="absolute bottom-0 inset-x-0 bg-black/60 text-[0.6rem] text-white text-center">播放</span>
               </button>
             ) : null
           )}
@@ -2031,7 +2031,7 @@ export function MemoCreateModal({
                 ) : (
                   <div className="text-center p-1">
                     <span className="text-lg">🎬</span>
-                    <div className="text-[10px] truncate max-w-[80px]">{att.filename}</div>
+                    <div className="text-[0.667rem] truncate max-w-[80px]">{att.filename}</div>
                   </div>
                 )}
                 <button
@@ -2169,7 +2169,7 @@ export function MemoEditModal({
                 ) : (
                   <div className="text-center p-1">
                     <span className="text-lg">🎬</span>
-                    <div className="text-[10px] truncate max-w-[80px]">{att.filename}</div>
+                    <div className="text-[0.667rem] truncate max-w-[80px]">{att.filename}</div>
                   </div>
                 )}
                 <button

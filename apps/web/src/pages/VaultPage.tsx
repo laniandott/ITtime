@@ -419,7 +419,7 @@ export default function VaultPage() {
                   <button type="button" onClick={() => void loadVault()} className="text-xs text-gray-400 hover:text-brand" title="刷新">↻</button>
                 </div>
               </div>
-              <div className="mb-2 truncate text-[10px] text-gray-400" title={vaultPath}>{vaultPath || '正在读取文件库…'}</div>
+              <div className="mb-2 truncate text-[0.667rem] text-gray-400" title={vaultPath}>{vaultPath || '正在读取文件库…'}</div>
               <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索笔记" className="input !py-1.5 !text-xs" />
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto p-2">
@@ -491,7 +491,7 @@ export default function VaultPage() {
           <p className="mb-2 text-xs text-gray-500 dark:text-gray-400">填写 ITtime 与 Obsidian 共同使用的本机 Vault 文件夹路径，例如 <code>F:/Obsidian/MyVault</code>。</p>
           {vaultSource === 'environment' && <p className="mb-2 rounded-md bg-amber-50 px-2 py-1.5 text-xs text-amber-700 dark:bg-amber-900/20 dark:text-amber-200">当前路径由 NOTES_DIR 启动配置固定，请修改启动配置后重启服务。</p>}
           <input value={vaultPathDraft} onChange={(event) => setVaultPathDraft(event.target.value)} disabled={vaultSource === 'environment'} className="input w-full font-mono text-xs disabled:cursor-not-allowed disabled:opacity-60" placeholder="F:/Obsidian/MyVault" autoFocus />
-          <p className="mt-2 text-[11px] text-gray-400">只会重新建立索引，不会复制、移动或删除 Markdown 文件。</p>
+          <p className="mt-2 text-[0.733rem] text-gray-400">只会重新建立索引，不会复制、移动或删除 Markdown 文件。</p>
           <div className="mt-4 flex justify-end gap-2">
             <button type="button" onClick={() => setVaultSettingsOpen(false)} className="rounded-md border border-gray-200 px-3 py-1.5 text-xs text-gray-600 dark:border-gray-700 dark:text-gray-300">取消</button>
             <button type="button" onClick={() => void switchVault()} disabled={vaultBusy || vaultSource === 'environment' || !vaultPathDraft.trim()} className="rounded-md bg-brand px-3 py-1.5 text-xs text-white disabled:opacity-40">{vaultBusy ? '切换中…' : '保存并切换'}</button>
@@ -537,9 +537,9 @@ function VaultTreeNode({
               <button type="button" onClick={() => onSelectFolder(child.path)} className="flex h-8 min-w-0 flex-1 items-center gap-1.5 text-left hover:text-brand" title={child.path}>
                 <span className="text-xs">{expanded ? '📂' : '📁'}</span>
                 <span className="truncate">{child.name}</span>
-                {count > 0 && <span className="ml-auto pr-2 text-[10px] text-gray-400">{count}</span>}
+                {count > 0 && <span className="ml-auto pr-2 text-[0.667rem] text-gray-400">{count}</span>}
               </button>
-              <button type="button" onClick={(event) => { event.stopPropagation(); onDeleteFolder(child.path) }} className={`mr-1 rounded px-1 text-[11px] text-gray-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20 ${selectedFolder === child.path ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`} title="删除空文件夹" aria-label={`删除文件夹 ${child.name}`}>×</button>
+              <button type="button" onClick={(event) => { event.stopPropagation(); onDeleteFolder(child.path) }} className={`mr-1 rounded px-1 text-[0.733rem] text-gray-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/20 ${selectedFolder === child.path ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus-within:opacity-100'}`} title="删除空文件夹" aria-label={`删除文件夹 ${child.name}`}>×</button>
             </div>
             {expanded && <div className="ml-3 border-l border-gray-100 pl-1 dark:border-gray-800"><VaultTreeNode node={child} expandedFolders={expandedFolders} selectedFolder={selectedFolder} onToggle={onToggle} onSelectFolder={onSelectFolder} onOpenNote={onOpenNote} onDeleteFolder={onDeleteFolder} /></div>}
           </div>
@@ -625,7 +625,7 @@ function VaultEditor({
         <div className="flex items-center gap-2">
           <input value={title} onChange={(event) => onTitleChange(event.target.value)} onBlur={onTitleBlur} className={`min-w-0 flex-1 bg-transparent font-bold text-gray-900 transition-[font-size] duration-150 focus:outline-none dark:text-gray-50 ${compactHeader ? 'text-sm' : 'text-lg'}`} aria-label="笔记标题" />
           <span className={`shrink-0 text-xs ${dirty ? 'text-amber-500' : 'text-gray-400'}`}>{dirty ? '● 未保存' : '已保存'}</span>
-          <button type="button" onClick={onDelete} className={`rounded-md border border-red-200 text-red-500 hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-900/20 ${compactHeader ? 'px-1.5 py-0.5 text-[11px]' : 'px-2 py-1 text-xs'}`}>删除</button>
+          <button type="button" onClick={onDelete} className={`rounded-md border border-red-200 text-red-500 hover:bg-red-50 dark:border-red-900 dark:hover:bg-red-900/20 ${compactHeader ? 'px-1.5 py-0.5 text-[0.733rem]' : 'px-2 py-1 text-xs'}`}>删除</button>
           <button type="button" onClick={onSave} disabled={!dirty || saving} className={`rounded-md bg-brand text-white disabled:opacity-40 ${compactHeader ? 'px-2 py-0.5 text-xs' : 'px-3 py-1 text-sm'}`}>{saving ? '保存中…' : '保存'}</button>
         </div>
         <div className={`flex flex-wrap items-center justify-between gap-2 text-xs text-gray-400 ${compactHeader ? 'mt-0.5' : 'mt-1'}`}>
@@ -637,7 +637,7 @@ function VaultEditor({
             <span className="truncate">{note.path} · rev {note.revision}</span>
           </div>
           <div className="flex gap-1" role="group" aria-label="笔记视图">
-            {(['live', 'edit', 'split', 'preview'] as const).map((value) => <button key={value} type="button" onClick={() => onModeChange(value)} className={`rounded-md px-2 py-1 text-[11px] ${mode === value ? 'bg-brand text-white' : 'bg-gray-100 text-gray-500 dark:bg-gray-800'}`}>{value === 'live' ? '实时' : value === 'edit' ? '源码' : value === 'split' ? '分屏' : '阅读'}</button>)}
+            {(['live', 'edit', 'split', 'preview'] as const).map((value) => <button key={value} type="button" onClick={() => onModeChange(value)} className={`rounded-md px-2 py-1 text-[0.733rem] ${mode === value ? 'bg-brand text-white' : 'bg-gray-100 text-gray-500 dark:bg-gray-800'}`}>{value === 'live' ? '实时' : value === 'edit' ? '源码' : value === 'split' ? '分屏' : '阅读'}</button>)}
           </div>
         </div>
       </div>

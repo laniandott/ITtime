@@ -5,9 +5,19 @@ export default {
   theme: {
     extend: {
       borderRadius: {
-        // 语义圆角：卡片 12 / 控件 8 / 胶囊 999，取值与 :root 变量保持一致
-        card: 'var(--radius-card)',
+        // 语义圆角五档（TOKENS_PLAN §4.1），取值与 :root 变量保持一致：
+        // xs 微型（圆点/指示条/复选框）/ ctl 控件（按钮/输入/tab/下拉）/
+        // card 卡片 / panel 面板（page-card/modal/抽屉）/ hero 英雄容器。
+        // 胶囊仍用 Tailwind 内置 rounded-full。
+        // ⚠ 命名铁律：禁止占用 Tailwind 内置档位名（sm/md/lg/xl/2xl/3xl）。
+        //   theme.extend 是合并语义——一旦定义 xl，内置 rounded-xl 会被
+        //   静默覆盖成自定义值，全站现有 rounded-xl 用法（68 处，内置 16px）
+        //   集体变形且不报错。新档位一律用无冲突的自造名。
+        xs: 'var(--radius-xs)',
         ctl: 'var(--radius-ctl)',
+        card: 'var(--radius-card)',
+        panel: 'var(--radius-panel)',
+        hero: 'var(--radius-xl)',
       },
       boxShadow: {
         card: 'var(--shadow-card)',

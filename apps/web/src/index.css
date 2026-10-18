@@ -200,13 +200,19 @@ html.dark {
 
 :root {
   /* ── 设计 token（唯一真相）────────────────────────────
-     圆角只保留两档语义：卡片 12px / 控件 8px（胶囊用 rounded-full）。
-     阴影只保留两档：卡片静态 / 浮层。tailwind.config 里的
-     rounded-card / rounded-ctl / shadow-card / shadow-float 都引用这里的变量。 */
-  --radius-card: 12px;
+     圆角五档（TOKENS_PLAN §4.1）：xs 微型 / ctl 控件 / card 卡片 /
+     panel 面板 / xl 英雄容器。card 与 ctl 是原有值，零视觉回归；
+     panel 给 index.css 里写死的 18px 一个名字可引。
+     阴影四档：card 静态 / panel 抬起一层 / float 浮层 / modal 模态。 */
+  --radius-xs: 4px;
   --radius-ctl: 8px;
+  --radius-card: 12px;
+  --radius-panel: 18px;
+  --radius-xl: 24px;
   --shadow-card: 0 1px 2px rgb(15 23 42 / .05), 0 1px 3px rgb(15 23 42 / .04);
+  --shadow-panel: 0 2px 6px rgb(15 23 42 / .06), 0 10px 28px -12px rgb(15 23 42 / .12);
   --shadow-float: 0 12px 34px rgb(15 23 42 / .08);
+  --shadow-modal: 0 24px 64px rgb(15 23 42 / .18);
 
   font-family: -apple-system, "Segoe UI", "Noto Sans CJK SC", "Microsoft YaHei", "PingFang SC", sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -216,6 +222,12 @@ html.dark {
 
 html.dark {
   color-scheme: dark;
+  /* 暗色阴影分流（TOKENS_PLAN §4.2）：纯黑阴影在暗底上几乎不可见，
+     统一加深提透明度才能撑出层次。 */
+  --shadow-card: 0 1px 2px rgb(0 0 0 / .30);
+  --shadow-panel: 0 2px 8px rgb(0 0 0 / .34), 0 12px 32px -14px rgb(0 0 0 / .50);
+  --shadow-float: 0 12px 34px rgb(0 0 0 / .44);
+  --shadow-modal: 0 24px 64px rgb(0 0 0 / .58);
 }
 
 body {
@@ -375,7 +387,7 @@ button:disabled {
   background: rgb(var(--d-500-rgb) / .24);
 }
 
-.stats-overview { display: grid; gap: 8px; padding: 20px 22px; border: 1px solid rgb(203 213 225 / .8); border-left: 3px solid var(--d); border-radius: 8px; background: #fff; box-shadow: none; }
+.stats-overview { display: grid; gap: 8px; padding: 20px 22px; border: 1px solid rgb(203 213 225 / .8); border-left: 3px solid var(--d); border-radius: var(--radius-ctl); background: #fff; box-shadow: none; }
 .stats-overview span, .stats-overview small { color: #62756f; font-size: 12px; }
 .stats-overview strong { color: var(--d-fg); font-size: 28px; font-variant-numeric: tabular-nums; }
 /* 暗色不再单独覆盖 border-left-color / strong 颜色：--d 与 --d-fg 本身随 html.dark 分流 */
@@ -443,7 +455,9 @@ button:disabled {
 
 .surface-card:hover {
   @apply border-gray-300 dark:border-gray-700;
-  box-shadow: var(--shadow-float);
+  /* 玻璃表面用 --shadow-panel 而非 --shadow-float：玻璃已有 backdrop-filter
+     提供层次，叠 12px/34px 的重浮层阴影会显脏（TOKENS_PLAN §4.2）。 */
+  box-shadow: var(--shadow-panel);
 }
 
 .skeleton {
@@ -860,7 +874,7 @@ body.fullscreen-clock-active header {
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
 }
-.page-card, .surface-card { border-radius: 18px }
+.page-card, .surface-card { border-radius: var(--radius-panel) }
 
 .calendar-month-shell > * {
   background: var(--glass-bg);
@@ -929,7 +943,7 @@ body.fullscreen-clock-active header {
   background: linear-gradient(150deg, rgb(var(--d-500-rgb) / .12), rgb(var(--d-400-rgb) / .05) 55%, var(--glass-bg));
   border-color: rgb(var(--d-500-rgb) / .28);
   border-left: 3px solid var(--aurora-teal);
-  border-radius: 18px;
+  border-radius: var(--radius-panel);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
 }

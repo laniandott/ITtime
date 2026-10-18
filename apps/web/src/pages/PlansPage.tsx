@@ -156,13 +156,13 @@ export default function PlansPage({ embedded = false }: { embedded?: boolean } =
         <div className="plan-scroll max-h-[calc(100vh-250px)] min-h-[420px] overflow-y-auto" ref={timelineRef}>
           <div className="relative grid min-h-[1440px] grid-cols-[3rem_minmax(0,1fr)_minmax(0,1fr)] sm:grid-cols-[4rem_minmax(0,1fr)_minmax(0,1fr)]" style={{ height: DAY_MINUTES * (HOUR_HEIGHT / 60) }}>
             <div className="relative sticky left-0 z-10 border-r border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900" aria-hidden="true">
-              {Array.from({ length: 25 }, (_, hour) => <div key={hour} className="absolute right-0 w-full pr-1 text-right text-[9px] tabular-nums text-gray-400 sm:pr-2 sm:text-[10px]" style={{ top: hour * HOUR_HEIGHT, transform: hour === 0 ? 'none' : 'translateY(-50%)' }}>{hour === 24 ? '24:00' : `${String(hour).padStart(2, '0')}:00`}</div>)}
+              {Array.from({ length: 25 }, (_, hour) => <div key={hour} className="absolute right-0 w-full pr-1 text-right text-[0.6rem] tabular-nums text-gray-400 sm:pr-2 sm:text-[0.667rem]" style={{ top: hour * HOUR_HEIGHT, transform: hour === 0 ? 'none' : 'translateY(-50%)' }}>{hour === 24 ? '24:00' : `${String(hour).padStart(2, '0')}:00`}</div>)}
             </div>
             <div className="relative min-w-0 border-r border-gray-200 dark:border-gray-800" onClick={addFromTimeline}>
               <TimelineGrid />
               {selectedDate === today && <CurrentTimeLine now={now} />}
               {sortedPlans.map((plan) => <PlanTimelineBlock key={plan.id} plan={plan} layout={planLayouts.get(plan.id)!} onClick={() => { setDraftStart(plan.startMinute); setEditing(plan) }} />)}
-              {loading && <div className="absolute inset-x-1 top-4 rounded bg-white/90 py-2 text-center text-[10px] text-gray-500 dark:bg-gray-900/90 sm:inset-x-4 sm:text-xs">正在加载…</div>}
+              {loading && <div className="absolute inset-x-1 top-4 rounded bg-white/90 py-2 text-center text-[0.667rem] text-gray-500 dark:bg-gray-900/90 sm:inset-x-4 sm:text-xs">正在加载…</div>}
               {!loading && sortedPlans.length === 0 && <div className="pointer-events-none absolute inset-x-4 top-1/2 -translate-y-1/2 text-center text-xs text-gray-400">双击空白处写计划</div>}
             </div>
             <div className="relative min-w-0" onClick={addActualFromTimeline}>
@@ -170,11 +170,11 @@ export default function PlansPage({ embedded = false }: { embedded?: boolean } =
               {selectedDate === today && <CurrentTimeLine now={now} />}
               {actualBlocks.map((item) => <ActualTimelineBlock key={item.entry.id} item={item} onClick={() => setSelectedEntry(item.entry)} />)}
               {!loading && actualBlocks.length === 0 && <div className="pointer-events-none absolute inset-x-4 top-1/2 -translate-y-1/2 text-center text-xs text-gray-400">当天暂无打卡记录</div>}
-              {loading && <div className="absolute inset-x-1 top-4 rounded bg-white/90 py-2 text-center text-[10px] text-gray-500 dark:bg-gray-900/90 sm:inset-x-4 sm:text-xs">正在加载…</div>}
+              {loading && <div className="absolute inset-x-1 top-4 rounded bg-white/90 py-2 text-center text-[0.667rem] text-gray-500 dark:bg-gray-900/90 sm:inset-x-4 sm:text-xs">正在加载…</div>}
             </div>
           </div>
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-1 border-t border-gray-200 px-3 py-2 text-[11px] text-gray-500 dark:border-gray-800"><span>计划列空白处新建计划 · 实际列空白处补录时长</span><span>两列共用分钟刻度</span></div>
+        <div className="flex flex-wrap items-center justify-between gap-1 border-t border-gray-200 px-3 py-2 text-[0.733rem] text-gray-500 dark:border-gray-800"><span>计划列空白处新建计划 · 实际列空白处补录时长</span><span>两列共用分钟刻度</span></div>
       </section>
 
       {editing !== undefined && <PlanNoteEditor date={selectedDate} plan={editing ?? undefined} startMinute={draftStart} tags={tags} categories={categories} todos={todos} onClose={() => setEditing(undefined)} onSaved={async () => { setEditing(undefined); await load() }} />}
@@ -263,7 +263,7 @@ function ActualTimelineBlock({ item, onClick }: { item: ActualLayoutItem; onClic
   const startLabel = minuteText(Math.floor(item.startMinute))
   const endLabel = minuteText(Math.min(DAY_MINUTES, Math.ceil(item.endMinute)))
   const status = entry.dismissed ? '已忽略' : entry.pendingResume ? '待续接' : !entry.endTime ? '进行中' : item.point ? '次数打卡' : '已结束'
-  return <button type="button" data-actual-block onClick={(event) => { event.stopPropagation(); onClick() }} title={`${startLabel}${item.point ? '' : `–${endLabel}`} ${entry.tag?.name ?? '打卡'}${entry.note ? ` · ${entry.note}` : ''} · ${status}，点击查看`} aria-label={`${entry.tag?.name ?? '打卡'}，${startLabel}${item.point ? '' : `至 ${endLabel}`}，${status}，点击查看详情`} className={`absolute z-[2] overflow-hidden rounded-r border-l-[3px] px-1 py-0.5 text-left text-[9px] leading-3 hover:z-10 hover:shadow-md focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 sm:px-1.5 sm:text-[10px] ${entry.dismissed ? 'opacity-45' : ''}`} style={{ top: item.startMinute, height, left: `calc(${(item.col / item.cols) * 100}% + 2px)`, width: `calc(${100 / item.cols}% - 4px)`, borderColor: color, backgroundColor: `${color}20`, color }}>
+  return <button type="button" data-actual-block onClick={(event) => { event.stopPropagation(); onClick() }} title={`${startLabel}${item.point ? '' : `–${endLabel}`} ${entry.tag?.name ?? '打卡'}${entry.note ? ` · ${entry.note}` : ''} · ${status}，点击查看`} aria-label={`${entry.tag?.name ?? '打卡'}，${startLabel}${item.point ? '' : `至 ${endLabel}`}，${status}，点击查看详情`} className={`absolute z-[2] overflow-hidden rounded-r border-l-[3px] px-1 py-0.5 text-left text-[0.6rem] leading-3 hover:z-10 hover:shadow-md focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 sm:px-1.5 sm:text-[0.667rem] ${entry.dismissed ? 'opacity-45' : ''}`} style={{ top: item.startMinute, height, left: `calc(${(item.col / item.cols) * 100}% + 2px)`, width: `calc(${100 / item.cols}% - 4px)`, borderColor: color, backgroundColor: `${color}20`, color }}>
     <div className="truncate font-semibold tabular-nums">{startLabel}{!item.point && `–${endLabel}`}</div>
     {height >= 20 && <div className="truncate font-medium">{entry.tag?.name ?? '打卡'} · {status}</div>}
     {height >= 36 && entry.note && <div className="truncate text-gray-600 dark:text-gray-300">{entry.note}</div>}
@@ -400,14 +400,14 @@ function PlanTimelineBlock({ plan, layout, onClick }: { plan: PlanBlock; layout:
     <button type="button" data-plan-block onClick={(event) => { event.stopPropagation(); onClick() }} title={`${minuteText(top)}-${minuteText(top + height)} ${plan.content} · ${formatDuration(plan.actualMs ?? 0)} 实际 / ${Math.round(coverage * 100)}% 覆盖 · ${status}${plan.overlaps ? ' · 并行安排' : ''}`} aria-label={`${minuteText(top)} 到 ${minuteText(top + height)}，${plan.content}${plan.overlaps ? '，并行安排' : ''}`} className={`absolute z-[2] overflow-hidden rounded-r border-l-[3px] px-1.5 py-1 text-left text-gray-800 transition-shadow hover:z-10 hover:shadow-md dark:text-gray-100 sm:px-2 ${plan.disposition === 'skipped' ? 'opacity-55' : ''}`} style={{ top, height: Math.max(height, 12), left: `calc(6px + (100% - 12px) * ${layout.lane} / ${layout.lanes})`, width: `calc((100% - 12px) / ${layout.lanes})`, borderColor: color, backgroundColor: `${color}14` }}>
       <div className="flex h-full min-w-0 flex-col gap-0.5">
         <div className="flex min-w-0 items-center gap-1.5">
-          <span className="shrink-0 text-[10px] font-semibold tabular-nums sm:text-[11px]">{minuteText(top)}{height >= 30 && `–${minuteText(top + height)}`}</span>
-          {showStatus && <span className={`truncate text-[10px] font-medium ${plan.executionStatus === 'done' || plan.confirmed ? 'text-green-700 dark:text-green-400' : plan.executionStatus === 'missed' ? 'text-red-700 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>{status}</span>}
-          {plan.overlaps && <span className="ml-auto shrink-0 text-[10px] font-semibold text-red-700 dark:text-red-400">并行</span>}
+          <span className="shrink-0 text-[0.667rem] font-semibold tabular-nums sm:text-[0.733rem]">{minuteText(top)}{height >= 30 && `–${minuteText(top + height)}`}</span>
+          {showStatus && <span className={`truncate text-[0.667rem] font-medium ${plan.executionStatus === 'done' || plan.confirmed ? 'text-green-700 dark:text-green-400' : plan.executionStatus === 'missed' ? 'text-red-700 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>{status}</span>}
+          {plan.overlaps && <span className="ml-auto shrink-0 text-[0.667rem] font-semibold text-red-700 dark:text-red-400">并行</span>}
         </div>
-        <span className="min-h-0 min-w-0 flex-1 whitespace-pre-wrap break-words text-[11px] leading-4 sm:text-xs">{plan.content}</span>
+        <span className="min-h-0 min-w-0 flex-1 whitespace-pre-wrap break-words text-[0.733rem] leading-4 sm:text-xs">{plan.content}</span>
         {showCoverage && <div className="mt-auto flex items-center gap-1.5">
           <div className="h-1 min-w-0 flex-1 overflow-hidden rounded-full bg-black/10 dark:bg-white/10"><div className="h-full rounded-full" style={{ width: `${coverage * 100}%`, backgroundColor: color }} /></div>
-          <span className="shrink-0 text-[10px] tabular-nums text-gray-500 dark:text-gray-400">{formatDuration(plan.actualMs ?? 0)} · {Math.round(coverage * 100)}%</span>
+          <span className="shrink-0 text-[0.667rem] tabular-nums text-gray-500 dark:text-gray-400">{formatDuration(plan.actualMs ?? 0)} · {Math.round(coverage * 100)}%</span>
         </div>}
       </div>
     </button>

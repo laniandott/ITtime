@@ -346,7 +346,7 @@ export default function NotesGraphPage() {
         </div>
 
         {data?.truncated && (
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-[11px] px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500">
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 text-[0.733rem] px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500">
             节点过多已截断
           </div>
         )}

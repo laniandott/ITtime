@@ -224,7 +224,7 @@ export default function DiaryPanel() {
                               playsInline
                               className="w-full max-h-64 object-contain"
                             />
-                            <div className="text-[10px] text-gray-400 px-2 py-1 bg-gray-900 truncate">
+                            <div className="text-[0.667rem] text-gray-400 px-2 py-1 bg-gray-900 truncate">
                               🎬 {video.filename}
                             </div>
                           </div>

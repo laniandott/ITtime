@@ -557,7 +557,7 @@ export default function CalendarPage() {
               <div className="absolute right-0 top-full mt-2 z-30 w-60 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-3 shadow-xl">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-semibold text-gray-600 dark:text-gray-200">显示分类</span>
-                  <button onClick={() => setSelectedCategoryKeys(null)} className="text-[10px] text-brand hover:underline">全部</button>
+                  <button onClick={() => setSelectedCategoryKeys(null)} className="text-[0.667rem] text-brand hover:underline">全部</button>
                 </div>
                 <div className="space-y-1 max-h-52 overflow-y-auto">
                   {categories.map((category) => {
@@ -595,8 +595,8 @@ export default function CalendarPage() {
                   </label>
                 </div>
                 <div className="flex justify-between mt-2 pt-2 border-t border-gray-100 dark:border-gray-800">
-                  <button onClick={() => setSelectedCategoryKeys(new Set())} className="text-[10px] text-gray-400 hover:text-red-500">全部取消</button>
-                  <button onClick={() => setShowFilter(false)} className="text-[10px] text-brand hover:underline">完成</button>
+                  <button onClick={() => setSelectedCategoryKeys(new Set())} className="text-[0.667rem] text-gray-400 hover:text-red-500">全部取消</button>
+                  <button onClick={() => setShowFilter(false)} className="text-[0.667rem] text-brand hover:underline">完成</button>
                 </div>
               </div>
             )}
@@ -634,7 +634,7 @@ export default function CalendarPage() {
       </div>
 
       {view === 'month' && (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-400" aria-label="月视图图例">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.733rem] text-gray-400" aria-label="月视图图例">
           <span className="font-medium text-gray-500 dark:text-gray-300">月视图</span>
           <span className="inline-flex items-center gap-1"><i className="h-2 w-2 rounded-full bg-brand" />计时记录</span>
           <span className="inline-flex items-center gap-1"><i className="h-2 w-2 rounded border border-dashed border-slate-500" />计划</span>
@@ -861,12 +861,12 @@ function DayView({ date, entries, activities, plans, dayMemos, externalEvents, n
       {/* 笔记回显：挂靠到本日期的 [[date:...]] 笔记 */}
       {linkedNotes.length > 0 && (
         <div className="flex items-center flex-wrap gap-1 px-2 py-1 border-b border-gray-200 dark:border-gray-800">
-          <span className="text-[10px] font-semibold text-gray-400 mr-1">📝 关联笔记</span>
+          <span className="text-[0.667rem] font-semibold text-gray-400 mr-1">📝 关联笔记</span>
           {linkedNotes.map((n) => (
             <button
               key={n.id}
               onClick={() => onOpenNote?.(n.id)}
-              className="text-[11px] text-brand hover:underline bg-brand/5 rounded px-1.5 py-0.5 truncate max-w-[180px]"
+              className="text-[0.733rem] text-brand hover:underline bg-brand/5 rounded px-1.5 py-0.5 truncate max-w-[180px]"
               title={n.title}
             >
               {n.title}
@@ -880,7 +880,7 @@ function DayView({ date, entries, activities, plans, dayMemos, externalEvents, n
           {dayActivities.map((todo) => (
             <div
               key={todo.id}
-              className={`text-[10px] font-semibold rounded px-2 py-0.5 border ${todo.status === 'done' ? 'line-through opacity-60' : ''}`}
+              className={`text-[0.667rem] font-semibold rounded px-2 py-0.5 border ${todo.status === 'done' ? 'line-through opacity-60' : ''}`}
               style={{ color: todo.tag?.color ?? todo.category?.color ?? '#0f766e', borderColor: todo.tag?.color ?? todo.category?.color ?? '#0f766e', backgroundColor: `${todo.tag?.color ?? todo.category?.color ?? '#0f766e'}12` }}
               title={todo.lateReason ?? undefined}
             >
@@ -891,7 +891,7 @@ function DayView({ date, entries, activities, plans, dayMemos, externalEvents, n
             <button
               key={entry.id}
               onClick={() => onEntryClick(entry)}
-              className="text-[10px] font-semibold rounded px-2 py-0.5 border border-dashed"
+              className="text-[0.667rem] font-semibold rounded px-2 py-0.5 border border-dashed"
               style={{ color: entry.tag?.color ?? '#0f766e', borderColor: entry.tag?.color ?? '#0f766e', backgroundColor: `${entry.tag?.color ?? '#0f766e'}12` }}
             >
               ● {entry.tag?.name}
@@ -900,7 +900,7 @@ function DayView({ date, entries, activities, plans, dayMemos, externalEvents, n
           {uniqueTopExternal.map((event) => {
             const color = event.subscription?.color ?? '#2ecc71'
             return (
-              <div key={event.id} className="text-[10px] font-semibold text-white rounded px-2 py-0.5" style={{ backgroundColor: color }} title={event.summary}>
+              <div key={event.id} className="text-[0.667rem] font-semibold text-white rounded px-2 py-0.5" style={{ backgroundColor: color }} title={event.summary}>
                 {formatExternalEventLabel(event)}
               </div>
             )
@@ -922,7 +922,7 @@ function DayView({ date, entries, activities, plans, dayMemos, externalEvents, n
           ))}
         </div>
         <div className="relative border-l border-gray-200 dark:border-gray-800" style={{ height: 24 * HOUR_HEIGHT_DAY }} onDoubleClick={handleTimelineDoubleClick}>
-          <div className="sticky top-0 z-30 border-b border-gray-200 bg-white/90 px-2 py-1 text-[10px] font-semibold text-gray-500 backdrop-blur dark:border-gray-800 dark:bg-gray-900/90">实际打卡</div>
+          <div className="sticky top-0 z-30 border-b border-gray-200 bg-white/90 px-2 py-1 text-[0.667rem] font-semibold text-gray-500 backdrop-blur dark:border-gray-800 dark:bg-gray-900/90">实际打卡</div>
           {/* 水平网格线 */}
           {Array.from({ length: 24 }, (_, h) => (
             <div key={h} className="border-t border-gray-100 dark:border-gray-800" style={{ height: HOUR_HEIGHT_DAY }} />
@@ -955,7 +955,7 @@ function DayView({ date, entries, activities, plans, dayMemos, externalEvents, n
                   {entry.tag?.name}
                 </div>
                 {height > 32 && (
-                  <div className="px-2 text-[10px] text-gray-400 flex items-center gap-1">
+                  <div className="px-2 text-[0.667rem] text-gray-400 flex items-center gap-1">
                     <span>
                       {new Date(entry.startTime).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
                       {' - '}
@@ -967,7 +967,7 @@ function DayView({ date, entries, activities, plans, dayMemos, externalEvents, n
                   </div>
                 )}
                 {height > 50 && entry.note && (
-                  <div className="px-2 text-[10px] text-gray-400 truncate">{entry.note}</div>
+                  <div className="px-2 text-[0.667rem] text-gray-400 truncate">{entry.note}</div>
                 )}
               </button>
             )
@@ -975,7 +975,7 @@ function DayView({ date, entries, activities, plans, dayMemos, externalEvents, n
           {nowTop >= 0 && <div className="pointer-events-none absolute left-0 right-0 z-20" style={{ top: nowTop }}><div className="h-px bg-red-500" /></div>}
         </div>
         <div className="relative border-l border-gray-200 dark:border-gray-800" style={{ height: 24 * HOUR_HEIGHT_DAY }}>
-          <div className="sticky top-0 z-30 border-b border-gray-200 bg-white/90 px-2 py-1 text-[10px] font-semibold text-gray-500 backdrop-blur dark:border-gray-800 dark:bg-gray-900/90">计划</div>
+          <div className="sticky top-0 z-30 border-b border-gray-200 bg-white/90 px-2 py-1 text-[0.667rem] font-semibold text-gray-500 backdrop-blur dark:border-gray-800 dark:bg-gray-900/90">计划</div>
           {Array.from({ length: 24 }, (_, h) => (
             <div key={`plan-grid-${h}`} className="pointer-events-none border-t border-gray-100 dark:border-gray-800" style={{ height: HOUR_HEIGHT_DAY }} />
           ))}
@@ -985,7 +985,7 @@ function DayView({ date, entries, activities, plans, dayMemos, externalEvents, n
             const color = plan.tag?.color ?? '#64748b'
             return (
               <div key={plan.id} className={`absolute left-1 right-1 z-10 overflow-hidden rounded-md border border-dashed px-2 py-1 text-left shadow-sm ${plan.executionStatus === 'done' ? 'opacity-50' : ''}`} style={{ top, height, minHeight: 24, backgroundColor: `${color}16`, borderColor: `${color}99` }} title={plan.content}>
-                <div className="truncate text-[10px] font-medium" style={{ color }}>{String(Math.floor(plan.startMinute / 60)).padStart(2, '0')}:{String(plan.startMinute % 60).padStart(2, '0')} · {plan.content}</div>
+                <div className="truncate text-[0.667rem] font-medium" style={{ color }}>{String(Math.floor(plan.startMinute / 60)).padStart(2, '0')}:{String(plan.startMinute % 60).padStart(2, '0')} · {plan.content}</div>
               </div>
             )
           })}
@@ -1084,7 +1084,7 @@ function WeekView({ days, selectedDate, entries, activities, plans, memosByDay, 
                   {dayActivities.slice(0, 2).map((todo) => (
                     <div
                       key={todo.id}
-                      className={`text-[9px] font-semibold rounded px-1 py-0.5 border truncate ${todo.status === 'done' ? 'line-through opacity-60' : ''}`}
+                      className={`text-[0.6rem] font-semibold rounded px-1 py-0.5 border truncate ${todo.status === 'done' ? 'line-through opacity-60' : ''}`}
                       style={{ color: todo.tag?.color ?? todo.category?.color ?? '#0f766e', borderColor: todo.tag?.color ?? todo.category?.color ?? '#0f766e', backgroundColor: `${todo.tag?.color ?? todo.category?.color ?? '#0f766e'}12` }}
                       title={todo.title}
                     >
@@ -1095,7 +1095,7 @@ function WeekView({ days, selectedDate, entries, activities, plans, memosByDay, 
                     <button
                       key={entry.id}
                       onClick={() => onEntryClick(entry)}
-                      className="w-full text-left text-[9px] font-semibold rounded px-1 py-0.5 border border-dashed truncate"
+                      className="w-full text-left text-[0.6rem] font-semibold rounded px-1 py-0.5 border border-dashed truncate"
                       style={{ color: entry.tag?.color ?? '#0f766e', borderColor: entry.tag?.color ?? '#0f766e', backgroundColor: `${entry.tag?.color ?? '#0f766e'}12` }}
                     >
                       ● {entry.tag?.name}
@@ -1106,7 +1106,7 @@ function WeekView({ days, selectedDate, entries, activities, plans, memosByDay, 
                     return (
                       <div
                         key={ev.id}
-                        className="text-[9px] font-semibold text-white rounded px-1 py-0.5 truncate leading-tight"
+                        className="text-[0.6rem] font-semibold text-white rounded px-1 py-0.5 truncate leading-tight"
                         style={{ backgroundColor: color }}
                         title={ev.summary}
                       >
@@ -1127,7 +1127,7 @@ function WeekView({ days, selectedDate, entries, activities, plans, memosByDay, 
           {Array.from({ length: 24 }, (_, h) => (
             <div
               key={h}
-              className="text-[10px] text-gray-400 text-right pr-1 border-t border-gray-100 dark:border-gray-800"
+              className="text-[0.667rem] text-gray-400 text-right pr-1 border-t border-gray-100 dark:border-gray-800"
               style={{ height: HOUR_HEIGHT_WEEK, lineHeight: `${HOUR_HEIGHT_WEEK}px` }}
             >
               {h === 0 ? '24' : `${24 - h}`}
@@ -1182,9 +1182,9 @@ function WeekView({ days, selectedDate, entries, activities, plans, memosByDay, 
                     }}
                   >
                     {height > 18 && (
-                      <div className="px-1.5 text-[10px] font-semibold truncate flex items-center gap-0.5" style={{ color }}>
+                      <div className="px-1.5 text-[0.667rem] font-semibold truncate flex items-center gap-0.5" style={{ color }}>
                         {entry.tag?.name}
-                        {hasMemos && <span className="text-[8px]">📝</span>}
+                        {hasMemos && <span className="text-[0.533rem]">📝</span>}
                       </div>
                     )}
                   </button>
@@ -1194,7 +1194,7 @@ function WeekView({ days, selectedDate, entries, activities, plans, memosByDay, 
                 const top = ((1440 - plan.endMinute) / 60) * HOUR_HEIGHT_WEEK
                 const height = Math.max(((plan.endMinute - plan.startMinute) / 60) * HOUR_HEIGHT_WEEK, 16)
                 const color = plan.tag?.color ?? '#64748b'
-                return <div key={plan.id} className={`absolute left-0.5 right-0.5 z-0 overflow-hidden rounded border border-dashed px-1 text-[9px] ${plan.executionStatus === 'done' ? 'opacity-50' : ''}`} style={{ top, height, backgroundColor: `${color}0d`, borderColor: `${color}99`, color }} title={plan.content}>▷ {plan.content}</div>
+                return <div key={plan.id} className={`absolute left-0.5 right-0.5 z-0 overflow-hidden rounded border border-dashed px-1 text-[0.6rem] ${plan.executionStatus === 'done' ? 'opacity-50' : ''}`} style={{ top, height, backgroundColor: `${color}0d`, borderColor: `${color}99`, color }} title={plan.content}>▷ {plan.content}</div>
               })}
               {/* 现在时间线 */}
               {showNowLine && (
@@ -1212,7 +1212,7 @@ function WeekView({ days, selectedDate, entries, activities, plans, memosByDay, 
           const dayMemos = memosByDay.get(startOfDay(d).toISOString()) ?? []
           const total = dayTotal(d)
           return (
-            <div key={d.toISOString()} className="flex-1 min-w-0 px-1 py-1 text-center text-[9px] text-gray-400 truncate">
+            <div key={d.toISOString()} className="flex-1 min-w-0 px-1 py-1 text-center text-[0.6rem] text-gray-400 truncate">
               {total > 0 && <span className="font-mono">{formatDuration(total)}</span>}
               {dayMemos.length > 0 && <span className="ml-1">📝{dayMemos.length}</span>}
             </div>
@@ -1282,14 +1282,14 @@ function MonthView({ date, selectedDate, entriesByDay, activities, plans, memosB
               aria-pressed={selected}
               className={`relative min-h-[92px] border-b border-r border-gray-200 p-2 text-left transition-colors group sm:min-h-[112px] sm:p-3 dark:border-gray-800 ${dayIndex % 7 === 6 ? 'border-r-0' : ''} ${dayIndex >= days.length - 7 ? 'border-b-0' : ''} ${selected ? 'bg-brand-50 ring-1 ring-inset ring-brand-500 dark:bg-brand-900/25' : holidayEvent ? 'bg-red-50 dark:bg-red-950/20' : 'hover:bg-gray-50 dark:hover:bg-gray-800/60'} ${!inMonth ? 'opacity-30' : ''}`}
             >
-              {holidayEvent && <span className="absolute right-1.5 top-1.5 rounded bg-red-500 px-1 text-[10px] font-bold text-white">休</span>}
-              {workdayEvent && !holidayEvent && <span className="absolute right-1.5 top-1.5 rounded bg-slate-500 px-1 text-[10px] font-bold text-white">班</span>}
+              {holidayEvent && <span className="absolute right-1.5 top-1.5 rounded bg-red-500 px-1 text-[0.667rem] font-bold text-white">休</span>}
+              {workdayEvent && !holidayEvent && <span className="absolute right-1.5 top-1.5 rounded bg-slate-500 px-1 text-[0.667rem] font-bold text-white">班</span>}
               <div className="flex items-start justify-between gap-1">
                 <div className="flex flex-col gap-0.5">
                   <span className={`text-2xl font-semibold leading-none sm:text-3xl ${weekend || holidayEvent ? 'text-red-500' : 'text-gray-800 dark:text-gray-100'}`}>
                     {d.getDate()}
                   </span>
-                  <span className={`text-[11px] ${getLunarText(d) === Solar.fromDate(d).getLunar().getJieQi() ? 'font-medium text-amber-600 dark:text-amber-400' : 'text-gray-400'}`}>{getLunarText(d)}</span>
+                  <span className={`text-[0.733rem] ${getLunarText(d) === Solar.fromDate(d).getLunar().getJieQi() ? 'font-medium text-amber-600 dark:text-amber-400' : 'text-gray-400'}`}>{getLunarText(d)}</span>
                 </div>
               </div>
               {allDayLabels.length > 0 && (
@@ -1298,7 +1298,7 @@ function MonthView({ date, selectedDate, entriesByDay, activities, plans, memosB
                     const kind = externalEventKind(event)
                     const color = kind === 'workday' ? '#2563eb' : kind === 'holiday' ? '#d97706' : (event.subscription?.color ?? '#059669')
                     return (
-                        <div key={event.id} className="truncate rounded px-1 py-0.5 text-[10px] font-medium leading-tight" style={{ color, backgroundColor: `${color}15` }} title={event.summary}>
+                        <div key={event.id} className="truncate rounded px-1 py-0.5 text-[0.667rem] font-medium leading-tight" style={{ color, backgroundColor: `${color}15` }} title={event.summary}>
                         {event.summary}
                       </div>
                     )
@@ -1382,7 +1382,7 @@ function EntryDetail({ entry, onClose, onChanged }: {
           <div className="min-w-0">
             <h3 className="text-lg font-bold truncate" style={{ color }}>{entry.tag?.name}</h3>
             {entry.tag?.category && (
-              <span className="text-[10px] px-2 py-0.5 rounded-full inline-block mt-0.5" style={{ background: `${entry.tag.category.color}20`, color: entry.tag.category.color }}>
+              <span className="text-[0.667rem] px-2 py-0.5 rounded-full inline-block mt-0.5" style={{ background: `${entry.tag.category.color}20`, color: entry.tag.category.color }}>
                 {entry.tag.category.name}
               </span>
             )}
@@ -1442,7 +1442,7 @@ function EntryDetail({ entry, onClose, onChanged }: {
                   <span className="line-clamp-2">{m.content}</span>
                 </div>
               ))}
-              {memos.length > 5 && <div className="text-[10px] text-gray-400 text-center">…还有 {memos.length - 5} 条</div>}
+              {memos.length > 5 && <div className="text-[0.667rem] text-gray-400 text-center">…还有 {memos.length - 5} 条</div>}
             </div>
           </div>
         )}
@@ -1544,7 +1544,7 @@ function QuickCreateModal({ defaultDate, defaultStartTime, defaultEndTime, onClo
             {groupedTags.map((g) => (
               <div key={g.category?.id ?? '_none'}>
                 {g.category && (
-                  <div className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider px-1 mb-1">
+                  <div className="text-[0.667rem] font-semibold text-gray-400 uppercase tracking-wider px-1 mb-1">
                     {g.category.icon ? `${g.category.icon} ` : ''}{g.category.name}
                   </div>
                 )}
@@ -1680,7 +1680,7 @@ function DayDetailPopupLegacy({ date, entries, activities, dayMemos, externalEve
         <div className="flex-1 overflow-y-auto px-5 py-3 space-y-2">
           {dayActivities.length > 0 && (
             <div className="space-y-1 mb-3">
-              <div className="text-[10px] text-gray-400">◆ 活动 ({dayActivities.length})</div>
+              <div className="text-[0.667rem] text-gray-400">◆ 活动 ({dayActivities.length})</div>
               {dayActivities.map((todo) => (
                 <div key={todo.id} className={`text-xs truncate ${todo.status === 'done' ? 'line-through text-gray-400' : 'text-gray-600 dark:text-gray-300'}`} title={todo.lateReason ?? undefined}>
                   {todo.status === 'done' ? '已完成 · ' : '待完成 · '}{todo.title}
@@ -1703,7 +1703,7 @@ function DayDetailPopupLegacy({ date, entries, activities, dayMemos, externalEve
           )}
           {dayMemos.length > 0 && (
             <div className="space-y-1 mb-3">
-              <div className="text-[10px] text-gray-400">📝 当日记事 ({dayMemos.length})</div>
+              <div className="text-[0.667rem] text-gray-400">📝 当日记事 ({dayMemos.length})</div>
               {dayMemos.slice(0, 5).map((memo) => (
                 <div key={memo.id} className="text-xs text-gray-600 dark:text-gray-300 truncate">
                   {new Date(memo.createdAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })} · {memo.content}
@@ -1732,15 +1732,15 @@ function DayDetailPopupLegacy({ date, entries, activities, dayMemos, externalEve
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-semibold" style={{ color }}>{e.tag?.name}</span>
-                        {e.tag?.category && <span className="text-[9px] text-gray-400">{e.tag.category.name}</span>}
+                        {e.tag?.category && <span className="text-[0.6rem] text-gray-400">{e.tag.category.name}</span>}
                       </div>
-                      <div className="text-[10px] text-gray-400">
+                      <div className="text-[0.667rem] text-gray-400">
                         {start.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
                         {end && ` - ${end.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`}
                         {e.note && ` · ${e.note}`}
                       </div>
                     </div>
-                    <span className="text-[10px] font-mono text-gray-400">{formatDuration(dur)}</span>
+                    <span className="text-[0.667rem] font-mono text-gray-400">{formatDuration(dur)}</span>
                   </button>
                 )
               })}
@@ -1799,7 +1799,7 @@ function DayDetailPopup({ date, entries, activities, plans, dayMemos, externalEv
           )}
         </div>
         <footer className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-2.5 dark:border-gray-800 dark:bg-gray-900 sm:px-5">
-          <span className="text-[11px] text-gray-400">{dayKey === startOfDay(new Date()).toISOString() ? '今天' : getLunarText(date)}</span>
+          <span className="text-[0.733rem] text-gray-400">{dayKey === startOfDay(new Date()).toISOString() ? '今天' : getLunarText(date)}</span>
           <button type="button" onClick={onClose} className="btn-secondary px-3 py-1.5 text-xs">完成</button>
         </footer>
       </section>
