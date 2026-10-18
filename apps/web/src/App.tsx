@@ -42,12 +42,16 @@ class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { has
             <div className="text-xs text-red-500 font-mono bg-red-50 dark:bg-red-900/20 p-3 rounded-lg text-left break-all max-h-32 overflow-y-auto">
               {String(this.state.error?.message || this.state.error)}
             </div>
+            {/* 刷新按钮固定在品牌青：ErrorBoundary 在 .app-shell 之外，但 Layout 会把
+                当前域镜像到 <html>，bg-brand 会跟随域色（TOKENS_PLAN §2.3 的
+                「壳外天然回落」假设因此不成立），故按 §5.2 验收目标显式钉住。
+                teal-600 即旧 brand-600（#0d9488），视觉零变化。 */}
             <button
               onClick={() => {
                 this.setState({ hasError: false, error: null })
                 window.location.reload()
               }}
-              className="px-4 py-2 bg-brand text-white text-xs font-medium rounded-xl hover:bg-brand-600 transition-colors"
+              className="px-4 py-2 bg-teal-600 text-white text-xs font-medium rounded-xl hover:bg-teal-700 transition-colors"
             >
               🔄 刷新页面重试
             </button>

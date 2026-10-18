@@ -2,6 +2,202 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ══════════════════════════════════════════════════════════════
+   ITtime 域色系统（TOKENS_PLAN §1.4，值与 .generated-palette.css 一致，勿手改）
+   三层架构：L1 原始色板（写死）→ L2 域指针（[data-domain] 切换）
+   → L3 角色变量（--d / --d-solid / --d-ring …，亮暗分流）
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── L1 原始色板：5 套域色 + 中性阶 + 语义色，只写死、不切换 ── */
+:root {
+  /* ── 工作台：品牌继承，主 CTA 沿用 teal；最亮一档，默认落地页 ── */
+  --d-work-50: #E5FAF7;  --d-work-100: #C1EBE5; --d-work-200: #58A398;
+  --d-work-300: #33AD9B; --d-work-400: #08B89E; --d-work-500: #00A28A;
+  --d-work-600: #008672; --d-work-700: #006A5A; --d-work-800: #005044;
+  --d-work-900: #00382F;
+
+  /* ── 时间：冷色秩序感；600/700/800 额外压暗以保证白底 4.5:1 ── */
+  --d-time-50: #F4F5FF;  --d-time-100: #E7E9FF; --d-time-200: #CFD4FF;
+  --d-time-300: #B4BBFD; --d-time-400: #9CA5F0; --d-time-500: #848DE2;
+  --d-time-600: #656EC5; --d-time-700: #464F9C; --d-time-800: #303778;
+  --d-time-900: #292E63;
+
+  /* ── 事项：暖色行动感，与 teal 形成冷暖对冲 ── */
+  --d-tasks-50: #FFF8F1;  --d-tasks-100: #FFEBD7; --d-tasks-200: #FFD1A4;
+  --d-tasks-300: #F4B06B; --d-tasks-400: #D17F2C; --d-tasks-500: #D56E07;
+  --d-tasks-600: #B25900; --d-tasks-700: #8D4600; --d-tasks-800: #6B3600;
+  --d-tasks-900: #4B2500;
+
+  /* ── 洞察：分析/深度；与时间域拉开 48°，并压暗一档 ── */
+  --d-insights-50: #F8EDFC;  --d-insights-100: #F3DEFC; --d-insights-200: #E9C5F9;
+  --d-insights-300: #DBA8F1; --d-insights-400: #C489DD; --d-insights-500: #8E4DAB;
+  --d-insights-600: #833EA1; --d-insights-700: #6A2A85; --d-insights-800: #521B69;
+  --d-insights-900: #3A0E4D;
+
+  /* ── 体系：收尾色相；最低彩度表达「不急」 ── */
+  --d-system-50: #FBEDF1;  --d-system-100: #FBDEE6; --d-system-200: #F6C6D2;
+  --d-system-300: #EBA9BB; --d-system-400: #D3889C; --d-system-500: #98485E;
+  --d-system-600: #8F3C52; --d-system-700: #762A3E; --d-system-800: #5D1C2D;
+  --d-system-900: #44101E;
+
+  /* ── 中性色阶 n-*：OKLCH hue 240 冷倾，暗端再冷一档 ── */
+  --n-0: #FFFFFF;  --n-25: #FAFAFD; --n-50: #F6F6FB; --n-100: #F0F0F7;
+  --n-200: #E5E5EE; --n-300: #D5D5DF; --n-400: #BBBBC6; --n-500: #93939F;
+  --n-600: #757583; --n-700: #535364; --n-800: #343446; --n-900: #1C1C2F;
+  --n-950: #0C0C20;
+
+  /* ── 语义色（仅用于状态，禁止做大面积身份色）── */
+  --sem-success-500: #109758; --sem-success-600: #008A4A; --sem-success-700: #006D3A;
+  --sem-success-300: #489F76;
+  --sem-warning-500: #AA8800; --sem-warning-600: #8C7000; --sem-warning-700: #6E5800;
+  --sem-warning-300: #B29A38;
+  --sem-danger-500: #CC565E;  --sem-danger-600: #A92F37;  --sem-danger-700: #8F1E26;
+  --sem-danger-300: #FFA5AB;
+  --sem-info-500: #188CCF;    --sem-info-600: #0079BF;    --sem-info-700: #006097;
+  --sem-info-300: #7CCBF9;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   L1b 域色 RGB 三元组 —— 供 Tailwind <alpha-value> 使用
+   没有这一段，bg-brand/5 这类不透明度修饰会失效（TOKENS_PLAN §2.2 已实测）
+   ══════════════════════════════════════════════════════════════ */
+:root {
+  --d-work-50-rgb: 229 250 247;  --d-work-100-rgb: 193 235 229;
+  --d-work-200-rgb: 88 163 152;  --d-work-300-rgb: 51 173 155;
+  --d-work-400-rgb: 8 184 158;   --d-work-500-rgb: 0 162 138;
+  --d-work-600-rgb: 0 134 114;   --d-work-700-rgb: 0 106 90;
+  --d-work-800-rgb: 0 80 68;     --d-work-900-rgb: 0 56 47;
+
+  --d-time-50-rgb: 244 245 255;  --d-time-100-rgb: 231 233 255;
+  --d-time-200-rgb: 207 212 255; --d-time-300-rgb: 180 187 253;
+  --d-time-400-rgb: 156 165 240; --d-time-500-rgb: 132 141 226;
+  --d-time-600-rgb: 101 110 197; --d-time-700-rgb: 70 79 156;
+  --d-time-800-rgb: 48 55 120;   --d-time-900-rgb: 41 46 99;
+
+  --d-tasks-50-rgb: 255 248 241;  --d-tasks-100-rgb: 255 235 215;
+  --d-tasks-200-rgb: 255 209 164; --d-tasks-300-rgb: 244 176 107;
+  --d-tasks-400-rgb: 209 127 44;  --d-tasks-500-rgb: 213 110 7;
+  --d-tasks-600-rgb: 178 89 0;    --d-tasks-700-rgb: 141 70 0;
+  --d-tasks-800-rgb: 107 54 0;    --d-tasks-900-rgb: 75 37 0;
+
+  --d-insights-50-rgb: 248 237 252;  --d-insights-100-rgb: 243 222 252;
+  --d-insights-200-rgb: 233 197 249; --d-insights-300-rgb: 219 168 241;
+  --d-insights-400-rgb: 196 137 221; --d-insights-500-rgb: 142 77 171;
+  --d-insights-600-rgb: 131 62 161;  --d-insights-700-rgb: 106 42 133;
+  --d-insights-800-rgb: 82 27 105;   --d-insights-900-rgb: 58 14 77;
+
+  --d-system-50-rgb: 251 237 241;  --d-system-100-rgb: 251 222 230;
+  --d-system-200-rgb: 246 198 210; --d-system-300-rgb: 235 169 187;
+  --d-system-400-rgb: 211 136 156; --d-system-500-rgb: 152 72 94;
+  --d-system-600-rgb: 143 60 82;   --d-system-700-rgb: 118 42 62;
+  --d-system-800-rgb: 93 28 45;    --d-system-900-rgb: 68 16 30;
+
+  --n-0-rgb: 255 255 255;   --n-25-rgb: 250 250 253;  --n-50-rgb: 246 246 251;
+  --n-100-rgb: 240 240 247; --n-200-rgb: 229 229 238; --n-300-rgb: 213 213 223;
+  --n-400-rgb: 187 187 198; --n-500-rgb: 147 147 159; --n-600-rgb: 117 117 131;
+  --n-700-rgb: 83 83 100;   --n-800-rgb: 52 52 70;    --n-900-rgb: 28 28 47;
+  --n-950-rgb: 12 12 32;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   L2 域指针 —— 活动域变量（默认值就是 work 域，
+   所以 .app-shell 之外的区域也有合理回落）
+   每域一段：--d-50…--d-900 十六进制指针 + --d-*-rgb 三元组指针。
+   注意：TOKENS_PLAN §1.4 原文只列了十六进制指针，但 §2.1 的 tailwind
+   brand 定义、§3.2 的域色光晕、§4.4 的 focus ring 都引用 --d-*-rgb，
+   缺了三元组指针 bg-brand/5 会静默失效，故在此补全。
+   ══════════════════════════════════════════════════════════════ */
+:root,
+:root[data-domain="work"] {
+  --d-50: var(--d-work-50);   --d-100: var(--d-work-100);
+  --d-200: var(--d-work-200); --d-300: var(--d-work-300);
+  --d-400: var(--d-work-400); --d-500: var(--d-work-500);
+  --d-600: var(--d-work-600); --d-700: var(--d-work-700);
+  --d-800: var(--d-work-800); --d-900: var(--d-work-900);
+  --d-50-rgb: var(--d-work-50-rgb);   --d-100-rgb: var(--d-work-100-rgb);
+  --d-200-rgb: var(--d-work-200-rgb); --d-300-rgb: var(--d-work-300-rgb);
+  --d-400-rgb: var(--d-work-400-rgb); --d-500-rgb: var(--d-work-500-rgb);
+  --d-600-rgb: var(--d-work-600-rgb); --d-700-rgb: var(--d-work-700-rgb);
+  --d-800-rgb: var(--d-work-800-rgb); --d-900-rgb: var(--d-work-900-rgb);
+}
+:root[data-domain="time"] {
+  --d-50: var(--d-time-50);   --d-100: var(--d-time-100);
+  --d-200: var(--d-time-200); --d-300: var(--d-time-300);
+  --d-400: var(--d-time-400); --d-500: var(--d-time-500);
+  --d-600: var(--d-time-600); --d-700: var(--d-time-700);
+  --d-800: var(--d-time-800); --d-900: var(--d-time-900);
+  --d-50-rgb: var(--d-time-50-rgb);   --d-100-rgb: var(--d-time-100-rgb);
+  --d-200-rgb: var(--d-time-200-rgb); --d-300-rgb: var(--d-time-300-rgb);
+  --d-400-rgb: var(--d-time-400-rgb); --d-500-rgb: var(--d-time-500-rgb);
+  --d-600-rgb: var(--d-time-600-rgb); --d-700-rgb: var(--d-time-700-rgb);
+  --d-800-rgb: var(--d-time-800-rgb); --d-900-rgb: var(--d-time-900-rgb);
+}
+:root[data-domain="tasks"] {
+  --d-50: var(--d-tasks-50);   --d-100: var(--d-tasks-100);
+  --d-200: var(--d-tasks-200); --d-300: var(--d-tasks-300);
+  --d-400: var(--d-tasks-400); --d-500: var(--d-tasks-500);
+  --d-600: var(--d-tasks-600); --d-700: var(--d-tasks-700);
+  --d-800: var(--d-tasks-800); --d-900: var(--d-tasks-900);
+  --d-50-rgb: var(--d-tasks-50-rgb);   --d-100-rgb: var(--d-tasks-100-rgb);
+  --d-200-rgb: var(--d-tasks-200-rgb); --d-300-rgb: var(--d-tasks-300-rgb);
+  --d-400-rgb: var(--d-tasks-400-rgb); --d-500-rgb: var(--d-tasks-500-rgb);
+  --d-600-rgb: var(--d-tasks-600-rgb); --d-700-rgb: var(--d-tasks-700-rgb);
+  --d-800-rgb: var(--d-tasks-800-rgb); --d-900-rgb: var(--d-tasks-900-rgb);
+}
+:root[data-domain="insights"] {
+  --d-50: var(--d-insights-50);   --d-100: var(--d-insights-100);
+  --d-200: var(--d-insights-200); --d-300: var(--d-insights-300);
+  --d-400: var(--d-insights-400); --d-500: var(--d-insights-500);
+  --d-600: var(--d-insights-600); --d-700: var(--d-insights-700);
+  --d-800: var(--d-insights-800); --d-900: var(--d-insights-900);
+  --d-50-rgb: var(--d-insights-50-rgb);   --d-100-rgb: var(--d-insights-100-rgb);
+  --d-200-rgb: var(--d-insights-200-rgb); --d-300-rgb: var(--d-insights-300-rgb);
+  --d-400-rgb: var(--d-insights-400-rgb); --d-500-rgb: var(--d-insights-500-rgb);
+  --d-600-rgb: var(--d-insights-600-rgb); --d-700-rgb: var(--d-insights-700-rgb);
+  --d-800-rgb: var(--d-insights-800-rgb); --d-900-rgb: var(--d-insights-900-rgb);
+}
+:root[data-domain="system"] {
+  --d-50: var(--d-system-50);   --d-100: var(--d-system-100);
+  --d-200: var(--d-system-200); --d-300: var(--d-system-300);
+  --d-400: var(--d-system-400); --d-500: var(--d-system-500);
+  --d-600: var(--d-system-600); --d-700: var(--d-system-700);
+  --d-800: var(--d-system-800); --d-900: var(--d-system-900);
+  --d-50-rgb: var(--d-system-50-rgb);   --d-100-rgb: var(--d-system-100-rgb);
+  --d-200-rgb: var(--d-system-200-rgb); --d-300-rgb: var(--d-system-300-rgb);
+  --d-400-rgb: var(--d-system-400-rgb); --d-500-rgb: var(--d-system-500-rgb);
+  --d-600-rgb: var(--d-system-600-rgb); --d-700-rgb: var(--d-system-700-rgb);
+  --d-800-rgb: var(--d-system-800-rgb); --d-900-rgb: var(--d-system-900-rgb);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   L3 角色变量（亮色）—— 每一步的用途都经过 WCAG 校验
+   ══════════════════════════════════════════════════════════════ */
+:root {
+  --d: var(--d-500);                    /* 域身份色：图标/图形，白底 ≥3:1 */
+  --d-fg: var(--d-700);                 /* 域色正文：白底 ≥4.5:1 */
+  --d-solid: var(--d-600);              /* 实心底：配白字 ≥4.5:1 */
+  --d-on-solid: #FFFFFF;
+  --d-ring: var(--d-600);               /* focus ring：≥4.5:1，见 TOKENS_PLAN §4.4 */
+  --d-bg: var(--d-50);                  /* 域色淡底 */
+  --d-bd: var(--d-200);                 /* 域色边框 */
+  --d-glow: rgb(var(--d-500-rgb) / .28);
+}
+/* ══════════════════════════════════════════════════════════════
+   L3 角色变量（暗色）—— 深空玻璃
+   关键差异：暗色下「实心底」改用 400 档配近黑字（亮底深字），
+   而不是沿用 600 档配白字——否则按钮在暗底上会糊成一团。
+   ══════════════════════════════════════════════════════════════ */
+html.dark {
+  --d: var(--d-400);
+  --d-fg: var(--d-300);
+  --d-solid: var(--d-400);
+  --d-on-solid: #0B0F17;
+  --d-ring: var(--d-400);
+  --d-bg: rgb(var(--d-900-rgb) / .45);
+  --d-bd: rgb(var(--d-700-rgb) / .55);
+  --d-glow: rgb(var(--d-400-rgb) / .22);
+}
+
 :root {
   /* ── 设计 token（唯一真相）────────────────────────────
      圆角只保留两档语义：卡片 12px / 控件 8px（胶囊用 rounded-full）。
@@ -35,8 +231,12 @@ body {
 
 .desktop-sidebar { box-shadow: none; }
 
-.page-header-mark { background: #0f766e; }
-.page-header-icon { background: #0f766e; }
+/* 页头图标/色条：域感知（TOKENS_PLAN §5.2 要求五个域的页头图标各自不同）。
+   用 --d-600 而非角色变量 --d-solid：容器内图标是写死的 text-white，
+   而暗色下 --d-solid = 400 档配近黑字（--d-on-solid）。600 档与模式无关，
+   两种模式下配白字都 ≥4.5:1，不必改 PageHeader.tsx。 */
+.page-header-mark { background: var(--d-600); }
+.page-header-icon { background: var(--d-600); }
 .page-header-kicker { margin-bottom: .2rem; color: #94a3b8; font-size: .64rem; font-weight: 700; letter-spacing: .12em; line-height: 1; }
 .page-header {
   flex-wrap: wrap;
@@ -162,20 +362,24 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* 全不透明度 + 域感知 + 柔和光环（TOKENS_PLAN §4.4）：
+   亮色 --d-ring = 600 档（4.51–8.84:1），暗色 = 400 档（3.14–6.33:1），全部达标；
+   旧值 rgb(45 212 191 / .45) 叠白底只有 1.5–2.0:1，且写死了 teal。 */
 :focus-visible {
-  outline: 3px solid rgb(45 212 191 / .45);
+  outline: 2px solid var(--d-ring);
   outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgb(var(--d-500-rgb) / .18);
 }
 
 ::selection {
-  background: rgb(20 184 166 / .24);
+  background: rgb(var(--d-500-rgb) / .24);
 }
 
-.stats-overview { display: grid; gap: 8px; padding: 20px 22px; border: 1px solid rgb(203 213 225 / .8); border-left: 3px solid #0f766e; border-radius: 8px; background: #fff; box-shadow: none; }
+.stats-overview { display: grid; gap: 8px; padding: 20px 22px; border: 1px solid rgb(203 213 225 / .8); border-left: 3px solid var(--d); border-radius: 8px; background: #fff; box-shadow: none; }
 .stats-overview span, .stats-overview small { color: #62756f; font-size: 12px; }
-.stats-overview strong { color: #0f766e; font-size: 28px; font-variant-numeric: tabular-nums; }
-.dark .stats-overview { border-color: rgb(51 65 85 / .8); border-left-color: #2dd4bf; background: #111827; }
-.dark .stats-overview strong { color: #5eead4; }
+.stats-overview strong { color: var(--d-fg); font-size: 28px; font-variant-numeric: tabular-nums; }
+/* 暗色不再单独覆盖 border-left-color / strong 颜色：--d 与 --d-fg 本身随 html.dark 分流 */
+.dark .stats-overview { border-color: rgb(51 65 85 / .8); background: #111827; }
 .timer-empty { background: #fff; }
 .dark .timer-empty { background: #111827; }
 .timer-tag { min-height: 44px; border-radius: var(--radius-ctl) !important; box-shadow: none; }
@@ -186,7 +390,7 @@ button:disabled {
   background: #fff;
 }
 
-.brand-gradient { background: #0f766e; }
+.brand-gradient { background: var(--d-600); }
 
 .toolbar-surface {
   border: 1px solid rgb(209 213 219 / .9);
@@ -589,10 +793,11 @@ body.fullscreen-clock-active header {
    覆盖顺序在本文件末尾，同优先级时生效于前面的规则。
    ══════════════════════════════════════════════════════════════ */
 :root {
-  --aurora-teal: #14b8a6;
-  --aurora-cyan: #38bdf8;
-  --aurora-violet: #8b5cf6;
-  --aurora-grad: linear-gradient(135deg, #14b8a6 0%, #38bdf8 100%);
+  /* 派生：跟随 data-domain 自动切换（TOKENS_PLAN §3.1） */
+  --aurora-teal: var(--d-400);
+  --aurora-cyan: var(--d-300);
+  --aurora-violet: #8B5CF6;              /* 极光第二团固定紫，不与域争 */
+  --aurora-grad: linear-gradient(135deg, var(--d-400) 0%, var(--d-300) 100%);
   /* 亮色（晨雾）：白玻璃 + 冷灰蓝底 */
   --glass-bg: rgba(255, 255, 255, .68);
   --glass-bg-2: rgba(255, 255, 255, .82);
@@ -683,9 +888,9 @@ body.fullscreen-clock-active header {
   background: var(--aurora-grad);
   border: none;
   color: #04121a;
-  box-shadow: 0 6px 22px rgba(20, 184, 166, .3);
+  box-shadow: 0 6px 22px var(--d-glow);
 }
-.btn-primary:not(:disabled):hover { box-shadow: 0 8px 30px rgba(20, 184, 166, .48) }
+.btn-primary:not(:disabled):hover { box-shadow: 0 8px 30px rgb(var(--d-400-rgb) / .48) }
 .btn-secondary {
   background: var(--glass-bg-2);
   border-color: var(--glass-line);
@@ -700,7 +905,7 @@ body.fullscreen-clock-active header {
 }
 .page-header-mark,
 .page-header-icon { background: var(--aurora-grad) }
-.page-header-icon { box-shadow: 0 0 18px rgba(20, 184, 166, .3) }
+.page-header-icon { box-shadow: 0 0 18px var(--d-glow) }
 .page-header { border-color: var(--glass-line) }
 
 /* ── 计时相关 ── */
@@ -715,14 +920,14 @@ body.fullscreen-clock-active header {
   background: transparent;
 }
 .dark .timer-tag[aria-pressed="true"] {
-  border-color: rgba(20, 184, 166, .55);
-  box-shadow: 0 0 18px rgba(20, 184, 166, .25);
+  border-color: rgb(var(--d-400-rgb) / .55);
+  box-shadow: 0 0 18px rgb(var(--d-400-rgb) / .25);
 }
 
 /* ── 统计 hero ── */
 .stats-overview {
-  background: linear-gradient(150deg, rgba(20, 184, 166, .12), rgba(56, 189, 248, .05) 55%, var(--glass-bg));
-  border-color: rgba(20, 184, 166, .28);
+  background: linear-gradient(150deg, rgb(var(--d-500-rgb) / .12), rgb(var(--d-400-rgb) / .05) 55%, var(--glass-bg));
+  border-color: rgb(var(--d-500-rgb) / .28);
   border-left: 3px solid var(--aurora-teal);
   border-radius: 18px;
   backdrop-filter: var(--glass-blur);
@@ -736,7 +941,7 @@ body.fullscreen-clock-active header {
 }
 
 /* ── 选中/进行中微光（语义发光）── */
-.dark .nav-item-glow { box-shadow: inset 0 0 18px rgba(20, 184, 166, .08) }
+.dark .nav-item-glow { box-shadow: inset 0 0 18px rgb(var(--d-400-rgb) / .08) }
 
 /* ── 移动端底栏（双主题玻璃）── */
 .mobile-nav {
