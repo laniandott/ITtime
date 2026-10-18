@@ -1,10 +1,12 @@
 import { useEffect, useState, useMemo, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { useStore, formatClock, formatDuration, toIsoSafe } from '../store'
 import { api, resolveUploadUrl } from '../api'
 import type { TimeEntry, Tag, Todo, Memo, LinkedNoteEntry, PlanBlock } from '../types'
 import { DateTimeSecondPicker } from '../components/DateTimeSecondPicker'
 import { PageHeader } from '../components/PageHeader'
+import { CategoryBadge } from '../components/CategoryBadge'
 import { syncNativeStatusBarTheme } from '../nativeStatusBar'
 import { GripVertical, ArrowUpDown } from 'lucide-react'
 import { ConfirmDialog } from '../components/ConfirmDialog'
@@ -458,9 +460,7 @@ export default function TimerPage() {
                       className="h-[6px] w-[6px] shrink-0 rounded-full"
                       style={{ background: category.color }}
                     />
-                    <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
-                      {category.name}
-                    </span>
+                    <CategoryBadge category={category} />
                     <span className="text-[0.733rem] text-gray-400">{ts.length}</span>
                     {sortingQuickStart && <GripVertical className="ml-auto h-4 w-4 cursor-grab text-gray-400 active:cursor-grabbing" aria-label="拖动分类排序" />}
                   </div>
@@ -1157,24 +1157,23 @@ function FullscreenClockOverlay({ onClose }: { onClose: () => void }) {
 
   // 字号随任务数与方向自适应（时钟 8 个等宽字符宽 ≈ 4.8 倍字号，需同时容纳于格子宽度与高度）
   const clockSize =
-    count === 1 ? 'min(19vw, 50vh)'
-    : count === 2 ? (isPortrait ? 'min(19vw, 22vh)' : 'min(9.5vw, 40vh)')
-    : count === 3 ? (isPortrait ? 'min(9.5vw, 20vh)' : 'min(9.5vw, 28vh)')
-    : count === 4 ? (isPortrait ? 'min(9.5vw, 20vh)' : 'min(9.5vw, 24vh)')
-    : 'min(8.5vw, 16vh)'
+    count === 1 ? 'min(19vw, 50dvh)'
+    : count === 2 ? (isPortrait ? 'min(19vw, 22dvh)' : 'min(9.5vw, 40dvh)')
+    : count === 3 ? (isPortrait ? 'min(9.5vw, 20dvh)' : 'min(9.5vw, 28dvh)')
+    : count === 4 ? (isPortrait ? 'min(9.5vw, 20dvh)' : 'min(9.5vw, 24dvh)')
+    : 'min(8.5vw, 16dvh)'
   const nameSize =
-    count === 1 ? 'min(6vw, 5vh)'
-    : count === 2 ? (isPortrait ? 'min(5vw, 3.5vh)' : 'min(4.5vw, 3.5vh)')
-    : count === 3 ? 'min(4vw, 3vh)'
-    : 'min(3.5vw, 2.5vh)'
+    count === 1 ? 'min(6vw, 5dvh)'
+    : count === 2 ? (isPortrait ? 'min(5vw, 3.5dvh)' : 'min(4.5vw, 3.5dvh)')
+    : count === 3 ? 'min(4vw, 3dvh)'
+    : 'min(3.5vw, 2.5dvh)'
 
-  return (
+  return createPortal((
     <div
-      className="fixed inset-0 z-[100] bg-black text-white flex flex-col select-none"
-      style={{ paddingTop: 'env(safe-area-inset-top)' }}
+      className="fullscreen-clock-overlay fixed inset-0 z-[100] flex flex-col select-none overflow-hidden bg-black text-white"
     >
       {/* 顶部状态 */}
-      <div className="flex items-center justify-between px-5 pt-4 pb-1 text-sm text-gray-500 shrink-0">
+      <div className="flex shrink-0 items-center justify-between px-5 pt-3 pb-1 text-sm text-gray-400">
         <span className="flex items-center gap-2">
           <span
             className={`w-2 h-2 rounded-full ${count > 0 ? 'bg-green-500 animate-pulse' : 'bg-gray-600'}`}
@@ -1188,7 +1187,7 @@ function FullscreenClockOverlay({ onClose }: { onClose: () => void }) {
       </div>
 
       {/* 中部：任务网格，每格尽量占满 */}
-      <div className={`flex-1 min-h-0 w-full grid gap-x-2 gap-y-4 px-2 py-2 ${gridClass} ${count > 4 ? 'overflow-y-auto' : ''}`}>
+      <div className={`fullscreen-clock-grid flex-1 min-h-0 w-full grid gap-x-2 gap-y-3 px-2 py-2 ${gridClass} ${count > 4 ? 'is-scrollable overflow-y-auto' : ''}`}>
         {count === 0 ? (
           <div className="col-span-full flex flex-col items-center justify-center text-gray-500 space-y-3">
             <div className="text-6xl">⏱</div>
@@ -1210,18 +1209,7 @@ function FullscreenClockOverlay({ onClose }: { onClose: () => void }) {
                     {entry.tag?.icon ? `${entry.tag.icon} ` : ''}{entry.tag?.name}
                   </span>
                   {entry.tag?.category && count <= 3 && (
-                    <span
-                      className="px-2 py-0.5 rounded-full border shrink-0"
-                      style={{
-                        fontSize: 'min(2.5vw, 2.2vh)',
-                        backgroundColor: `${entry.tag.category.color}22`,
-                        color: entry.tag.category.color,
-                        borderColor: `${entry.tag.category.color}55`,
-                      }}
-                    >
-                      {entry.tag.category.icon ? `${entry.tag.category.icon} ` : ''}
-                      {entry.tag.category.name}
-                    </span>
+                    <CategoryBadge category={entry.tag.category} size="xs" className="shrink-0" style={{ fontSize: 'min(2.5vw, 2.2vh)' }} />
                   )}
                 </div>
                 <div
@@ -1237,8 +1225,8 @@ function FullscreenClockOverlay({ onClose }: { onClose: () => void }) {
       </div>
 
       {/* 底部：当前时间（保持字号，压缩高度给任务区让空间） */}
-      <div className="shrink-0 text-center pb-5 pt-1">
-        <div className="text-6xl font-mono font-light tabular-nums text-gray-100 leading-tight">
+      <div className="shrink-0 text-center px-2 pb-2 pt-1 sm:pb-4">
+        <div className="fullscreen-clock-walltime font-mono font-light tabular-nums text-gray-100 leading-tight">
           {wallTime.toLocaleTimeString('zh-CN', { hour12: false })}
         </div>
         <div className="mt-1 text-sm text-gray-500">
@@ -1246,7 +1234,7 @@ function FullscreenClockOverlay({ onClose }: { onClose: () => void }) {
         </div>
       </div>
     </div>
-  )
+  ), document.body)
 }
 
 // 进行中计时卡片（内部自带每秒时钟，避免整页重渲染）
@@ -1308,10 +1296,7 @@ function RunningTimer({ entry, stopping, todos, onStop, onTodoChange, onTerminat
           正在计时
         </span>
         {entry.tag?.category && (
-          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[0.667rem] font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">
-            {entry.tag.category.icon ? `${entry.tag.category.icon} ` : ''}
-            {entry.tag.category.name}
-          </span>
+          <CategoryBadge category={entry.tag.category} size="xs" />
         )}
       </div>
       <div className="text-lg font-semibold leading-tight text-gray-900 dark:text-gray-50">
@@ -1462,10 +1447,7 @@ function TimelineEntryItem({
                 {entry.tag?.icon ? `${entry.tag.icon} ` : ''}{entry.tag?.name}
               </span>
               {entry.tag?.category && (
-                <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">
-                  {entry.tag.category.icon ? `${entry.tag.category.icon} ` : ''}
-                  {entry.tag.category.name}
-                </span>
+                <CategoryBadge category={entry.tag.category} />
               )}
               {entry.todo && (
                 <span className="text-xs px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 font-medium truncate max-w-[18rem]" title={entry.todo.title}>

@@ -566,6 +566,21 @@ body.fullscreen-clock-active {
 body.fullscreen-clock-active header {
   display: none;
 }
+.fullscreen-clock-overlay {
+  box-sizing: border-box;
+  height: 100vh;
+  height: 100dvh;
+  padding: calc(env(safe-area-inset-top) + .5rem)
+    calc(env(safe-area-inset-right) + .25rem)
+    calc(env(safe-area-inset-bottom) + .5rem)
+    calc(env(safe-area-inset-left) + .25rem);
+}
+.fullscreen-clock-grid { grid-auto-rows: minmax(0, 1fr); }
+.fullscreen-clock-grid.is-scrollable { grid-auto-rows: minmax(10rem, auto); }
+.fullscreen-clock-walltime {
+  font-size: clamp(1.5rem, 7vh, 3.75rem);
+  font-size: clamp(1.5rem, 7dvh, 3.75rem);
+}
 
 /* 笔记 Markdown 预览排版 */
 .prose-preview h1,

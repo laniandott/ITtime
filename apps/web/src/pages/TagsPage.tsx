@@ -4,6 +4,7 @@ import { useStore } from '../store'
 import { PageHeader } from '../components/PageHeader'
 import { api } from '../api'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { CategoryBadge } from '../components/CategoryBadge'
 import { announceUrgent } from '../announce'
 import type { Category, Tag, Goal } from '../types'
 import { ChevronDown, ChevronRight, GripVertical, Settings } from 'lucide-react'
@@ -234,9 +235,9 @@ export default function TagsPage({ embedded = false }: { embedded?: boolean } = 
                   {tag.icon ? `${tag.icon} ` : ''}{tag.name}
                 </span>
                 {!isChild && childTags.length > 0 && <span className="shrink-0 text-xs text-gray-400">{childTags.length} 个子标签</span>}
-                <span className="shrink-0 whitespace-nowrap rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500 dark:bg-gray-800 dark:text-gray-400">
-                  {tag.category?.name ?? '未分类'}
-                </span>
+                {tag.category
+                  ? <CategoryBadge category={tag.category} className="shrink-0 whitespace-nowrap" />
+                  : <span className="shrink-0 whitespace-nowrap rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500 dark:bg-gray-800 dark:text-gray-400">未分类</span>}
                 {tag.trackType === 'count' && (
                   <span className="shrink-0 whitespace-nowrap text-xs px-1.5 py-0.5 rounded bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
                     次数

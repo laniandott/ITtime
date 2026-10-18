@@ -6,6 +6,7 @@ import type { Memo } from '../types'
 import { DateTimeSecondPicker } from './DateTimeSecondPicker'
 import { MemoEditModal } from '../pages/TimerPage'
 import { ConfirmDialog } from './ConfirmDialog'
+import { CategoryBadge } from './CategoryBadge'
 
 type DaysRange = 0 | 1 | 7 | 30
 
@@ -152,7 +153,7 @@ export default function DiaryPanel() {
               })
               const tagColor = memo.tag?.color ?? memo.timeEntry?.tag?.color ?? '#0f766e'
               const tagName = memo.tag?.name ?? memo.timeEntry?.tag?.name ?? '随手记'
-              const categoryName = memo.tag?.category?.name ?? memo.timeEntry?.tag?.category?.name
+              const category = memo.tag?.category ?? memo.timeEntry?.tag?.category
               const images = memo.attachments?.filter((attachment) => attachment.mimeType.startsWith('image/')) ?? []
               const videos = memo.attachments?.filter((attachment) => attachment.mimeType.startsWith('video/')) ?? []
 
@@ -166,9 +167,8 @@ export default function DiaryPanel() {
                     <div className="flex items-center justify-between text-xs text-gray-400 flex-wrap gap-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-medium text-gray-700 dark:text-gray-200">{timeStr}</span>
-                        <span className="rounded-full bg-gray-100 px-2 py-0.5 font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">
-                          {categoryName ? `${categoryName} / ` : ''}{tagName}
-                        </span>
+                        {category && <CategoryBadge category={category} size="xs" />}
+                        <span className="rounded-full bg-gray-100 px-2 py-0.5 font-medium text-gray-700 dark:bg-gray-800 dark:text-gray-300">{tagName}</span>
                         {memo.timeEntry && (
                           <span className="text-gray-400 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded">
                             ⏱ 关联计时: {formatDuration(

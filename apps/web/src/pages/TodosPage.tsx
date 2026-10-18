@@ -5,6 +5,7 @@ import { useStore } from '../store'
 import type { Goal, Todo } from '../types'
 import { MoreHorizontal, Pencil, Play, Trash2 } from 'lucide-react'
 import { PageHeader } from '../components/PageHeader'
+import { CategoryBadge } from '../components/CategoryBadge'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { PromptDialog } from '../components/PromptDialog'
 import { ErrorBlockCard } from '../components/StateViews'
@@ -699,14 +700,7 @@ function TodoCard({
           <div className="text-xs text-amber-600/80 dark:text-amber-300/80 mt-0.5">恢复原因：{todo.restoreReason}</div>
         )}
         <div className="flex items-center gap-2 mt-1 flex-wrap">
-          {todo.category && (
-            <span
-              className="text-xs px-2 py-0.5 rounded-full"
-              style={{ background: todo.category.color + '22', color: todo.category.color }}
-            >
-              {todo.category.name}
-            </span>
-          )}
+          {todo.category && <CategoryBadge category={todo.category} />}
           {todo.tag && (
             <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-300">
               {todo.tag.name}

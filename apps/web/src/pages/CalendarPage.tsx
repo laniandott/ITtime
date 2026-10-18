@@ -8,6 +8,7 @@ import { DateTimeSecondPicker } from '../components/DateTimeSecondPicker'
 import { CalendarSyncModal } from '../components/CalendarSyncModal'
 import { SubscriptionManager } from '../components/SubscriptionManager'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { CategoryBadge } from '../components/CategoryBadge'
 import type { CalendarEvent } from '../types'
 import { Solar } from 'lunar-javascript'
 import { readCalendarEventSnapshot, saveCalendarEventSnapshot } from '../calendarCache'
@@ -1416,9 +1417,7 @@ function EntryDetail({ entry, onClose, onChanged }: {
           <div className="min-w-0">
             <h3 className="text-lg font-bold truncate" style={{ color }}>{entry.tag?.name}</h3>
             {entry.tag?.category && (
-              <span className="text-[0.667rem] px-2 py-0.5 rounded-full inline-block mt-0.5" style={{ background: `${entry.tag.category.color}20`, color: entry.tag.category.color }}>
-                {entry.tag.category.name}
-              </span>
+              <CategoryBadge category={entry.tag.category} size="xs" className="mt-0.5" />
             )}
           </div>
         </div>
@@ -1777,7 +1776,7 @@ function DayDetailPopupLegacy({ date, entries, activities, dayMemos, externalEve
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-semibold" style={{ color }}>{e.tag?.name}</span>
-                        {e.tag?.category && <span className="text-[0.6rem] text-gray-400">{e.tag.category.name}</span>}
+                        {e.tag?.category && <CategoryBadge category={e.tag.category} size="xs" />}
                       </div>
                       <div className="text-[0.667rem] text-gray-400">
                         {start.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}
