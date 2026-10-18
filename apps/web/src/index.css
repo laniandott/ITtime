@@ -333,10 +333,12 @@ body {
   box-shadow: 0 24px 64px rgb(15 23 42 / .18);
 }
 
-/* 高度贴合内容（去掉原 min-height 42rem：短内容弹窗如「新建标签」
-   会被撑到近满屏高，底部大片空白、视觉上「下沿太高」）。
-   内容长时由调用处的 max-h-[calc(100vh-2rem)] + 内部滚动兜底。 */
+/* 稳定大尺寸（用户实测裁定）：宽弹窗固定最小高度 42rem，跨浏览器一致
+   （贴合内容时高度受字体渲染影响，各浏览器不一样）。之前「下沿太高」的
+   真凶是 page-in transform 常驻把 fixed 弹窗困在 main 里（已修），
+   min-height 本身无罪——恢复。视口矮时 min/max 同取 100dvh-2rem 收敛。 */
 .modal-panel-wide {
+  min-height: min(42rem, calc(100dvh - 2rem));
   max-height: calc(100dvh - 2rem); /* 与弹窗容器 sm:p-4 对齐（上下共 2rem） */
 }
 

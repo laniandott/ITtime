@@ -481,7 +481,9 @@ function TagForm({ tag, categories, tags, onClose, onSaved }: {
 
   return (
     <Modal onClose={onClose} title={tag ? '编辑标签' : '新建标签'} size="wide">
-      <div className="grid gap-x-8 gap-y-5 md:grid-cols-2">
+      {/* my-auto：定高面板内垂直居中表单；内容溢出时 auto margin 归零，
+          安全退化为顶部对齐且可滚（比 justify-center 的 safe 降级更可靠） */}
+      <div className="my-auto grid gap-x-8 gap-y-5 md:grid-cols-2">
         <div className="space-y-4">
           <Field label="名称">
             <input value={name} onChange={(e) => setName(e.target.value)} placeholder="如：吃饭、编码、陪玩"
@@ -629,7 +631,7 @@ function Modal({ title, children, onClose, size = 'default' }: { title: string; 
           <header className="shrink-0 border-b border-gray-200 px-5 py-4 dark:border-gray-700 sm:px-6">
             <h3 id={titleId} className="text-base font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
           </header>
-          <div className="min-h-0 overflow-y-auto px-5 py-4 sm:px-6">
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-5 py-4 sm:px-6">
             {children}
           </div>
         </div>
