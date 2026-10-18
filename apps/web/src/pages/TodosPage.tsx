@@ -4,6 +4,8 @@ import { useStore } from '../store'
 import type { Goal, Todo } from '../types'
 import { MoreHorizontal, Pencil, Play, Trash2 } from 'lucide-react'
 import { PageHeader } from '../components/PageHeader'
+import { ConfirmDialog } from '../components/ConfirmDialog'
+import { PromptDialog } from '../components/PromptDialog'
 
 const PRIORITY = [
   { value: 0, label: '普通', color: 'text-gray-400' },
@@ -113,6 +115,8 @@ export default function TodosPage({ embedded = false }: { embedded?: boolean } =
   const [pickingTagFor, setPickingTagFor] = useState<Todo | null>(null)
   const [error, setError] = useState('')
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set())
+  const [reasonPrompt, setReasonPrompt] = useState<{ kind: 'restore' | 'late'; todoId: string } | null>(null)
+  const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null)
   const loadSequence = useRef(0)
 
   const load = async () => {
@@ -151,28 +155,7 @@ export default function TodosPage({ embedded = false }: { embedded?: boolean } =
     }
   }
 
-  const toggle = async (id: string) => {
-    if (togglingIds.has(id)) return
-    const todo = todos.find((item) => item.id === id)
-    let lateReason: string | undefined
-    let restoreReason: string | undefined
-    if (todo?.status === 'done') {
-      const reason = window.prompt('请填写恢复未完成的原因')
-      if (reason === null) return
-      restoreReason = reason.trim()
-      if (!restoreReason) {
-        setError('恢复未完成必须填写原因')
-        return
-      }
-    } else if (todo?.dueDate && new Date(todo.dueDate).getTime() < Date.now()) {
-      const reason = window.prompt('这项活动已经超时，请填写原因')
-      if (reason === null) return
-      lateReason = reason.trim()
-      if (!lateReason) {
-        setError('超时完成必须填写原因')
-        return
-      }
-    }
+  const applyToggle = async (id: string, lateReason?: string, restoreReason?: string) => {
     setTogglingIds((current) => new Set(current).add(id))
     try {
       await api.todos.toggle(id, lateReason, restoreReason)
@@ -188,8 +171,48 @@ export default function TodosPage({ embedded = false }: { embedded?: boolean } =
     }
   }
 
+  const toggle = async (id: string) => {
+    if (togglingIds.has(id)) return
+    const todo = todos.find((item) => item.id === id)
+    if (todo?.status === 'done') {
+      // 恢复未完成：必须先填写原因（替代原生 prompt）
+      setReasonPrompt({ kind: 'restore', todoId: id })
+      return
+    }
+    if (todo?.dueDate && new Date(todo.dueDate).getTime() < Date.now()) {
+      // 超时完成：必须先填写原因（替代原生 prompt）
+      setReasonPrompt({ kind: 'late', todoId: id })
+      return
+    }
+    await applyToggle(id)
+  }
+
+  const confirmReasonPrompt = async (rawReason: string) => {
+    if (!reasonPrompt) return
+    const reason = rawReason.trim()
+    if (reasonPrompt.kind === 'restore') {
+      if (!reason) {
+        setError('恢复未完成必须填写原因')
+        return
+      }
+      setReasonPrompt(null)
+      await applyToggle(reasonPrompt.todoId, undefined, reason)
+    } else {
+      if (!reason) {
+        setError('超时完成必须填写原因')
+        return
+      }
+      setReasonPrompt(null)
+      await applyToggle(reasonPrompt.todoId, reason)
+    }
+  }
+
   const remove = async (id: string) => {
-    if (!confirm('确定删除这条待办吗？')) return
+    setPendingRemoveId(id)
+  }
+
+  const performRemove = async (id: string) => {
+    setPendingRemoveId(null)
     try {
       await api.todos.remove(id)
       await load()
@@ -361,7 +384,7 @@ export default function TodosPage({ embedded = false }: { embedded?: boolean } =
               <div id="one-time-activities" hidden={oneTimeCollapsed} className="space-y-2">
                 {oneTimeItems.length === 0 ? (
                   <div className="py-3 text-center text-sm text-gray-400">暂无一次性活动</div>
-                ) : oneTimeItems.map((todo) => (
+                ) : oneTimeItems.map((todo, index) => (
                   <TodoCard
                     key={todo.id}
                     todo={todo}
@@ -372,6 +395,7 @@ export default function TodosPage({ embedded = false }: { embedded?: boolean } =
                     onDelete={remove}
                     onPickTag={setPickingTagFor}
                     isDone={todo.status === 'done'}
+                    animationDelay={Math.min(index, 5) * 40}
                   />
                 ))}
               </div>
@@ -405,6 +429,31 @@ export default function TodosPage({ embedded = false }: { embedded?: boolean } =
           onPick={(tagId) => startFromTodo(pickingTagFor, tagId)}
         />
       )}
+
+      {/* 恢复 / 超时原因输入（替代原生 prompt；空值保留弹窗并显示顶部错误条） */}
+      <PromptDialog
+        open={!!reasonPrompt}
+        title={reasonPrompt?.kind === 'restore' ? '恢复未完成' : '超时完成'}
+        message={reasonPrompt?.kind === 'restore' ? '请填写恢复未完成的原因' : '这项活动已经超时，请填写原因'}
+        label="原因"
+        confirmLabel="确定"
+        onConfirm={(value) => void confirmReasonPrompt(value)}
+        onCancel={() => setReasonPrompt(null)}
+      />
+
+      {/* 删除待办确认（替代原生 confirm） */}
+      <ConfirmDialog
+        open={!!pendingRemoveId}
+        danger
+        title="删除确认"
+        message="确定删除这条待办吗？"
+        onConfirm={() => {
+          const id = pendingRemoveId
+          setPendingRemoveId(null)
+          if (id) void performRemove(id)
+        }}
+        onCancel={() => setPendingRemoveId(null)}
+      />
     </div>
   )
 }
@@ -444,7 +493,7 @@ function ActivityModule({
       <div className="space-y-2">
         {items.length === 0 ? (
           <div className="py-6 text-center text-sm text-gray-400">{emptyText}</div>
-        ) : items.map((todo) => (
+        ) : items.map((todo, index) => (
           <TodoCard
             key={todo.id}
             todo={todo}
@@ -455,6 +504,7 @@ function ActivityModule({
             onDelete={onDelete}
             onPickTag={onPickTag}
             isDone={todo.status === 'done'}
+            animationDelay={Math.min(index, 5) * 40}
           />
         ))}
       </div>
@@ -472,6 +522,7 @@ function TodoCard({
   onDelete,
   onPickTag,
   isDone = false,
+  animationDelay,
 }: {
   todo: Todo
   running: any[]
@@ -481,13 +532,18 @@ function TodoCard({
   onDelete: (id: string) => void
   onPickTag: (t: Todo) => void
   isDone?: boolean
+  /** 列表错峰延迟（MOTION_SPEC §2 L2）：40ms/项，最多错 6 项，第 7 项起齐出。
+   *  260 + 5×40 = 460ms 封顶。传入即启用 list-in 入场；不传则静态渲染
+   *  （用于编辑态复用等不该重播动画的场景）。 */
+  animationDelay?: number
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   return (
     <div
       className={`group flex items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors ${
         isDone ? 'bg-green-50/70 border-green-200 dark:bg-green-950/20 dark:border-green-900/60' : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800'
-      }`}
+      } ${animationDelay !== undefined ? 'motion-safe:animate-list-in' : ''}`}
+      style={animationDelay !== undefined ? { animationDelay: `${animationDelay}ms` } : undefined}
     >
       <button
         type="button"

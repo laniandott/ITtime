@@ -3,6 +3,7 @@ import { CalendarClock, ChevronLeft, ChevronRight, Plus, Trash2, X } from 'lucid
 import { api } from '../api'
 import { DateTimeSecondPicker } from '../components/DateTimeSecondPicker'
 import { PageHeader } from '../components/PageHeader'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import { layoutPlans, type PlanLayout } from '../planLayout'
 import { formatDuration, toIsoSafe, useStore } from '../store'
 import type { Category, PlanBlock, Tag, TimeEntry, Todo } from '../types'
@@ -336,6 +337,7 @@ function ActualEntryDialog({ entry, tags, todos, onClose, onSaved }: {
   const [todoId, setTodoId] = useState(entry.todoId ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [pendingDelete, setPendingDelete] = useState(false)
 
   const save = async () => {
     const startIso = toIsoSafe(start)
@@ -351,8 +353,12 @@ function ActualEntryDialog({ entry, tags, todos, onClose, onSaved }: {
     finally { setSaving(false) }
   }
 
-  const remove = async () => {
-    if (!window.confirm('删除这条打卡记录？')) return
+  const remove = () => {
+    setPendingDelete(true)
+  }
+
+  const performRemove = async () => {
+    setPendingDelete(false)
     setSaving(true)
     try { await api.timer.remove(entry.id); await onSaved() }
     catch (reason) { setError(reason instanceof Error ? reason.message : '删除记录失败'); setSaving(false) }
@@ -363,7 +369,8 @@ function ActualEntryDialog({ entry, tags, todos, onClose, onSaved }: {
   const duration = Math.max(0, endDate.getTime() - startDate.getTime())
   const availableTodos = entry.todo && !todos.some((todo) => todo.id === entry.todo!.id) ? [entry.todo, ...todos] : todos
 
-  return <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
+  return <>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
     <section role="dialog" aria-modal="true" aria-labelledby="actual-entry-title" className="max-h-[90vh] w-full max-w-lg space-y-4 overflow-y-auto rounded-t-xl bg-white p-5 shadow-xl dark:bg-gray-900 sm:rounded-xl">
       <header className="flex items-start justify-between gap-3"><div className="min-w-0"><h2 id="actual-entry-title" className="truncate text-lg font-semibold" style={{ color: entry.tag?.color }}>{entry.tag?.name ?? '打卡记录'}</h2><p className="mt-1 text-xs text-gray-500">{entry.dismissed ? '已忽略' : entry.pendingResume ? '待续接' : !entry.endTime ? '进行中' : isCount ? '次数打卡' : '实际记录'}</p></div><button type="button" onClick={onClose} aria-label="关闭" className="grid h-8 w-8 shrink-0 place-items-center rounded hover:bg-gray-100 dark:hover:bg-gray-800"><X size={18} /></button></header>
       {editing ? <div className="space-y-3">
@@ -379,7 +386,18 @@ function ActualEntryDialog({ entry, tags, todos, onClose, onSaved }: {
       {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
       <footer className="flex items-center justify-between border-t border-gray-100 pt-3 dark:border-gray-800"><div>{!editing && <button type="button" disabled={saving} onClick={() => void remove()} aria-label="删除打卡记录" title="删除记录" className="grid h-9 w-9 place-items-center rounded text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"><Trash2 size={16} /></button>}</div><div className="flex gap-2"><button type="button" onClick={editing ? () => { setEditing(false); setError('') } : onClose} className="btn-secondary px-3 py-2 text-sm">{editing ? '取消' : '关闭'}</button>{editing ? <button type="button" disabled={saving} onClick={() => void save()} className="btn-primary px-4 py-2 text-sm">{saving ? '保存中…' : '保存修改'}</button> : <button type="button" onClick={() => setEditing(true)} className="btn-primary px-4 py-2 text-sm">编辑</button>}</div></footer>
     </section>
-  </div>
+    </div>
+    {/* 删除打卡记录确认（替代原生 confirm） */}
+    <ConfirmDialog
+      open={pendingDelete}
+      danger
+      title="删除确认"
+      message="删除这条打卡记录？"
+      confirmLabel="删除"
+      onConfirm={() => void performRemove()}
+      onCancel={() => setPendingDelete(false)}
+    />
+  </>
 }
 
 function toLocalInputWithSeconds(value: string) {
@@ -452,6 +470,7 @@ function PlanNoteEditor({ date, plan, startMinute, tags, categories, todos, onCl
   const [choosingStartTag, setChoosingStartTag] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [pendingDelete, setPendingDelete] = useState(false)
 
   const save = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -471,8 +490,14 @@ function PlanNoteEditor({ date, plan, startMinute, tags, categories, todos, onCl
     } finally { setSaving(false) }
   }
 
-  const remove = async () => {
-    if (!plan || !window.confirm('删除这项计划笔记？')) return
+  const remove = () => {
+    if (!plan) return
+    setPendingDelete(true)
+  }
+
+  const performRemove = async () => {
+    setPendingDelete(false)
+    if (!plan) return
     setSaving(true)
     try { await api.plans.remove(plan.id); await onSaved() }
     catch (reason) { setError(reason instanceof Error ? reason.message : '删除计划失败') }
@@ -519,6 +544,7 @@ function PlanNoteEditor({ date, plan, startMinute, tags, categories, todos, onCl
   }
 
   return (
+    <>
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
       <form onSubmit={save} className="w-full max-w-xl space-y-4 rounded-t-xl bg-white p-5 shadow-xl dark:bg-gray-900 sm:rounded-xl">
         <div className="flex items-start justify-between"><div><h2 className="text-lg font-semibold">{plan ? '编辑计划笔记' : '写入计划笔记'}</h2><p className="mt-1 text-xs text-gray-500">{date} · 按分钟设置时间</p></div><button type="button" onClick={onClose} aria-label="关闭" className="grid h-8 w-8 place-items-center rounded hover:bg-gray-100 dark:hover:bg-gray-800"><X size={18} /></button></div>
@@ -533,5 +559,16 @@ function PlanNoteEditor({ date, plan, startMinute, tags, categories, todos, onCl
         <div className="flex items-center justify-between"><div>{plan && <button type="button" disabled={saving} onClick={() => void remove()} title="删除计划" aria-label="删除计划" className="grid h-9 w-9 place-items-center rounded text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"><Trash2 size={16} /></button>}</div><div className="flex gap-2"><button type="button" onClick={onClose} className="btn-secondary px-3 py-2 text-sm">取消</button><button type="submit" disabled={saving || !content.trim()} className="btn-primary px-4 py-2 text-sm">{saving ? '保存中…' : '保存计划'}</button></div></div>
       </form>
     </div>
+    {/* 删除计划笔记确认（替代原生 confirm） */}
+    <ConfirmDialog
+      open={pendingDelete}
+      danger
+      title="删除确认"
+      message="删除这项计划笔记？"
+      confirmLabel="删除"
+      onConfirm={() => void performRemove()}
+      onCancel={() => setPendingDelete(false)}
+    />
+    </>
   )
 }

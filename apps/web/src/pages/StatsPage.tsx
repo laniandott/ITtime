@@ -8,6 +8,7 @@ import { elapsed, periodBounds } from '../localStats'
 import { planAdherence } from '../planStats'
 import { PageHeader } from '../components/PageHeader'
 import { announce, announceUrgent } from '../announce'
+import { useChartMotion } from '../hooks/useChartMotion'
 import type { TimeEntry, PlanBlock } from '../types'
 
 // 四态状态机（EMPTY_LOADING_ERROR.md §2.1）：loading 与 empty 绝不能用 data.length===0 混推——
@@ -100,6 +101,9 @@ export default function StatsPage() {
   const seqRef = useRef(0)
   const loadedOnceRef = useRef(false)
   const retryButtonRef = useRef<HTMLButtonElement>(null)
+  // 图表入场动画（MOTION_SPEC §6.4）：reduce 下 isAnimationActive=false，
+  // 直接呈现终态——CSS 全局降级够不到 Recharts 的 JS 时序动画。
+  const chartMotion = useChartMotion()
 
   useEffect(() => {
     const seq = ++seqRef.current
@@ -203,7 +207,9 @@ export default function StatsPage() {
                   <span className="text-xs text-gray-400">每日实际投入</span>
                 </div>
                 {hasTrend ? (
-                  <div className="-ml-2 h-[168px] w-[calc(100%+1rem)]">
+                  /* text-brand：SVG presentation attribute 不解析 var()，
+                     用 currentColor 关键字让 fill 继承 CSS color，拿到域感知色 */
+                  <div className="-ml-2 h-[168px] w-[calc(100%+1rem)] text-brand">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={trend} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
                         <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#9ca3af' }} axisLine={false} tickLine={false} interval={2} />
@@ -213,7 +219,7 @@ export default function StatsPage() {
                           labelStyle={{ color: '#374151', fontWeight: 600 }}
                           contentStyle={{ border: '1px solid #e5e7eb', borderRadius: 8, boxShadow: '0 6px 20px rgba(16,24,40,.08)', fontSize: 12, padding: '6px 10px' }}
                         />
-                        <Bar dataKey="ms" fill="#0d9488" radius={[4, 4, 0, 0]} maxBarSize={20} />
+                        <Bar dataKey="ms" fill="currentColor" radius={[4, 4, 0, 0]} maxBarSize={20} {...chartMotion} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>

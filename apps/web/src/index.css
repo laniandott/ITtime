@@ -218,6 +218,13 @@ html.dark {
   -webkit-font-smoothing: antialiased;
   color-scheme: light;
   --ui-ease: cubic-bezier(.2,.8,.2,1);
+  /* 动效缓动令牌（MOTION_SPEC §3）。--ui-ease 与 --ease-micro 同值并存是有意的：
+     前者已被 6 处存量引用，改名会牵连存量；后者是新代码的统一入口。
+     两变量必须同值，将来调 L1 曲线时两处一起改。 */
+  --ease-micro: cubic-bezier(.2,.8,.2,1);
+  --ease-enter: cubic-bezier(.16,1,.3,1);
+  --ease-exit:  cubic-bezier(.4,0,1,1);
+  --ease-loop:  cubic-bezier(.4,0,.6,1);
 }
 
 html.dark {
@@ -344,13 +351,6 @@ body {
   box-shadow: 0 24px 64px rgb(0 0 0 / .45);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .modal-panel,
-  [class*='animate-'] {
-    animation: none !important;
-  }
-}
-
 * {
   -webkit-tap-highlight-color: transparent;
 }
@@ -439,10 +439,9 @@ button:disabled {
   min-height: 2.5rem;
 }
 
-.btn-primary:not(:disabled):hover {
-  box-shadow: 0 5px 14px rgb(15 118 110 / .18);
-  transform: translateY(-1px);
-}
+/* hover 抬升与阴影见下方「表单与按钮」节的 ::before 伪元素版：
+   box-shadow 过渡触发重绘，低端 Android 上与 transform 混用会掉帧，
+   统一改为只动画伪元素 opacity（MOTION_SPEC §9.5）。 */
 
 .btn-secondary:not(:disabled):hover {
   @apply border-gray-300 bg-gray-50 dark:border-gray-600 dark:bg-gray-800;
@@ -463,7 +462,9 @@ button:disabled {
 .skeleton {
   background: linear-gradient(100deg, rgb(226 232 240 / .7) 30%, rgb(241 245 249) 50%, rgb(226 232 240 / .7) 70%);
   background-size: 200% 100%;
-  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  /* 1200ms + --ease-loop：UX 裁定值（原 1.5s ease-in-out）。ease-in-out 是
+     浏览器默认曲线的等价参数化形式，写出来等于没指定，统一走令牌。 */
+  animation: skeleton-shimmer 1200ms var(--ease-loop) infinite;
 }
 
 .dark .skeleton {
@@ -474,12 +475,65 @@ button:disabled {
 @keyframes skeleton-shimmer { to { background-position: -200% 0; } }
 @keyframes fade-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
+/* ── 折叠展开的高度动画（MOTION_SPEC §9.4，L2 · 320ms）── */
+/* grid-template-rows: 0fr → 1fr 技巧。不要动画 height:auto（不可插值），
+   也不要动画 max-height（timing 失真、中段裁剪内容）。
+   Capacitor Android WebView 需 ≥ Chrome 107，更低版本退化为 display:none
+   切换（无动画），不要退化成 max-height。 */
+.collapsible {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 320ms var(--ease-enter);
+}
+.collapsible[data-open="true"] {
+  grid-template-rows: 1fr;
+}
+.collapsible > * {
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* a11y 补充（规范 §9.4 未含，落地时必需）：折叠态子内容常驻 DOM，
+   仅靠 overflow 裁剪的话读屏能读到、Tab 能聚焦视觉上不可见的按钮。
+   visibility 离散过渡实现「展开立即可见、折叠播完再隐」：
+   折叠时新状态匹配基础规则，delay 320ms 等动画播完再 hidden；
+   展开时新状态匹配 open 规则，delay 归 0 立即 visible。
+   reduce 下全局规则把 delay 压成 0ms，visibility 与高度同步瞬切，
+   与 P5「跳到终态」一致。 */
+.collapsible > * {
+  visibility: hidden;
+  transition: visibility 0s linear 320ms;
+}
+.collapsible[data-open="true"] > * {
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+/* ── 动效降级：全局唯一入口（MOTION_SPEC §9.2）── */
+/* 覆盖 CSS 动画 / 过渡 / 滚动；JS 驱动的动画（Recharts）见 §6.4 的
+   useReducedMotion。四个「洞」都必须在场：
+   洞 1 · animation-delay 不重置 → 错峰列表逐项延迟闪现；
+   洞 2 · transition-delay 不重置 → hover 反馈延迟出现；
+   洞 3 · iteration-count 压成 1 → spinner 转一圈就停（下方例外段反压）；
+   洞 4 · fill-mode 缺失 → reduce 下 animation 直接跳到终态，这正是 P5 要的。 */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     scroll-behavior: auto !important;
     animation-duration: .01ms !important;
+    animation-delay: 0ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: .01ms !important;
+    transition-delay: 0ms !important;
+  }
+
+  /* spinner 例外：上方 * 通配符带 !important，会凭 important 胜过
+     .animate-spin 的普通声明，把 iteration-count 压成 1，转一圈就停。
+     用 !important 反压回来。duration 与 iteration-count 都必须显式恢复。 */
+  .animate-spin {
+    animation-duration: 1s !important;
+    animation-iteration-count: infinite !important;
   }
 }
 
@@ -903,8 +957,25 @@ body.fullscreen-clock-active header {
   border: none;
   color: #04121a;
   box-shadow: 0 6px 22px var(--d-glow);
+  /* 合成层优化（MOTION_SPEC §9.5）：阴影搬到 ::before，hover 只动画 opacity，
+     避免 box-shadow 过渡触发重绘在低端 Android 上掉帧。
+     isolation: isolate 把伪元素的层叠上下文限制在按钮内部，
+     z-index: -1 的伪元素不会穿到祖先背景后面。 */
+  position: relative;
+  isolation: isolate;
 }
-.btn-primary:not(:disabled):hover { box-shadow: 0 8px 30px rgb(var(--d-400-rgb) / .48) }
+.btn-primary::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  box-shadow: 0 8px 30px rgb(var(--d-400-rgb) / .48);
+  opacity: 0;
+  transition: opacity .2s var(--ease-micro);
+}
+.btn-primary:not(:disabled):hover::before { opacity: 1; }
+.btn-primary:not(:disabled):hover { transform: translateY(-1px); }
 .btn-secondary {
   background: var(--glass-bg-2);
   border-color: var(--glass-line);

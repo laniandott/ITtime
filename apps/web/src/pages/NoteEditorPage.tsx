@@ -11,6 +11,7 @@ import MarkdownEditor, {
 } from '../editor/MarkdownEditor'
 import type { EditorView } from '@codemirror/view'
 import { renderMarkdown } from '../editor/markdownPreview'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 
 type Mode = 'live' | 'edit' | 'split' | 'preview'
 
@@ -37,6 +38,8 @@ export default function NoteEditorPage() {
   const entitiesRequest = useRef(0)
   const [folders, setFolders] = useState<string[]>([])
   const [compactHeader, setCompactHeader] = useState(false)
+  const [pendingDiscardLocal, setPendingDiscardLocal] = useState(false)
+  const [pendingRemove, setPendingRemove] = useState(false)
 
   useEffect(() => {
     const updateHeader = () => {
@@ -156,9 +159,14 @@ export default function NoteEditorPage() {
     }
   }
 
-  const reloadDiscardLocal = async () => {
+  const reloadDiscardLocal = () => {
     if (!conflict) return
-    if (!confirm('将丢弃本地的未保存修改，重新加载服务器版本，确定？')) return
+    setPendingDiscardLocal(true)
+  }
+
+  const performReloadDiscardLocal = () => {
+    setPendingDiscardLocal(false)
+    if (!conflict) return
     const s = conflict
     setContent(s.serverContent)
     setConflict(null)
@@ -233,9 +241,14 @@ export default function NoteEditorPage() {
     }
   }
 
-  const remove = async () => {
+  const remove = () => {
     if (!note) return
-    if (!confirm(`确定删除笔记「${note.title}」？其它文件中的引用不会删除。`)) return
+    setPendingRemove(true)
+  }
+
+  const performRemove = async () => {
+    setPendingRemove(false)
+    if (!note) return
     try {
       await api.notes.remove(note.id)
       navigate('/notes')
@@ -596,6 +609,26 @@ export default function NoteEditorPage() {
           )}
         </div>
       )}
+
+      {/* 丢弃本地修改确认（替代原生 confirm） */}
+      <ConfirmDialog
+        open={pendingDiscardLocal}
+        danger
+        title="丢弃确认"
+        message="将丢弃本地的未保存修改，重新加载服务器版本，确定？"
+        onConfirm={performReloadDiscardLocal}
+        onCancel={() => setPendingDiscardLocal(false)}
+      />
+
+      {/* 删除笔记确认（替代原生 confirm） */}
+      <ConfirmDialog
+        open={pendingRemove}
+        danger
+        title="删除确认"
+        message={`确定删除笔记「${note?.title ?? ''}」？其它文件中的引用不会删除。`}
+        onConfirm={() => void performRemove()}
+        onCancel={() => setPendingRemove(false)}
+      />
     </div>
   )
 }

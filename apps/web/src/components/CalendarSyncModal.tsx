@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { getServerHost } from '../api'
 import { useStore } from '../store'
+import { announce } from '../announce'
 
 export function CalendarSyncModal({ onClose }: { onClose: () => void }) {
   const { categories } = useStore()
@@ -8,6 +9,7 @@ export function CalendarSyncModal({ onClose }: { onClose: () => void }) {
   const [selectedCat, setSelectedCat] = useState<string>('')
   const [version, setVersion] = useState<number>(Date.now())
   const [copiedType, setCopiedType] = useState<string | null>(null)
+  const [copyFailed, setCopyFailed] = useState(false)
   const [activeTab, setActiveTab] = useState<'apple' | 'android' | 'google' | 'outlook'>('apple')
 
   // 计算完整的绝对服务器根地址
@@ -46,10 +48,12 @@ export function CalendarSyncModal({ onClose }: { onClose: () => void }) {
     try {
       await navigator.clipboard.writeText(text)
       setCopiedType(type)
+      setCopyFailed(false)
       setTimeout(() => setCopiedType(null), 2000)
     } catch {
-      // 降级使用 prompt
-      window.prompt('请手动复制以下日历订阅链接：', text)
+      // 剪贴板不可用（降级）：链接已在下方只读输入框展示，行内提示手动复制即可
+      setCopyFailed(true)
+      announce('复制失败，请手动复制上方链接')
     }
   }
 
@@ -135,6 +139,7 @@ export function CalendarSyncModal({ onClose }: { onClose: () => void }) {
 
         {/* 订阅链接展示与复制 */}
         <div className="space-y-3">
+          {copyFailed && <p role="alert" className="text-xs text-amber-600 dark:text-amber-400">复制失败，请手动复制上方链接。</p>}
           <div>
             <div className="flex items-center justify-between text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1.5">
               <span>🌟 WebCal 订阅链接 (推荐)</span>

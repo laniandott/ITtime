@@ -105,14 +105,83 @@ export default {
           4: '#6ACAEF', 5: '#B9B9FF', 6: '#F4A8D4',
         },
       },
+      /* 缓动令牌（MOTION_SPEC §3/§8）：与 index.css 的 --ease-* 一一对应。
+         现存 transition-* 工具类继续用 Tailwind 默认曲线（被 index.css 全局
+         规则覆盖为 .18s var(--ui-ease)），加这四个是为了让
+         duration-[260ms] ease-enter 这类组合可写。 */
+      transitionTimingFunction: {
+        micro: 'cubic-bezier(.2,.8,.2,1)',
+        enter: 'cubic-bezier(.16,1,.3,1)',
+        exit:  'cubic-bezier(.4,0,1,1)',
+        loop:  'cubic-bezier(.4,0,.6,1)',
+      },
       keyframes: {
+        /* ── L0 环境层（循环，禁加 fill-mode） ── */
+        'pulse-live': {
+          '0%':   { transform: 'scale(1)',   opacity: '.5' },
+          '70%':  { transform: 'scale(1.6)', opacity: '0' },
+          '100%': { transform: 'scale(1.6)', opacity: '0' },
+        },
+        /* ── L1 微反馈层 ── */
+        'tip-in': {
+          from: { opacity: '0', transform: 'translateY(4px) scale(.98)' },
+          to:   { opacity: '1', transform: 'translateY(0) scale(1)' },
+        },
+        'pop-in': {
+          from: { opacity: '0', transform: 'translateY(8px) scale(.96)' },
+          to:   { opacity: '1', transform: 'translateY(0) scale(1)' },
+        },
+        'press-tap': {
+          '0%':   { transform: 'scale(1)' },
+          '40%':  { transform: 'scale(.96)' },
+          '100%': { transform: 'scale(1)' },
+        },
+        /* ── L2 组件层 ── */
+        'list-in': {
+          from: { opacity: '0', transform: 'translateY(10px)' },
+          to:   { opacity: '1', transform: 'translateY(0)' },
+        },
+        'sheet-in': {
+          from: { transform: 'translateY(100%)' },
+          to:   { transform: 'translateY(0)' },
+        },
+        'cmdk-in': {
+          from: { opacity: '0', transform: 'translateY(-8px) scale(.98)' },
+          to:   { opacity: '1', transform: 'translateY(0) scale(1)' },
+        },
+        /* ── L3 页面层 ── */
+        /* 升级版：纯 opacity → opacity + translateY(12px) + scale(.99)。
+           纯淡入在玻璃拟态 + 极光背景下几乎不可感知（MOTION_SPEC §2 L3）。 */
         'page-in': {
-          '0%': { opacity: '0' },
-          '100%': { opacity: '1' },
+          from: { opacity: '0', transform: 'translateY(12px) scale(.99)' },
+          to:   { opacity: '1', transform: 'translateY(0) scale(1)' },
+        },
+        /* ── L4 数据层 ── */
+        'bar-grow': {
+          from: { transform: 'scaleY(0)' },
+          to:   { transform: 'scaleY(1)' },
+        },
+        'ring-draw': {
+          from: { strokeDashoffset: '1' },
+          to:   { strokeDashoffset: '0' },
         },
       },
       animation: {
-        'page-in': 'page-in .3s cubic-bezier(.2,.8,.2,1) both',
+        /* L0 */
+        'pulse-live': 'pulse-live 2400ms cubic-bezier(.4,0,.6,1) infinite',
+        /* L1 */
+        'tip-in':    'tip-in 140ms cubic-bezier(.2,.8,.2,1) both',
+        'pop-in':    'pop-in 140ms cubic-bezier(.2,.8,.2,1) both',
+        'press-tap': 'press-tap 90ms cubic-bezier(.2,.8,.2,1) both',
+        /* L2 */
+        'list-in':   'list-in 260ms cubic-bezier(.16,1,.3,1) both',
+        'sheet-in':  'sheet-in 260ms cubic-bezier(.16,1,.3,1) both',
+        'cmdk-in':   'cmdk-in 200ms cubic-bezier(.16,1,.3,1) both',
+        /* L3 */
+        'page-in':   'page-in 300ms cubic-bezier(.16,1,.3,1) both',
+        /* L4 */
+        'bar-grow':  'bar-grow 700ms cubic-bezier(.16,1,.3,1) both',
+        'ring-draw': 'ring-draw 900ms cubic-bezier(.2,.8,.2,1) both',
       },
     },
   },

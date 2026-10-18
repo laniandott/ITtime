@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '../api'
 import type { CalendarSubscription } from '../types'
+import { ConfirmDialog } from './ConfirmDialog'
 
 const PRESET_COLORS = ['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#3498db', '#9b59b6', '#1abc9c', '#e84393']
 
@@ -13,6 +14,7 @@ export function SubscriptionManager({ onClose }: { onClose: () => void }) {
   const [newUrl, setNewUrl] = useState('')
   const [newColor, setNewColor] = useState(PRESET_COLORS[0])
   const [error, setError] = useState('')
+  const [pendingDeleteSub, setPendingDeleteSub] = useState<{ id: string; name: string } | null>(null)
   const loadSequence = useRef(0)
 
   const loadSubs = useCallback(async () => {
@@ -57,8 +59,12 @@ export function SubscriptionManager({ onClose }: { onClose: () => void }) {
     finally { setSyncing(null) }
   }
 
-  const deleteSub = async (id: string, name: string) => {
-    if (!confirm(`确定删除订阅「${name}」？`)) return
+  const deleteSub = (id: string, name: string) => {
+    setPendingDeleteSub({ id, name })
+  }
+
+  const performDeleteSub = async (id: string) => {
+    setPendingDeleteSub(null)
     setError('')
     try {
       await api.calendars.subscriptions.remove(id)
@@ -81,6 +87,7 @@ export function SubscriptionManager({ onClose }: { onClose: () => void }) {
   }
 
   return (
+    <>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
       <div className="modal-panel bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-lg mx-4 shadow-xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
@@ -113,12 +120,12 @@ export function SubscriptionManager({ onClose }: { onClose: () => void }) {
                   >
                     {syncing === sub.id ? '同步中…' : '🔄 同步'}
                   </button>
-                  <button
-                    onClick={() => deleteSub(sub.id, sub.name)}
-                    className="px-2 py-1 text-[0.667rem] rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                  >
-                    删除
-                  </button>
+          <button
+            onClick={() => deleteSub(sub.id, sub.name)}
+            className="px-2 py-1 text-[0.667rem] rounded-lg text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+          >
+            删除
+          </button>
                 </div>
               </div>
             ))
@@ -173,5 +180,15 @@ export function SubscriptionManager({ onClose }: { onClose: () => void }) {
         )}
       </div>
     </div>
+    {/* 删除订阅确认（替代原生 confirm；作为遮罩的兄弟节点，避免点击冒泡误关外层弹窗） */}
+    <ConfirmDialog
+      open={!!pendingDeleteSub}
+      danger
+      title="删除确认"
+      message={`确定删除订阅「${pendingDeleteSub?.name ?? ''}」？`}
+      onConfirm={() => { const sub = pendingDeleteSub; if (sub) void performDeleteSub(sub.id) }}
+      onCancel={() => setPendingDeleteSub(null)}
+    />
+    </>
   )
 }

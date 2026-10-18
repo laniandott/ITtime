@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import { PageHeader } from '../components/PageHeader'
 import { useNotesSocket } from '../hooks/useNotesSocket'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import type { NoteListEntry } from '../types'
 
 function noteFolder(path: string): string {
@@ -72,6 +73,7 @@ export default function NotesPage() {
   const [error, setError] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [expandedFolders, setExpandedFolders] = useState<Set<string> | null>(null)
+  const [pendingRemoveFolder, setPendingRemoveFolder] = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const loadSequence = useRef(0)
 
@@ -146,9 +148,14 @@ export default function NotesPage() {
     }
   }
 
-  const removeSelectedFolder = async () => {
+  const removeSelectedFolder = () => {
     if (!selectedFolder) return
-    if (!confirm(`删除空文件夹「${selectedFolder}」？`)) return
+    setPendingRemoveFolder(true)
+  }
+
+  const performRemoveSelectedFolder = async () => {
+    setPendingRemoveFolder(false)
+    if (!selectedFolder) return
     try {
       await api.notes.removeFolder(selectedFolder)
       const parentIndex = selectedFolder.lastIndexOf('/')
@@ -334,6 +341,16 @@ export default function NotesPage() {
           )}
         </section>
       </div>
+
+      {/* 删除空文件夹确认（替代原生 confirm） */}
+      <ConfirmDialog
+        open={pendingRemoveFolder}
+        danger
+        title="删除确认"
+        message={`删除空文件夹「${selectedFolder ?? ''}」？`}
+        onConfirm={() => void performRemoveSelectedFolder()}
+        onCancel={() => setPendingRemoveFolder(false)}
+      />
     </div>
   )
 }

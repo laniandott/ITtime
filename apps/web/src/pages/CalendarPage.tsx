@@ -6,6 +6,7 @@ import type { TimeEntry, Memo, Todo, Tag, PlanBlock, LinkedNoteEntry } from '../
 import { DateTimeSecondPicker } from '../components/DateTimeSecondPicker'
 import { CalendarSyncModal } from '../components/CalendarSyncModal'
 import { SubscriptionManager } from '../components/SubscriptionManager'
+import { ConfirmDialog } from '../components/ConfirmDialog'
 import type { CalendarEvent } from '../types'
 import { Solar } from 'lunar-javascript'
 import { readCalendarEventSnapshot, saveCalendarEventSnapshot } from '../calendarCache'
@@ -769,6 +770,7 @@ function PlanCreateModal({ date, plan, tags, todos, onClose, onSaved }: {
   const [todoId, setTodoId] = useState(plan?.todoId ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [pendingDelete, setPendingDelete] = useState(false)
   const submit = async (event: React.FormEvent) => {
     event.preventDefault()
     const toMinute = (time: string) => {
@@ -789,7 +791,21 @@ function PlanCreateModal({ date, plan, tags, todos, onClose, onSaved }: {
       setSaving(false)
     }
   }
+  const performDelete = async () => {
+    setPendingDelete(false)
+    if (!plan) return
+    setSaving(true)
+    try {
+      await api.plans.remove(plan.id)
+      await onSaved()
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : '删除计划失败')
+    } finally {
+      setSaving(false)
+    }
+  }
   return (
+    <>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onClick={onClose}>
       <form onSubmit={submit} className="modal-panel w-full max-w-lg space-y-4 rounded-xl bg-white p-5 shadow-xl dark:bg-gray-900" onClick={(event) => event.stopPropagation()}>
         <div className="flex items-center justify-between"><div><h2 className="text-lg font-semibold">{plan ? '编辑计划' : '新建计划'}</h2><p className="mt-1 text-sm text-gray-500">{date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}</p></div><button type="button" onClick={onClose} className="grid h-8 w-8 place-items-center rounded hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="关闭">×</button></div>
@@ -797,9 +813,20 @@ function PlanCreateModal({ date, plan, tags, todos, onClose, onSaved }: {
         <div className="grid grid-cols-2 gap-3"><label className="text-sm">开始时间<input required type="time" value={start} onChange={(event) => setStart(event.target.value)} className="input mt-1 w-full" /></label><label className="text-sm">结束时间<input required type="time" value={end} onChange={(event) => setEnd(event.target.value)} className="input mt-1 w-full" /></label></div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><label className="text-sm">Tag（可选）<select value={tagId} onChange={(event) => setTagId(event.target.value)} className="input mt-1 w-full"><option value="">不挂 Tag</option>{tags.map((tag) => <option key={tag.id} value={tag.id}>{tag.name}</option>)}</select></label><label className="text-sm">Todo（可选）<select value={todoId} onChange={(event) => setTodoId(event.target.value)} className="input mt-1 w-full"><option value="">不关联 Todo</option>{todos.map((todo) => <option key={todo.id} value={todo.id}>{todo.title}</option>)}</select></label></div>
         {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
-        <div className="flex justify-between gap-2">{plan ? <button type="button" disabled={saving} onClick={async () => { if (!window.confirm('删除这项计划？')) return; setSaving(true); try { await api.plans.remove(plan.id); await onSaved() } catch (reason) { setError(reason instanceof Error ? reason.message : '删除计划失败') } finally { setSaving(false) } }} className="text-sm text-red-600">删除</button> : <span />}<div className="flex gap-2"><button type="button" onClick={onClose} className="btn-secondary px-3 py-2 text-sm">取消</button><button type="submit" disabled={saving || !content.trim()} className="btn-primary px-4 py-2 text-sm">{saving ? '保存中…' : '保存计划'}</button></div></div>
+        <div className="flex justify-between gap-2">{plan ? <button type="button" disabled={saving} onClick={() => setPendingDelete(true)} className="text-sm text-red-600">删除</button> : <span />}<div className="flex gap-2"><button type="button" onClick={onClose} className="btn-secondary px-3 py-2 text-sm">取消</button><button type="submit" disabled={saving || !content.trim()} className="btn-primary px-4 py-2 text-sm">{saving ? '保存中…' : '保存计划'}</button></div></div>
       </form>
     </div>
+    {/* 删除计划确认（替代原生 confirm；作为遮罩的兄弟节点，避免点击冒泡误关外层弹窗） */}
+    <ConfirmDialog
+      open={pendingDelete}
+      danger
+      title="删除确认"
+      message="删除这项计划？"
+      confirmLabel="删除"
+      onConfirm={() => void performDelete()}
+      onCancel={() => setPendingDelete(false)}
+    />
+    </>
   )
 }
 
@@ -1338,6 +1365,7 @@ function EntryDetail({ entry, onClose, onChanged }: {
   const [editNote, setEditNote] = useState(entry.note ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [pendingDelete, setPendingDelete] = useState(false)
 
   const saveEdit = async () => {
     const startIso = toIsoSafe(editStart)
@@ -1362,8 +1390,12 @@ function EntryDetail({ entry, onClose, onChanged }: {
     }
   }
 
-  const removeEntry = async () => {
-    if (!confirm('确定要删除这条时间记录吗？')) return
+  const removeEntry = () => {
+    setPendingDelete(true)
+  }
+
+  const performRemoveEntry = async () => {
+    setPendingDelete(false)
     setSaving(true)
     try {
       await api.timer.remove(entry.id)
@@ -1375,6 +1407,7 @@ function EntryDetail({ entry, onClose, onChanged }: {
   }
 
   return (
+    <>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
       <div className="modal-panel bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-sm mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2.5 mb-5">
@@ -1463,6 +1496,17 @@ function EntryDetail({ entry, onClose, onChanged }: {
         </div>
       </div>
     </div>
+    {/* 删除时间记录确认（替代原生 confirm；作为遮罩的兄弟节点，避免点击冒泡误关外层弹窗） */}
+    <ConfirmDialog
+      open={pendingDelete}
+      danger
+      title="删除确认"
+      message="确定要删除这条时间记录吗？"
+      confirmLabel="删除"
+      onConfirm={() => void performRemoveEntry()}
+      onCancel={() => setPendingDelete(false)}
+    />
+    </>
   )
 }
 

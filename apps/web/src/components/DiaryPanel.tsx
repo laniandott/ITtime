@@ -5,6 +5,7 @@ import { formatDuration, toIsoSafe, useStore } from '../store'
 import type { Memo } from '../types'
 import { DateTimeSecondPicker } from './DateTimeSecondPicker'
 import { MemoEditModal } from '../pages/TimerPage'
+import { ConfirmDialog } from './ConfirmDialog'
 
 type DaysRange = 0 | 1 | 7 | 30
 
@@ -19,6 +20,7 @@ export default function DiaryPanel() {
   const [searchQuery, setSearchQuery] = useState('')
   const [filterCat, setFilterCat] = useState('')
   const [error, setError] = useState('')
+  const [pendingDeleteMemo, setPendingDeleteMemo] = useState<Memo | null>(null)
   const loadSequence = useRef(0)
 
   const loadMemos = useCallback(async () => {
@@ -59,6 +61,16 @@ export default function DiaryPanel() {
       return content.includes(query) || tagName.includes(query)
     })
   }, [memos, searchQuery, filterCat])
+
+  const performDeleteMemo = async (memo: Memo) => {
+    setPendingDeleteMemo(null)
+    try {
+      await api.memos.remove(memo.id)
+      await loadMemos()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '删除日记失败')
+    }
+  }
 
   return (
     <section className="diary-panel max-w-[1120px] space-y-4" aria-label="日记面板">
@@ -175,15 +187,7 @@ export default function DiaryPanel() {
                           编辑
                         </button>
                         <button
-                          onClick={async () => {
-                            if (!confirm('确定要删除这条日记吗？')) return
-                            try {
-                              await api.memos.remove(memo.id)
-                              await loadMemos()
-                            } catch (err) {
-                              setError(err instanceof Error ? err.message : '删除日记失败')
-                            }
-                          }}
+                          onClick={() => setPendingDeleteMemo(memo)}
                           className="text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                           删除
@@ -268,6 +272,15 @@ export default function DiaryPanel() {
           }}
         />
       )}
+      {/* 删除日记确认（替代原生 confirm） */}
+      <ConfirmDialog
+        open={!!pendingDeleteMemo}
+        danger
+        title="删除确认"
+        message="确定要删除这条日记吗？"
+        onConfirm={() => { const memo = pendingDeleteMemo; if (memo) void performDeleteMemo(memo) }}
+        onCancel={() => setPendingDeleteMemo(null)}
+      />
     </section>
   )
 }

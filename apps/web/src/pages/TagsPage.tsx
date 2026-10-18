@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { useStore } from '../store'
 import { PageHeader } from '../components/PageHeader'
 import { api } from '../api'
+import { ConfirmDialog } from '../components/ConfirmDialog'
+import { announceUrgent } from '../announce'
 import type { Category, Tag, Goal } from '../types'
 import { ChevronDown, ChevronRight, GripVertical, Settings } from 'lucide-react'
 
@@ -30,6 +32,9 @@ export default function TagsPage({ embedded = false }: { embedded?: boolean } = 
   const [draggedId, setDraggedId] = useState<string | null>(null)
   const [draggedGoalId, setDraggedGoalId] = useState<string | null>(null)
   const [collapsedTagIds, setCollapsedTagIds] = useState<Set<string>>(() => new Set())
+  const [pendingRemoveCategory, setPendingRemoveCategory] = useState<Category | null>(null)
+  const [pendingRemoveTag, setPendingRemoveTag] = useState<Tag | null>(null)
+  const [pendingRemoveGoal, setPendingRemoveGoal] = useState<Goal | null>(null)
 
   const orderedCategories = [...categories].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name))
   const orderedTags = [...tags].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name))
@@ -86,6 +91,38 @@ export default function TagsPage({ embedded = false }: { embedded?: boolean } = 
   }
   useEffect(() => { loadGoals() }, [tags])
 
+  const performRemoveCategory = async (cat: Category) => {
+    setPendingRemoveCategory(null)
+    try {
+      await api.categories.remove(cat.id)
+      await loadAll()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '删除分类失败')
+    }
+  }
+
+  const performRemoveTag = async (tag: Tag) => {
+    setPendingRemoveTag(null)
+    try {
+      await api.tags.remove(tag.id)
+      loadAll()
+    } catch (e) {
+      const message = (e as Error).message
+      setError(message)
+      announceUrgent(message)
+    }
+  }
+
+  const performRemoveGoal = async (goal: Goal) => {
+    setPendingRemoveGoal(null)
+    try {
+      await api.goals.remove(goal.id)
+      await loadGoals()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : '删除目标失败')
+    }
+  }
+
   return (
     <div className="workspace-page tags-page space-y-6">
       {/* 移动端底栏不放设置，这里是移动端唯一设置入口；桌面端侧栏底部也有同一个链接。
@@ -134,15 +171,7 @@ export default function TagsPage({ embedded = false }: { embedded?: boolean } = 
                   编辑
                 </button>
                 <button
-                  onClick={async () => {
-                    if (!confirm(`删除分类「${cat.name}」？标签不会被删除，只是变为未分类。`)) return
-                    try {
-                      await api.categories.remove(cat.id)
-                      await loadAll()
-                    } catch (e) {
-                      setError(e instanceof Error ? e.message : '删除分类失败')
-                    }
-                  }}
+                  onClick={() => setPendingRemoveCategory(cat)}
                   className="text-sm text-gray-400 hover:text-red-500"
                 >
                   删除
@@ -230,15 +259,7 @@ export default function TagsPage({ embedded = false }: { embedded?: boolean } = 
                   编辑
                 </button>
                 <button
-                  onClick={async () => {
-                    if (!confirm(`删除标签「${tag.name}」？`)) return
-                    try {
-                      await api.tags.remove(tag.id)
-                      loadAll()
-                    } catch (e) {
-                      alert((e as Error).message)
-                    }
-                  }}
+                  onClick={() => setPendingRemoveTag(tag)}
                   className="text-sm text-gray-400 hover:text-red-500"
                 >
                   删除
@@ -300,15 +321,7 @@ export default function TagsPage({ embedded = false }: { embedded?: boolean } = 
                       编辑
                     </button>
                     <button
-                  onClick={async () => {
-                    if (!confirm(`删除目标「${goal.title}」？`)) return
-                        try {
-                          await api.goals.remove(goal.id)
-                          await loadGoals()
-                        } catch (e) {
-                          setError(e instanceof Error ? e.message : '删除目标失败')
-                        }
-                      }}
+                      onClick={() => setPendingRemoveGoal(goal)}
                       className="text-sm text-gray-400 hover:text-red-500"
                     >
                       删除
@@ -349,6 +362,36 @@ export default function TagsPage({ embedded = false }: { embedded?: boolean } = 
           onSaved={() => { setEditingGoal(null); loadGoals() }}
         />
       )}
+
+      {/* 删除分类确认（替代原生 confirm） */}
+      <ConfirmDialog
+        open={!!pendingRemoveCategory}
+        danger
+        title="删除确认"
+        message={`删除分类「${pendingRemoveCategory?.name ?? ''}」？标签不会被删除，只是变为未分类。`}
+        onConfirm={() => { const cat = pendingRemoveCategory; if (cat) void performRemoveCategory(cat) }}
+        onCancel={() => setPendingRemoveCategory(null)}
+      />
+
+      {/* 删除标签确认（替代原生 confirm） */}
+      <ConfirmDialog
+        open={!!pendingRemoveTag}
+        danger
+        title="删除确认"
+        message={`删除标签「${pendingRemoveTag?.name ?? ''}」？`}
+        onConfirm={() => { const tag = pendingRemoveTag; if (tag) void performRemoveTag(tag) }}
+        onCancel={() => setPendingRemoveTag(null)}
+      />
+
+      {/* 删除目标确认（替代原生 confirm） */}
+      <ConfirmDialog
+        open={!!pendingRemoveGoal}
+        danger
+        title="删除确认"
+        message={`删除目标「${pendingRemoveGoal?.title ?? ''}」？`}
+        onConfirm={() => { const goal = pendingRemoveGoal; if (goal) void performRemoveGoal(goal) }}
+        onCancel={() => setPendingRemoveGoal(null)}
+      />
     </div>
   )
 }

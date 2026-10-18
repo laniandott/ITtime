@@ -14,6 +14,8 @@ import MarkdownEditor, {
 import { renderMarkdown } from '../editor/markdownPreview'
 import { atomicMathPreview } from '../editor/atomicMathPreview'
 import { buildNoteTree, type NoteFolderNode } from './NotesPage'
+import { ConfirmDialog } from '../components/ConfirmDialog'
+import { PromptDialog } from '../components/PromptDialog'
 import 'katex/dist/katex.min.css'
 
 type ViewMode = 'live' | 'edit' | 'split' | 'preview'
@@ -65,6 +67,13 @@ export default function VaultPage() {
   const [entities, setEntities] = useState<RelatedEntities | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>('live')
   const [vaultError, setVaultError] = useState('')
+  const [pendingCloseTabId, setPendingCloseTabId] = useState<string | null>(null)
+  const [pendingRemoveFolder, setPendingRemoveFolder] = useState<string | null>(null)
+  const [pendingDiscardNoteId, setPendingDiscardNoteId] = useState<string | null>(null)
+  const [pendingRemoveNoteId, setPendingRemoveNoteId] = useState<string | null>(null)
+  const [pendingSwitchVault, setPendingSwitchVault] = useState(false)
+  const [creatingNote, setCreatingNote] = useState(false)
+  const [creatingFolder, setCreatingFolder] = useState(false)
   const editorRef = useRef<EditorView | null>(null)
   const documentsRef = useRef(documents)
   const activeIdRef = useRef(id)
@@ -123,7 +132,13 @@ export default function VaultPage() {
   const switchVault = async () => {
     const nextPath = vaultPathDraft.trim()
     if (!nextPath || vaultBusy) return
-    if (!confirm('切换文件库后，ITtime 会重新扫描该文件夹中的 Markdown 文件。不会移动或删除任何文件，笔记索引和笔记 ID 可能变化。继续吗？')) return
+    setPendingSwitchVault(true)
+  }
+
+  const performSwitchVault = async () => {
+    const nextPath = vaultPathDraft.trim()
+    if (!nextPath || vaultBusy) return
+    setPendingSwitchVault(false)
     setVaultBusy(true)
     try {
       const result = await api.notes.setVault(nextPath)
@@ -216,7 +231,10 @@ export default function VaultPage() {
 
   const closeTab = (noteId: string, force = false) => {
     const doc = documentsRef.current[noteId]
-    if (!force && doc?.dirty && !confirm(`「${doc.title}」还有未保存修改，确定关闭？`)) return
+    if (!force && doc?.dirty) {
+      setPendingCloseTabId(noteId)
+      return
+    }
     const index = openTabs.indexOf(noteId)
     const nextTabs = openTabs.filter((tabId) => tabId !== noteId)
     setOpenTabs(nextTabs)
@@ -232,7 +250,11 @@ export default function VaultPage() {
   }
 
   const createNote = async () => {
-    const title = window.prompt('新建笔记标题')?.trim()
+    setCreatingNote(true)
+  }
+
+  const performCreateNote = async (rawTitle: string) => {
+    const title = rawTitle.trim()
     if (!title) return
     try {
       const created = await api.notes.create({ title, folder: selectedFolder || '' })
@@ -244,7 +266,11 @@ export default function VaultPage() {
   }
 
   const createFolder = async () => {
-    const name = window.prompt(selectedFolder ? `在「${selectedFolder}」下新建文件夹` : '新建文件夹')?.trim().replace(/\\/g, '/')
+    setCreatingFolder(true)
+  }
+
+  const performCreateFolder = async (rawName: string) => {
+    const name = rawName.trim().replace(/\\/g, '/')
     if (!name) return
     const path = selectedFolder && !name.includes('/') ? `${selectedFolder}/${name}` : name
     try {
@@ -258,7 +284,11 @@ export default function VaultPage() {
   }
 
   const removeFolder = async (path: string) => {
-    if (!confirm(`删除空文件夹「${path}」？文件夹不为空时不会删除。`)) return
+    setPendingRemoveFolder(path)
+  }
+
+  const performRemoveFolder = async (path: string) => {
+    setPendingRemoveFolder(null)
     try {
       await api.notes.removeFolder(path)
       setSelectedFolder((current) => current === path || current?.startsWith(`${path}/`) ? path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : null : current)
@@ -328,7 +358,14 @@ export default function VaultPage() {
 
   const discardLocal = (noteId: string) => {
     const doc = documentsRef.current[noteId]
-    if (!doc?.conflict || !confirm('将丢弃本地修改并加载服务器版本，确定？')) return
+    if (!doc?.conflict) return
+    setPendingDiscardNoteId(noteId)
+  }
+
+  const performDiscardLocal = (noteId: string) => {
+    setPendingDiscardNoteId(null)
+    const doc = documentsRef.current[noteId]
+    if (!doc?.conflict) return
     updateDocument(noteId, {
       content: doc.conflict.serverContent,
       note: { ...doc.note, content: doc.conflict.serverContent, revision: doc.conflict.serverRevision },
@@ -364,7 +401,14 @@ export default function VaultPage() {
 
   const removeDocument = async (noteId: string) => {
     const doc = documentsRef.current[noteId]
-    if (!doc || !confirm(`确定删除笔记「${doc.title}」？其它文件中的引用不会删除。`)) return
+    if (!doc) return
+    setPendingRemoveNoteId(noteId)
+  }
+
+  const performRemoveDocument = async (noteId: string) => {
+    setPendingRemoveNoteId(null)
+    const doc = documentsRef.current[noteId]
+    if (!doc) return
     try {
       await api.notes.remove(noteId)
       closeTab(noteId, true)
@@ -498,6 +542,101 @@ export default function VaultPage() {
           </div>
         </div>
       </div>}
+
+      {/* 关闭未保存标签页确认（替代原生 confirm） */}
+      <ConfirmDialog
+        open={!!pendingCloseTabId}
+        title="关闭确认"
+        message={`「${pendingCloseTabId ? documents[pendingCloseTabId]?.title ?? '' : ''}」还有未保存修改，确定关闭？`}
+        confirmLabel="放弃修改并关闭"
+        danger
+        onConfirm={() => {
+          const noteId = pendingCloseTabId
+          setPendingCloseTabId(null)
+          if (noteId) closeTab(noteId, true)
+        }}
+        onCancel={() => setPendingCloseTabId(null)}
+      />
+
+      {/* 删除空文件夹确认（替代原生 confirm） */}
+      <ConfirmDialog
+        open={!!pendingRemoveFolder}
+        danger
+        title="删除确认"
+        message={`删除空文件夹「${pendingRemoveFolder ?? ''}」？文件夹不为空时不会删除。`}
+        onConfirm={() => {
+          const path = pendingRemoveFolder
+          setPendingRemoveFolder(null)
+          if (path) void performRemoveFolder(path)
+        }}
+        onCancel={() => setPendingRemoveFolder(null)}
+      />
+
+      {/* 丢弃本地修改确认（替代原生 confirm） */}
+      <ConfirmDialog
+        open={!!pendingDiscardNoteId}
+        danger
+        title="丢弃确认"
+        message="将丢弃本地修改并加载服务器版本，确定？"
+        onConfirm={() => {
+          const noteId = pendingDiscardNoteId
+          setPendingDiscardNoteId(null)
+          if (noteId) performDiscardLocal(noteId)
+        }}
+        onCancel={() => setPendingDiscardNoteId(null)}
+      />
+
+      {/* 删除笔记确认（替代原生 confirm） */}
+      <ConfirmDialog
+        open={!!pendingRemoveNoteId}
+        danger
+        title="删除确认"
+        message={`确定删除笔记「${pendingRemoveNoteId ? documents[pendingRemoveNoteId]?.title ?? '' : ''}」？其它文件中的引用不会删除。`}
+        onConfirm={() => {
+          const noteId = pendingRemoveNoteId
+          setPendingRemoveNoteId(null)
+          if (noteId) void performRemoveDocument(noteId)
+        }}
+        onCancel={() => setPendingRemoveNoteId(null)}
+      />
+
+      {/* 切换文件库确认（替代原生 confirm） */}
+      <ConfirmDialog
+        open={pendingSwitchVault}
+        title="切换文件库"
+        message="切换文件库后，ITtime 会重新扫描该文件夹中的 Markdown 文件。不会移动或删除任何文件，笔记索引和笔记 ID 可能变化。继续吗？"
+        confirmLabel="确认切换"
+        onConfirm={() => void performSwitchVault()}
+        onCancel={() => setPendingSwitchVault(false)}
+      />
+
+      {/* 新建笔记标题输入（替代原生 prompt） */}
+      <PromptDialog
+        open={creatingNote}
+        title="新建笔记"
+        label="笔记标题"
+        defaultValue=""
+        confirmLabel="创建"
+        onConfirm={async (value) => {
+          setCreatingNote(false)
+          await performCreateNote(value)
+        }}
+        onCancel={() => setCreatingNote(false)}
+      />
+
+      {/* 新建文件夹名称输入（替代原生 prompt） */}
+      <PromptDialog
+        open={creatingFolder}
+        title={selectedFolder ? `在「${selectedFolder}」下新建文件夹` : '新建文件夹'}
+        label="文件夹名称"
+        defaultValue=""
+        confirmLabel="创建"
+        onConfirm={async (value) => {
+          setCreatingFolder(false)
+          await performCreateFolder(value)
+        }}
+        onCancel={() => setCreatingFolder(false)}
+      />
     </div>
   )
 }

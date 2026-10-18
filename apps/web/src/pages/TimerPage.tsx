@@ -7,6 +7,8 @@ import { DateTimeSecondPicker } from '../components/DateTimeSecondPicker'
 import { PageHeader } from '../components/PageHeader'
 import { syncNativeStatusBarTheme } from '../nativeStatusBar'
 import { ChevronDown, ChevronRight, GripVertical, ArrowUpDown } from 'lucide-react'
+import { ConfirmDialog } from '../components/ConfirmDialog'
+import { announce, announceUrgent } from '../announce'
 
 // 辅助函数：格式化时间为 YYYY/MM/DD HH:mm:ss
 const formatDateTimeWithSeconds = (isoStr: string) => {
@@ -108,6 +110,9 @@ export default function TimerPage() {
   const [customTo, setCustomTo] = useState('')
   const [recentError, setRecentError] = useState('')
   const [feedback, setFeedback] = useState('')
+  // 计时操作（开始/停止/删除记录）的行内错误：替代原生 alert，配 announceUrgent 播报
+  const [actionError, setActionError] = useState('')
+  const [pendingDeleteEntryId, setPendingDeleteEntryId] = useState<string | null>(null)
   const [sortingQuickStart, setSortingQuickStart] = useState(false)
   const [draggedQuickStartId, setDraggedQuickStartId] = useState<string | null>(null)
   const [collapsedQuickTagIds, setCollapsedQuickTagIds] = useState<Set<string>>(() => new Set())
@@ -207,7 +212,9 @@ export default function TimerPage() {
       await startActivity(tagId, quickTodoId || undefined)
       setFeedback('已保存到本机：' + (tags.find(tag => tag.id === tagId)?.trackType === 'count' ? '打卡成功' : '计时已开始'))
     } catch (e) {
-      alert((e as Error).message)
+      const message = (e as Error).message
+      setActionError(message)
+      announceUrgent(message)
     } finally {
       startingTagIds.current.delete(tagId)
     }
@@ -236,7 +243,9 @@ export default function TimerPage() {
       await loadRecent()
       openNextRecovery()
     } catch (e) {
-      alert((e as Error).message)
+      const message = (e as Error).message
+      setActionError(message)
+      announceUrgent(message)
     } finally {
       setStoppingId(null)
     }
@@ -249,21 +258,16 @@ export default function TimerPage() {
       await loadRecent()
       setFeedback('所有计时均已结束并保存到本机，可在下方最近记录中查看')
     } catch (e) {
-      alert((e as Error).message)
+      const message = (e as Error).message
+      setActionError(message)
+      announceUrgent(message)
     } finally {
       setStoppingAll(false)
     }
   }
 
-  const handleDelete = async (id: string) => {
-    if (confirm('确定要删除这条时间记录吗？')) {
-      try {
-        await api.timer.remove(id)
-        await loadRecent()
-      } catch (e) {
-        alert(e instanceof Error ? e.message : '删除时间记录失败')
-      }
-    }
+  const handleDelete = (id: string) => {
+    setPendingDeleteEntryId(id)
   }
 
   // 按分类分组标签
@@ -308,6 +312,7 @@ export default function TimerPage() {
   return (
     <div className="workspace-page timer-page space-y-6">
       {feedback && <div role="status" className="rounded-xl border border-green-200 bg-green-50 dark:bg-green-950/30 p-3 text-sm text-green-700 dark:text-green-300">{feedback}</div>}
+      {actionError && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">{actionError}</div>}
       <PageHeader title="工作台" description="正在进行的计时、快速开始与最近记录" />
 
       {/* 布局：运行中为「计时 + 时间线 | 快速开始」两栏，空闲时单栏（session 自身 hidden） */}
@@ -357,7 +362,15 @@ export default function TimerPage() {
       {running.length > 0 ? (
         <div className="min-w-0 space-y-3">
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <span className="text-sm text-gray-500">
+            <span className="flex items-center gap-2 text-sm text-gray-500">
+              {/* 呼吸圆点（MOTION_SPEC §2 L4 · pulse-live 2400ms）：装饰性，aria-hidden。
+                  motion-safe: 前缀 + index.css 全局 reduce 兜底双保险（§0.3 硬规则 2）；
+                  reduce 下脉冲圈被压成 .01ms 即停，视觉只剩静态实心点，符合 P5。
+                  P4：循环动画元素 pointer-events-none，不拦截点击。 */}
+              <span className="relative flex h-2 w-2 shrink-0" aria-hidden="true">
+                <span className="pointer-events-none absolute inline-flex h-full w-full motion-safe:animate-pulse-live rounded-full bg-brand/60" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-brand" />
+              </span>
               {running.length > 1 ? `${running.length} 个计时进行中` : '正在计时'}
             </span>
             <div className="flex items-center gap-3">
@@ -471,8 +484,15 @@ export default function TimerPage() {
                             <QuickStartTagButton tag={tag} isRunning={running.some(entry => entry.tagId === tag.id)} onClick={() => handleStart(tag.id)} />
                             {sortingQuickStart && <GripVertical className="h-4 w-4 cursor-grab text-gray-400 active:cursor-grabbing" aria-label="拖动标签排序" />}
                           </div>
-                          {!collapsed && childTags.length > 0 && <div className="ml-7 space-y-1.5 border-l border-gray-200 pl-2 dark:border-gray-700">
-                            {childTags.map((child) => <div key={child.id} draggable={sortingQuickStart} onDragStart={(event) => { event.stopPropagation(); event.dataTransfer.setData('text/plain', child.id); event.dataTransfer.effectAllowed = 'move'; setDraggedQuickStartId(child.id) }} onDragOver={(event) => { if (sortingQuickStart) event.preventDefault() }} onDrop={(event) => { event.preventDefault(); event.stopPropagation(); const sourceId = event.dataTransfer.getData('text/plain'); if (sourceId) void saveOrder(childTags, sourceId, child.id, (id, sortOrder) => api.tags.update(id, { sortOrder })) }} onDragEnd={() => setDraggedQuickStartId(null)} className={`flex items-center gap-1 ${draggedQuickStartId === child.id ? 'opacity-40' : ''}`}><QuickStartTagButton tag={child} isRunning={running.some(entry => entry.tagId === child.id)} onClick={() => handleStart(child.id)} />{sortingQuickStart && <GripVertical className="h-4 w-4 cursor-grab text-gray-400 active:cursor-grabbing" aria-label="拖动标签排序" />}</div>)}
+                          {/* 折叠动画（MOTION_SPEC §9.4 .collapsible）：
+                              grid-template-rows 0fr→1fr，320ms --ease-enter。
+                              子内容常驻 DOM，折叠态的可见性/可聚焦性由 CSS
+                              visibility 延迟切换处理（见 index.css a11y 补充）。
+                              aria-expanded 由上方按钮承载，此处无需重复。 */}
+                          {childTags.length > 0 && <div className="collapsible ml-7 border-l border-gray-200 pl-2 dark:border-gray-700" data-open={!collapsed}>
+                            <div className="space-y-1.5">
+                              {childTags.map((child) => <div key={child.id} draggable={sortingQuickStart} onDragStart={(event) => { event.stopPropagation(); event.dataTransfer.setData('text/plain', child.id); event.dataTransfer.effectAllowed = 'move'; setDraggedQuickStartId(child.id) }} onDragOver={(event) => { if (sortingQuickStart) event.preventDefault() }} onDrop={(event) => { event.preventDefault(); event.stopPropagation(); const sourceId = event.dataTransfer.getData('text/plain'); if (sourceId) void saveOrder(childTags, sourceId, child.id, (id, sortOrder) => api.tags.update(id, { sortOrder })) }} onDragEnd={() => setDraggedQuickStartId(null)} className={`flex items-center gap-1 ${draggedQuickStartId === child.id ? 'opacity-40' : ''}`}><QuickStartTagButton tag={child} isRunning={running.some(entry => entry.tagId === child.id)} onClick={() => handleStart(child.id)} />{sortingQuickStart && <GripVertical className="h-4 w-4 cursor-grab text-gray-400 active:cursor-grabbing" aria-label="拖动标签排序" />}</div>)}
+                            </div>
                           </div>}
                         </div>
                       )
@@ -674,7 +694,9 @@ export default function TimerPage() {
               }
               await loadRecent()
             } catch (e) {
-              alert((e as Error).message)
+              const message = (e as Error).message
+              setActionError(message)
+              announceUrgent(message)
             } finally {
               setStoppingId(null)
             }
@@ -752,6 +774,29 @@ export default function TimerPage() {
 
       {/* 全屏常显时钟 */}
       {showFullscreen && <FullscreenClockOverlay onClose={() => setShowFullscreen(false)} />}
+
+      {/* 删除时间记录确认（替代原生 confirm） */}
+      <ConfirmDialog
+        open={!!pendingDeleteEntryId}
+        danger
+        title="删除确认"
+        message="确定要删除这条时间记录吗？"
+        onConfirm={async () => {
+          const id = pendingDeleteEntryId
+          if (!id) return
+          try {
+            await api.timer.remove(id)
+            await loadRecent()
+          } catch (e) {
+            const message = e instanceof Error ? e.message : '删除时间记录失败'
+            setActionError(message)
+            announceUrgent(message)
+          } finally {
+            setPendingDeleteEntryId(null)
+          }
+        }}
+        onCancel={() => setPendingDeleteEntryId(null)}
+      />
     </div>
   )
 }
@@ -808,6 +853,11 @@ function PlanPanel({
   const [actionId, setActionId] = useState<string | null>(null)
   const [startingPlanId, setStartingPlanId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
+  // 计划操作失败的行内错误（面板级）与编辑器内的校验/保存错误，替代原生 alert
+  const [panelError, setPanelError] = useState('')
+  const [editorError, setEditorError] = useState('')
+  const [pendingDeletePlan, setPendingDeletePlan] = useState<PlanBlock | null>(null)
+  const [deferringPlan, setDeferringPlan] = useState<PlanBlock | null>(null)
   const [draft, setDraft] = useState<PlanDraft>(() => {
     const now = new Date()
     const start = Math.ceil((now.getHours() * 60 + now.getMinutes()) / 15) * 15
@@ -825,7 +875,7 @@ function PlanPanel({
     const startMinute = minuteFromTime(draft.start)
     const endMinute = minuteFromTime(draft.end)
     if (endMinute <= startMinute) {
-      alert('结束时间必须晚于开始时间')
+      setEditorError('结束时间必须晚于开始时间')
       return
     }
     setSaving(true)
@@ -838,11 +888,14 @@ function PlanPanel({
         tagId: draft.tagId || null,
         todoId: draft.todoId || null,
       })
+      setEditorError('')
       resetDraft()
       setShowComposer(false)
       await onChanged()
     } catch (error) {
-      alert(error instanceof Error ? error.message : '创建计划失败')
+      const message = error instanceof Error ? error.message : '创建计划失败'
+      setEditorError(message)
+      announceUrgent(message)
     } finally {
       setSaving(false)
     }
@@ -864,7 +917,7 @@ function PlanPanel({
     const startMinute = minuteFromTime(editDraft.start)
     const endMinute = minuteFromTime(editDraft.end)
     if (endMinute <= startMinute) {
-      alert('结束时间必须晚于开始时间')
+      setEditorError('结束时间必须晚于开始时间')
       return
     }
     setSaving(true)
@@ -876,11 +929,14 @@ function PlanPanel({
         tagId: editDraft.tagId || null,
         todoId: editDraft.todoId || null,
       })
+      setEditorError('')
       setEditingId(null)
       setEditDraft(null)
       await onChanged()
     } catch (error) {
-      alert(error instanceof Error ? error.message : '保存计划失败')
+      const message = error instanceof Error ? error.message : '保存计划失败'
+      setEditorError(message)
+      announceUrgent(message)
     } finally {
       setSaving(false)
     }
@@ -892,30 +948,21 @@ function PlanPanel({
       await action()
       await onChanged()
     } catch (error) {
-      alert(error instanceof Error ? error.message : '计划操作失败')
+      const message = error instanceof Error ? error.message : '计划操作失败'
+      setPanelError(message)
+      announceUrgent(message)
     } finally {
       setActionId(null)
     }
   }
 
-  const deferPlan = async (plan: PlanBlock) => {
-    const date = window.prompt('推迟到哪一天？', localDateKey())
-    if (!date) return
-    const start = window.prompt('新的开始时间（HH:mm）', timeFromMinute(plan.startMinute))
-    if (!start) return
-    const end = window.prompt('新的结束时间（HH:mm）', timeFromMinute(plan.endMinute))
-    if (!end) return
-    const startMinute = minuteFromTime(start)
-    const endMinute = minuteFromTime(end)
-    if (endMinute <= startMinute) {
-      alert('结束时间必须晚于开始时间')
-      return
-    }
-    await perform(plan, () => api.plans.defer(plan.id, { date, startMinute, endMinute }))
+  const deferPlan = (plan: PlanBlock) => {
+    setDeferringPlan(plan)
   }
 
   const renderEditor = (value: PlanDraft, setValue: (next: PlanDraft) => void, onSave: () => void, onCancel?: () => void) => (
     <div className="mt-3 space-y-2 rounded-xl border border-brand/20 bg-brand/5 p-3">
+      {editorError && <p role="alert" className="text-xs text-red-500">{editorError}</p>}
       <textarea
         value={value.content}
         onChange={(event) => setValue({ ...value, content: event.target.value })}
@@ -943,6 +990,7 @@ function PlanPanel({
       </div>
       {showComposer && renderEditor(draft, setDraft, submitNew, () => setShowComposer(false))}
       {error && <div className="mt-3 flex items-center justify-between rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/30 dark:text-red-300"><span>{error}</span><button type="button" onClick={onReload} className="underline">重试</button></div>}
+      {panelError && <div role="alert" className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950/30 dark:text-red-300">{panelError}</div>}
       {plans.length === 0 ? <div className="py-6 text-center text-sm text-gray-500">今天还没有计划，先写下第一件要做的事。</div> : <div className="mt-4 space-y-2">{[...plans].sort((a, b) => a.startMinute - b.startMinute).map((plan) => {
         const selectedTagId = plan.tagId ?? ''
         const tag = tags.find((item) => item.id === selectedTagId)
@@ -951,12 +999,91 @@ function PlanPanel({
           <div className="flex flex-wrap items-start gap-3">
             <div className="w-24 shrink-0 text-xs font-medium text-gray-500">{timeFromMinute(plan.startMinute)} - {timeFromMinute(plan.endMinute)}<div className="mt-1 text-[0.733rem]">{planStatusLabel[plan.executionStatus ?? 'upcoming'] ?? '待开始'}</div><div className="mt-0.5 text-[0.667rem] text-gray-400">{planDispositionLabel[plan.disposition ?? 'planned']}{plan.confirmed ? ' · 已确认' : ''}</div></div>
             <div className="min-w-0 flex-1"><div className="whitespace-pre-wrap text-sm text-gray-900 dark:text-gray-100">{plan.content}</div><div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500"><select value={selectedTagId} onChange={(event) => void perform(plan, () => api.plans.update(plan.id, { tagId: event.target.value || null }))} className="input !w-auto !py-0.5 text-xs"><option value="">选择标签</option>{tags.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>{tag && <span>{tag.trackType === 'count' ? '次数型' : '时长型'}</span>}{plan.actualMs != null && <span>已记录 {formatDuration(plan.actualMs)}</span>}{plan.coverageRate != null && <span>覆盖 {Math.round(plan.coverageRate * 100)}%</span>}</div></div>
-            <div className="flex shrink-0 flex-wrap justify-end gap-1.5">{plan.disposition !== 'skipped' && (selectedTagId ? <button type="button" disabled={actionId === plan.id || tag?.trackType === 'count'} onClick={() => tag?.trackType === 'time' && void perform(plan, () => onStart(plan, selectedTagId))} className="btn-primary px-2.5 py-1 text-xs">{tag?.trackType === 'count' ? '次数标签不可启动' : '开始'}</button> : startingPlanId === plan.id ? <select autoFocus aria-label="选择计划计时标签" defaultValue="" onChange={(event) => { const id = event.target.value; if (id) { setStartingPlanId(null); void perform(plan, () => onStart(plan, id)) } }} className="input !w-auto !py-1 text-xs"><option value="" disabled>选择时长型标签</option>{tags.filter((item) => item.trackType === 'time').map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select> : <button type="button" disabled={actionId === plan.id || !tags.some((item) => item.trackType === 'time')} onClick={() => setStartingPlanId(plan.id)} className="btn-primary px-2.5 py-1 text-xs">开始</button>)}{plan.disposition === 'skipped' ? <button type="button" disabled={actionId === plan.id} onClick={() => void perform(plan, () => api.plans.unskip(plan.id))} className="btn-secondary px-2.5 py-1 text-xs">恢复</button> : <button type="button" disabled={actionId === plan.id} onClick={() => void perform(plan, () => api.plans.skip(plan.id))} className="btn-secondary px-2.5 py-1 text-xs">跳过</button>}<button type="button" disabled={actionId === plan.id} onClick={() => void perform(plan, () => api.plans.confirm(plan.id))} className="btn-secondary px-2.5 py-1 text-xs">确认</button>{plan.disposition !== 'deferred' && <button type="button" disabled={actionId === plan.id} onClick={() => void deferPlan(plan)} className="btn-secondary px-2.5 py-1 text-xs">推迟</button>}<button type="button" onClick={() => beginEdit(plan)} className="btn-secondary px-2.5 py-1 text-xs">编辑</button><button type="button" disabled={actionId === plan.id} onClick={() => { if (window.confirm('删除这项计划？')) void perform(plan, () => api.plans.remove(plan.id)) }} className="btn-secondary px-2.5 py-1 text-xs text-red-500">删除</button></div>
+            <div className="flex shrink-0 flex-wrap justify-end gap-1.5">{plan.disposition !== 'skipped' && (selectedTagId ? <button type="button" disabled={actionId === plan.id || tag?.trackType === 'count'} onClick={() => tag?.trackType === 'time' && void perform(plan, () => onStart(plan, selectedTagId))} className="btn-primary px-2.5 py-1 text-xs">{tag?.trackType === 'count' ? '次数标签不可启动' : '开始'}</button> : startingPlanId === plan.id ? <select autoFocus aria-label="选择计划计时标签" defaultValue="" onChange={(event) => { const id = event.target.value; if (id) { setStartingPlanId(null); void perform(plan, () => onStart(plan, id)) } }} className="input !w-auto !py-1 text-xs"><option value="" disabled>选择时长型标签</option>{tags.filter((item) => item.trackType === 'time').map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select> : <button type="button" disabled={actionId === plan.id || !tags.some((item) => item.trackType === 'time')} onClick={() => setStartingPlanId(plan.id)} className="btn-primary px-2.5 py-1 text-xs">开始</button>)}{plan.disposition === 'skipped' ? <button type="button" disabled={actionId === plan.id} onClick={() => void perform(plan, () => api.plans.unskip(plan.id))} className="btn-secondary px-2.5 py-1 text-xs">恢复</button> : <button type="button" disabled={actionId === plan.id} onClick={() => void perform(plan, () => api.plans.skip(plan.id))} className="btn-secondary px-2.5 py-1 text-xs">跳过</button>}<button type="button" disabled={actionId === plan.id} onClick={() => void perform(plan, () => api.plans.confirm(plan.id))} className="btn-secondary px-2.5 py-1 text-xs">确认</button>{plan.disposition !== 'deferred' && <button type="button" disabled={actionId === plan.id} onClick={() => setDeferringPlan(plan)} className="btn-secondary px-2.5 py-1 text-xs">推迟</button>}<button type="button" onClick={() => beginEdit(plan)} className="btn-secondary px-2.5 py-1 text-xs">编辑</button><button type="button" disabled={actionId === plan.id} onClick={() => setPendingDeletePlan(plan)} className="btn-secondary px-2.5 py-1 text-xs text-red-500">删除</button></div>
           </div>
           {editing && renderEditor(editDraft, setEditDraft, () => void saveEdit(plan), () => { setEditingId(null); setEditDraft(null) })}
         </div>
       })}</div>}
+
+      {/* 删除计划确认（替代原生 confirm） */}
+      <ConfirmDialog
+        open={!!pendingDeletePlan}
+        danger
+        title="删除确认"
+        message="确定要删除这项计划？"
+        onConfirm={async () => {
+          const plan = pendingDeletePlan
+          if (!plan) return
+          setPendingDeletePlan(null)
+          await perform(plan, () => api.plans.remove(plan.id))
+        }}
+        onCancel={() => setPendingDeletePlan(null)}
+      />
+
+      {/* 推迟计划：日期 + 起止时间一次填完（替代三次原生 prompt） */}
+      {deferringPlan && (
+        <PlanDeferDialog
+          plan={deferringPlan}
+          onClose={() => setDeferringPlan(null)}
+          onSubmit={(value) => perform(deferringPlan, () => api.plans.defer(deferringPlan.id, value))}
+        />
+      )}
     </section>
+  )
+}
+
+/** 推迟计划弹窗：默认值语义同原原生 prompt（今天 / 原开始 / 原结束）。 */
+function PlanDeferDialog({ plan, onClose, onSubmit }: {
+  plan: PlanBlock
+  onClose: () => void
+  onSubmit: (value: { date: string; startMinute: number; endMinute: number }) => Promise<void>
+}) {
+  const [date, setDate] = useState(localDateKey())
+  const [start, setStart] = useState(timeFromMinute(plan.startMinute))
+  const [end, setEnd] = useState(timeFromMinute(plan.endMinute))
+  const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  const submit = async () => {
+    const startMinute = minuteFromTime(start)
+    const endMinute = minuteFromTime(end)
+    if (endMinute <= startMinute) {
+      setError('结束时间必须晚于开始时间')
+      return
+    }
+    setSaving(true)
+    try {
+      await onSubmit({ date, startMinute, endMinute })
+    } finally {
+      setSaving(false)
+    }
+    onClose()
+  }
+
+  return (
+    <ModalShell title="推迟计划" onClose={onClose}>
+      <div className="space-y-4">
+        <div>
+          <label className="mb-1 block text-xs text-gray-500">推迟到哪一天</label>
+          <input type="date" value={date} onChange={(event) => setDate(event.target.value)} className="input" />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="mb-1 block text-xs text-gray-500">新的开始时间</label>
+            <input type="time" value={start} onChange={(event) => setStart(event.target.value)} className="input" />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-gray-500">新的结束时间</label>
+            <input type="time" value={end} onChange={(event) => setEnd(event.target.value)} className="input" />
+          </div>
+        </div>
+        {error && <p role="alert" className="text-sm text-red-500">{error}</p>}
+        <div className="flex justify-end gap-2 pt-2">
+          <button type="button" onClick={onClose} className="btn-secondary px-3 py-1.5 text-sm">取消</button>
+          <button type="button" onClick={() => void submit()} disabled={saving} className="btn-primary px-3 py-1.5 text-sm">{saving ? '处理中…' : '确定推迟'}</button>
+        </div>
+      </div>
+    </ModalShell>
   )
 }
 
@@ -1163,6 +1290,7 @@ function RunningTimer({ entry, stopping, todos, onStop, onTodoChange, onTerminat
   const [note, setNote] = useState(entry.note ?? '')
   const [noteSaved, setNoteSaved] = useState(false)
   const [todoSaving, setTodoSaving] = useState(false)
+  const [error, setError] = useState('')
   const [now, setNow] = useState(Date.now())
 
   useEffect(() => {
@@ -1179,7 +1307,9 @@ function RunningTimer({ entry, stopping, todos, onStop, onTodoChange, onTerminat
       setNoteSaved(true)
       setTimeout(() => setNoteSaved(false), 1500)
     } catch (e) {
-      alert(e instanceof Error ? e.message : '保存备注失败')
+      const message = e instanceof Error ? e.message : '保存备注失败'
+      setError(message)
+      announceUrgent(message)
     }
   }
 
@@ -1188,7 +1318,9 @@ function RunningTimer({ entry, stopping, todos, onStop, onTodoChange, onTerminat
     try {
       await onTodoChange(todoId)
     } catch (e) {
-      alert(e instanceof Error ? e.message : '关联待办失败')
+      const message = e instanceof Error ? e.message : '关联待办失败'
+      setError(message)
+      announceUrgent(message)
     } finally {
       setTodoSaving(false)
     }
@@ -1244,6 +1376,7 @@ function RunningTimer({ entry, stopping, todos, onStop, onTodoChange, onTerminat
           {noteSaved ? '✓ 已存' : '存备注'}
         </button>
       </div>
+      {error && <p role="alert" className="mb-2 text-xs text-red-500">{error}</p>}
       {/* 按钮行：点记录 / 记日记 / 停止 */}
       <div className="flex justify-center items-center gap-2 flex-wrap">
         <button
@@ -1306,9 +1439,26 @@ function TimelineEntryItem({
   const [editingMemo, setEditingMemo] = useState<Memo | null>(null)
   const [previewImage, setPreviewImage] = useState<string | null>(null)
   const [previewVideo, setPreviewVideo] = useState<string | null>(null)
+  const [pendingDeleteMemo, setPendingDeleteMemo] = useState<Memo | null>(null)
+  const [error, setError] = useState('')
 
   const isRunning = !entry.endTime
   const displayEndTime = entry.endTime ? formatTimeWithSeconds(entry.endTime) : '进行中'
+
+  const confirmDeleteMemo = async () => {
+    const memo = pendingDeleteMemo
+    if (!memo) return
+    setPendingDeleteMemo(null)
+    try {
+      await api.memos.remove(memo.id)
+      await onReload()
+    } catch (e) {
+      // 原实现此处无 catch，删除失败会静默；按行内错误规范补上播报
+      const message = e instanceof Error ? e.message : '删除失败'
+      setError(message)
+      announceUrgent(message)
+    }
+  }
 
   return (
     <div className="relative pl-8 pb-6 group last:pb-0">
@@ -1329,6 +1479,7 @@ function TimelineEntryItem({
 
       {/* 时间线主体卡片 */}
       <div className="rounded-xl bg-white dark:bg-gray-900 border border-gray-200/80 dark:border-gray-800 p-4 shadow-sm hover:shadow-md transition-all">
+        {error && <p role="alert" className="mb-2 text-xs text-red-500">{error}</p>}
         {/* 卡片头部信息 */}
         <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 flex-1">
@@ -1452,12 +1603,7 @@ function TimelineEntryItem({
                   key={m.id}
                   memo={m}
                   onEdit={() => setEditingMemo(m)}
-                  onDelete={async () => {
-                    if (confirm('确定要删除这条点记录吗？')) {
-                      await api.memos.remove(m.id)
-                      await onReload()
-                    }
-                  }}
+                  onDelete={() => setPendingDeleteMemo(m)}
                   onPreviewImage={(url) => setPreviewImage(url)}
                   onPreviewVideo={(url) => setPreviewVideo(url)}
                 />
@@ -1486,12 +1632,7 @@ function TimelineEntryItem({
                   key={m.id}
                   memo={m}
                   onEdit={() => setEditingMemo(m)}
-                  onDelete={async () => {
-                    if (confirm('确定要删除这篇日记吗？')) {
-                      await api.memos.remove(m.id)
-                      await onReload()
-                    }
-                  }}
+                  onDelete={() => setPendingDeleteMemo(m)}
                   onPreviewImage={(url) => setPreviewImage(url)}
                   onPreviewVideo={(url) => setPreviewVideo(url)}
                 />
@@ -1539,6 +1680,16 @@ function TimelineEntryItem({
             }}
           />
         )}
+
+        {/* 删除记录确认（替代原生 confirm） */}
+        <ConfirmDialog
+          open={!!pendingDeleteMemo}
+          danger
+          title="删除确认"
+          message={pendingDeleteMemo?.type === 'point' ? '确定要删除这条点记录吗？' : '确定要删除这篇日记吗？'}
+          onConfirm={confirmDeleteMemo}
+          onCancel={() => setPendingDeleteMemo(null)}
+        />
       </div>
     </div>
   )
@@ -2316,6 +2467,7 @@ function RecoveryDialog({ entries, onClose, onResume, onFinish, onStartAnother }
 }) {
   const [selectedId, setSelectedId] = useState(entries[0]?.id ?? '')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
   const selected = entries.find((entry) => entry.id === selectedId) ?? entries[0]
 
   if (!selected) return null
@@ -2325,7 +2477,9 @@ function RecoveryDialog({ entries, onClose, onResume, onFinish, onStartAnother }
     try {
       await action(selected)
     } catch (e) {
-      alert(e instanceof Error ? e.message : '处理待续活动失败')
+      const message = e instanceof Error ? e.message : '处理待续活动失败'
+      setError(message)
+      announceUrgent(message)
     } finally {
       setLoading(false)
     }
@@ -2352,6 +2506,7 @@ function RecoveryDialog({ entries, onClose, onResume, onFinish, onStartAnother }
           </div>
           <div className="text-sm text-gray-500 dark:text-gray-400 mt-2 whitespace-pre-wrap">{selected.note || '没有留下续接备注'}</div>
         </div>
+        {error && <p role="alert" className="text-sm text-red-500">{error}</p>}
         <div className="grid grid-cols-2 gap-2">
           <button onClick={() => void run(onResume)} disabled={loading} className="px-3 py-2.5 rounded-xl bg-blue-500 text-white font-medium hover:bg-blue-600 disabled:opacity-50">继续活动</button>
           <button onClick={() => onStartAnother(selected)} disabled={loading} className="px-3 py-2.5 rounded-xl bg-brand text-white font-medium hover:bg-brand-600 disabled:opacity-50">开始新活动</button>
@@ -2371,17 +2526,20 @@ function TerminateDialog({ entry, onClose, onConfirm }: {
 }) {
   const [reason, setReason] = useState('')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
-  const confirm = async () => {
+  const handleConfirm = async () => {
     if (!reason.trim()) {
-      alert('必须填写终止本次链路的具体原因')
+      setError('必须填写终止本次链路的具体原因')
       return
     }
     setLoading(true)
     try {
       await onConfirm(reason.trim())
     } catch (e) {
-      alert(e instanceof Error ? e.message : '终止链路失败')
+      const message = e instanceof Error ? e.message : '终止链路失败'
+      setError(message)
+      announceUrgent(message)
     } finally {
       setLoading(false)
     }
@@ -2396,10 +2554,11 @@ function TerminateDialog({ entry, onClose, onConfirm }: {
         <div className="text-sm text-gray-600 dark:text-gray-300">当前活动：{entry.tag?.name}</div>
         <div>
           <label className="block text-sm text-gray-500 mb-1">具体原因 *</label>
-          <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={3} className="input resize-y" placeholder="例如：需求取消，今天不再继续这组工作" autoFocus />
+          <textarea value={reason} onChange={(e) => { setReason(e.target.value); setError('') }} rows={3} className="input resize-y" placeholder="例如：需求取消，今天不再继续这组工作" autoFocus />
+          {error && <p role="alert" className="mt-1 text-xs text-red-500">{error}</p>}
         </div>
         <div className="flex gap-2 pt-2">
-          <button onClick={() => void confirm()} disabled={loading} className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 disabled:opacity-50">{loading ? '终止中…' : '确认终止链路'}</button>
+          <button onClick={() => void handleConfirm()} disabled={loading} className="flex-1 px-4 py-2.5 rounded-xl bg-red-600 text-white font-semibold hover:bg-red-700 disabled:opacity-50">{loading ? '终止中…' : '确认终止链路'}</button>
           <button onClick={onClose} disabled={loading} className="px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">取消</button>
         </div>
       </div>
@@ -2416,10 +2575,11 @@ function StopDialog({ entryId, tag, onClose, onConfirm }: {
 }) {
   const [note, setNote] = useState('')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const handleConfirm = async (pendingResume: boolean) => {
     if (pendingResume && !note.trim()) {
-      alert('有序标签暂停时需要记一下接下来怎么续')
+      setError('有序标签暂停时需要记一下接下来怎么续')
       return
     }
     setLoading(true)
@@ -2427,7 +2587,9 @@ function StopDialog({ entryId, tag, onClose, onConfirm }: {
       await onConfirm(pendingResume, note.trim() || undefined)
       onClose()
     } catch (e) {
-      alert((e as Error).message)
+      const message = (e as Error).message
+      setError(message)
+      announceUrgent(message)
     } finally {
       setLoading(false)
     }
@@ -2445,10 +2607,11 @@ function StopDialog({ entryId, tag, onClose, onConfirm }: {
           <label className="block text-sm text-gray-500 mb-1">下一步怎么续（暂停时必填）</label>
           <textarea
             value={note}
-            onChange={(e) => setNote(e.target.value)}
+            onChange={(e) => { setNote(e.target.value); setError('') }}
             placeholder="写一句回来后马上能接上的提示…"
             className="input min-h-20 resize-y"
           />
+          {error && <p role="alert" className="mt-1 text-xs text-red-500">{error}</p>}
         </div>
         <div className="flex flex-col gap-2 pt-2">
           <button
@@ -2485,6 +2648,7 @@ function ResumeDialog({ entry, onClose, onConfirm }: {
   onConfirm: () => Promise<void>
 }) {
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const handleConfirm = async () => {
     setLoading(true)
@@ -2492,7 +2656,9 @@ function ResumeDialog({ entry, onClose, onConfirm }: {
       await onConfirm()
       onClose()
     } catch (e) {
-      alert((e as Error).message)
+      const message = (e as Error).message
+      setError(message)
+      announceUrgent(message)
     } finally {
       setLoading(false)
     }
@@ -2511,6 +2677,7 @@ function ResumeDialog({ entry, onClose, onConfirm }: {
             {entry.note || '（没有备注）'}
           </div>
         </div>
+        {error && <p role="alert" className="text-sm text-red-500">{error}</p>}
         <div className="flex gap-2 pt-2">
           <button
             onClick={handleConfirm}
@@ -2540,10 +2707,11 @@ function DismissDialog({ entry, onClose, onConfirm }: {
 }) {
   const [reason, setReason] = useState('')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
 
   const handleConfirm = async () => {
     if (!reason.trim()) {
-      alert('请输入算了的原因')
+      setError('请输入算了的原因')
       return
     }
     setLoading(true)
@@ -2551,7 +2719,9 @@ function DismissDialog({ entry, onClose, onConfirm }: {
       await onConfirm(reason)
       onClose()
     } catch (e) {
-      alert((e as Error).message)
+      const message = (e as Error).message
+      setError(message)
+      announceUrgent(message)
     } finally {
       setLoading(false)
     }
@@ -2568,10 +2738,11 @@ function DismissDialog({ entry, onClose, onConfirm }: {
           <label className="block text-sm text-gray-500 mb-1">原因 *</label>
           <input
             value={reason}
-            onChange={(e) => setReason(e.target.value)}
+            onChange={(e) => { setReason(e.target.value); setError('') }}
             placeholder="如：不重要、已完成、计划变更…"
             className="input"
           />
+          {error && <p role="alert" className="mt-1 text-xs text-red-500">{error}</p>}
         </div>
         <div className="flex gap-2 pt-2">
           <button
