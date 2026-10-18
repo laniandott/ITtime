@@ -457,10 +457,11 @@ export default function TimerPage() {
             还没有标签，去 <Link to="/tags" className="text-brand underline">标签管理</Link> 创建一些吧
           </div>
         ) : (
-          <div className={`grid gap-x-6 gap-y-5 ${running.length > 0 ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'}`}>
+          <div className={`grid gap-4 ${running.length > 0 ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'}`}>
+            {/* gap-4：原 gap-x-6 gap-y-5 在标签少时列间显松（用户反馈） */}
             {visibleCategoryGroups.map(({ category, tags: ts }, groupIndex) =>
               (
-                <div key={category.id} draggable={sortingQuickStart} onDragStart={(event) => { event.dataTransfer.setData('text/plain', category.id); event.dataTransfer.effectAllowed = 'move'; setDraggedQuickStartId(category.id) }} onDragOver={(event) => { if (sortingQuickStart) event.preventDefault() }} onDrop={(event) => { event.preventDefault(); const sourceId = event.dataTransfer.getData('text/plain'); if (sourceId) void saveOrder(orderedCategories, sourceId, category.id, (id, sortOrder) => api.categories.update(id, { sortOrder })) }} onDragEnd={() => setDraggedQuickStartId(null)} className={`timer-category min-w-0 ${groupIndex === 0 && running.length === 0 ? 'lg:col-span-full' : ''} ${draggedQuickStartId === category.id ? 'opacity-40' : ''}`}>
+                <div key={category.id} draggable={sortingQuickStart} onDragStart={(event) => { event.dataTransfer.setData('text/plain', category.id); event.dataTransfer.effectAllowed = 'move'; setDraggedQuickStartId(category.id) }} onDragOver={(event) => { if (sortingQuickStart) event.preventDefault() }} onDrop={(event) => { event.preventDefault(); const sourceId = event.dataTransfer.getData('text/plain'); if (sourceId) void saveOrder(orderedCategories, sourceId, category.id, (id, sortOrder) => api.categories.update(id, { sortOrder })) }} onDragEnd={() => setDraggedQuickStartId(null)} className={`timer-category min-w-0 ${draggedQuickStartId === category.id ? 'opacity-40' : ''}`}>
                   <div className="mb-2 flex items-center gap-2">
                     <span
                       className="h-[6px] w-[6px] shrink-0 rounded-full"

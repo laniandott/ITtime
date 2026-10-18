@@ -36,8 +36,11 @@ export default function Layout({ children, username, onLogout }: { children: Rea
   }, [domain])
 
   return (
-    <div className="app-shell min-h-screen pb-24 lg:pl-64 lg:pb-0" data-domain={domain}>
-      <aside className="desktop-sidebar fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r px-3 py-4 lg:flex">
+    <div className="app-shell min-h-screen pb-24 lg:pl-[17.75rem] lg:pb-0" data-domain={domain}>
+      {/* 悬浮玻璃侧栏（用户提案）：四周留空 + 圆角 + 面板阴影，不再通顶贴边。
+          半透明底 + blur(24px) 由 .desktop-sidebar（index.css）提供，
+          极光背景从面板四周与半透明底透出。内容区让位 = left 0.75rem + w-64 + 右隙 1rem。 */}
+      <aside className="desktop-sidebar fixed inset-y-3 left-3 z-40 hidden w-64 flex-col rounded-panel border px-3 py-4 lg:flex">
         <div className="flex items-center gap-3 px-3 pb-7">
           <div aria-hidden="true" className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-gradient-to-br from-teal-500 to-sky-400 text-[0.867rem] font-extrabold text-[#04121a] shadow-[0_0_22px_rgba(20,184,166,.45)]">IT</div>
           <div className="min-w-0"><div className="font-semibold text-gray-900 dark:text-gray-100">ITtime</div><div className="text-[0.667rem] uppercase tracking-[0.14em] text-gray-400 dark:text-gray-500">Aurora workspace</div></div>

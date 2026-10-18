@@ -620,7 +620,7 @@ function Modal({ title, children, onClose, size = 'default' }: { title: string; 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/45 p-2" onClick={onClose}>
-      <div role="dialog" aria-modal="true" aria-labelledby={titleId} className={`modal-panel my-auto flex w-full flex-col overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900 ${size === 'wide' ? 'modal-panel-wide max-w-3xl' : 'max-h-[calc(100vh-2rem)] max-w-lg'}`} onClick={(e) => e.stopPropagation()}>
+      <div role="dialog" aria-modal="true" aria-labelledby={titleId} className={`modal-panel my-auto flex w-full flex-col overflow-y-auto rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900 ${size === 'wide' ? 'modal-panel-wide max-w-3xl' : 'max-h-[calc(100vh-2rem)] max-w-lg'}`} onClick={(e) => e.stopPropagation()}>
         <header className="shrink-0 border-b border-gray-200 px-5 py-4 dark:border-gray-700 sm:px-6">
           <h3 id={titleId} className="text-base font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
         </header>

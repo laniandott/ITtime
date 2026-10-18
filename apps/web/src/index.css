@@ -248,7 +248,9 @@ body {
 
 .app-shell { background: #f8fafc; }
 
-.desktop-sidebar { box-shadow: none; }
+/* 悬浮玻璃侧栏：阴影随主题分流（暗色加深）。圆角/边框由 Layout 的
+   rounded-panel + border 类提供，半透明底 + blur 在下方 .desktop-sidebar 块。 */
+.desktop-sidebar { box-shadow: var(--shadow-panel); }
 
 /* 页头图标/色条：域感知（TOKENS_PLAN §5.2 要求五个域的页头图标各自不同）。
    用 --d-600 而非角色变量 --d-solid：容器内图标是写死的 text-white，
@@ -331,15 +333,11 @@ body {
   box-shadow: 0 24px 64px rgb(15 23 42 / .18);
 }
 
+/* 高度贴合内容（去掉原 min-height 42rem：短内容弹窗如「新建标签」
+   会被撑到近满屏高，底部大片空白、视觉上「下沿太高」）。
+   内容长时由调用处的 max-h-[calc(100vh-2rem)] + 内部滚动兜底。 */
 .modal-panel-wide {
-  min-height: min(42rem, calc(100dvh - 1rem));
   max-height: calc(100dvh - 1rem);
-}
-
-@media (max-height: 560px) {
-  .modal-panel-wide {
-    min-height: calc(100dvh - 1rem);
-  }
 }
 
 @keyframes modal-in {
