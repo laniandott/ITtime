@@ -64,14 +64,14 @@ export default function SettingsPage() {
   return <div className="workspace-page settings-page space-y-6">
     <PageHeader title="设置" description="账户、安全、数据同步与显示偏好" />
     <div className="settings-layout">
-    <nav className="settings-nav flex gap-1 overflow-x-auto md:flex-col md:overflow-visible" role="tablist" aria-label="设置分类">{[['account', '账户'], ['sync', 'CouchDB 同步'], ['migration', '数据迁移'], ['general', '常规']].map(([id, name]) => <button key={id} role="tab" aria-selected={page === id} onClick={() => setPage(id)} className={`shrink-0 rounded-md px-3 py-2.5 text-left text-sm transition-colors ${page === id ? 'bg-teal-50 font-medium text-teal-800 dark:bg-teal-950/50 dark:text-teal-200' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}>{name}</button>)}</nav>
+    <nav className="settings-nav flex gap-1 overflow-x-auto md:flex-col md:overflow-visible" role="tablist" aria-label="设置分类">{[['account', '账户'], ['sync', 'CouchDB 同步'], ['migration', '数据迁移'], ['general', '常规']].map(([id, name]) => <button key={id} role="tab" aria-selected={page === id} onClick={() => setPage(id)} className={`shrink-0 rounded-md px-3 py-2.5 text-left text-sm transition-colors ${page === id ? 'bg-brand-50 font-medium text-brand-800 dark:bg-brand-900/30 dark:text-brand-200' : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`}>{name}</button>)}</nav>
     <div className="min-w-0">
     {page === 'account' && <AccountSettings />}
     {page === 'migration' && <section className="page-card max-w-2xl space-y-4 p-4 sm:p-5">
       <h2 className="font-semibold">从服务器导入旧数据</h2>
       <p className="text-sm text-gray-600 dark:text-gray-300">将服务器 SQLite 中的分类、标签、计时记录、待办、目标和随手记导入此浏览器的 PouchDB。原记录 ID 会保留，已有记录不会被覆盖，因此可重复运行。</p>
       <p className="text-sm text-amber-700 dark:text-amber-300">建议先备份服务器数据，并在开始 CouchDB 同步前完成导入。附件文件仍保存在服务器 uploads 目录。</p>
-      <button type="button" disabled={busy} onClick={() => void migrate()} className="rounded-md bg-brand px-4 py-2 text-sm text-white disabled:opacity-50">{busy ? '正在处理…' : '扫描并导入旧数据'}</button>
+      <button type="button" disabled={busy} onClick={() => void migrate()} className="btn-primary px-4 py-2 text-sm disabled:opacity-50">{busy ? '正在处理…' : '扫描并导入旧数据'}</button>
       {migrationMessage && <p role="status" className="text-sm">{migrationMessage}</p>}
     </section>}
     {page === 'general' && <div className="page-card space-y-6 p-4 sm:p-5">

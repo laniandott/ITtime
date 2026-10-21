@@ -104,6 +104,18 @@ export default function StatsPage() {
   // 图表入场动画（MOTION_SPEC §6.4）：reduce 下 isAnimationActive=false，
   // 直接呈现终态——CSS 全局降级够不到 Recharts 的 JS 时序动画。
   const chartMotion = useChartMotion()
+  // 跟随系统明暗（App.tsx 同步切换 html.dark）：Recharts tooltip 不继承页面配色，
+  // 暗色下若仍传白底浅字样式会出现「白盒」，故按主题给两套 contentStyle/labelStyle。
+  const [isDark, setIsDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches)
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-color-scheme: dark)')
+    const onChange = () => setIsDark(media.matches)
+    media.addEventListener('change', onChange)
+    return () => media.removeEventListener('change', onChange)
+  }, [])
+  const tooltipStyle = isDark
+    ? { contentStyle: { border: '1px solid #1f2937', borderRadius: 8, background: '#111827', color: '#f3f4f6', boxShadow: '0 6px 20px rgba(0,0,0,.4)', fontSize: 12, padding: '6px 10px' }, labelStyle: { color: '#e5e7eb', fontWeight: 600 }, itemStyle: { color: '#e5e7eb' } }
+    : { contentStyle: { border: '1px solid #e5e7eb', borderRadius: 8, boxShadow: '0 6px 20px rgba(16,24,40,.08)', fontSize: 12, padding: '6px 10px' }, labelStyle: { color: '#374151', fontWeight: 600 } }
 
   useEffect(() => {
     const seq = ++seqRef.current
@@ -214,8 +226,7 @@ export default function StatsPage() {
                         <Tooltip
                           cursor={{ fill: 'rgba(13, 148, 136, 0.08)' }}
                           formatter={(value) => [formatDuration(Number(value)), '投入']}
-                          labelStyle={{ color: '#374151', fontWeight: 600 }}
-                          contentStyle={{ border: '1px solid #e5e7eb', borderRadius: 8, boxShadow: '0 6px 20px rgba(16,24,40,.08)', fontSize: 12, padding: '6px 10px' }}
+                          {...tooltipStyle}
                         />
                         <Bar dataKey="ms" fill="currentColor" radius={[4, 4, 0, 0]} maxBarSize={20} {...chartMotion} />
                       </BarChart>

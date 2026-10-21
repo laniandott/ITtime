@@ -10,6 +10,7 @@ import { CategoryBadge } from '../components/CategoryBadge'
 import { syncNativeStatusBarTheme } from '../nativeStatusBar'
 import { GripVertical, ArrowUpDown } from 'lucide-react'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { Modal, useModalClose } from '../components/Modal'
 import { announce, announceUrgent } from '../announce'
 
 // 辅助函数：格式化时间为 YYYY/MM/DD HH:mm:ss
@@ -515,7 +516,7 @@ export default function TimerPage() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="搜索活动/待办/备注/打点…"
-                className="w-full text-xs border border-gray-200 dark:border-gray-800 rounded-lg pl-7 pr-2 py-1 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 sm:w-36 sm:focus:w-48 transition-[width] focus:outline-none focus:border-brand"
+                className="w-full text-xs border border-gray-200 dark:border-gray-800 rounded-lg pl-7 pr-2 py-1 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 sm:w-36 sm:focus:w-48 transition-[width,box-shadow] focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent"
               />
               <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-xs">🔍</span>
             </div>
@@ -1606,30 +1607,18 @@ function TimelineEntryItem({
 
         {/* 大图预览弹窗 */}
         {previewImage && (
-          <div
-            className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
-            onClick={() => setPreviewImage(null)}
-          >
-            <img src={previewImage} alt="大图预览" className="max-w-full max-h-full rounded-lg object-contain" />
-          </div>
+          <Modal bare onClose={() => setPreviewImage(null)} ariaLabel="大图预览">
+            <img src={previewImage} alt="大图预览" className="max-h-[calc(100dvh-2rem)] max-w-full rounded-lg object-contain" />
+          </Modal>
         )}
 
         {/* 视频全屏播放弹窗 */}
         {previewVideo && (
-          <div
-            className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
-            onClick={() => setPreviewVideo(null)}
-          >
-            <div className="relative max-w-3xl w-full" onClick={(e) => e.stopPropagation()}>
-              <button
-                onClick={() => setPreviewVideo(null)}
-                className="absolute -top-10 right-0 text-white text-xl font-bold p-2"
-              >
-                ✕ 关闭
-              </button>
-              <video src={previewVideo} controls autoPlay className="w-full max-h-[80vh] rounded-lg" />
+          <Modal bare onClose={() => setPreviewVideo(null)} ariaLabel="视频全屏播放" backdropClassName="bg-black/90">
+            <div className="relative w-full max-w-3xl">
+              <video src={previewVideo} controls autoPlay className="max-h-[calc(100dvh-2rem)] w-full rounded-lg" />
             </div>
-          </div>
+          </Modal>
         )}
 
         {/* 编辑弹窗 */}
@@ -1767,7 +1756,7 @@ export function PointRecordModal({
             value={content}
             onChange={(e) => setContent(e.target.value)}
             rows={3}
-            placeholder="如：拉了个屎、看了下邮件、洗了个手..."
+            placeholder="如：拉了个屎、看了下邮件、洗了个手…"
             className="input mt-1"
             autoFocus
           />
@@ -2020,21 +2009,18 @@ function EntryEditModal({ entry, tags, todos, onClose, onSaved }: {
 }
 
 // 通用弹窗壳
-function ModalShell({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
+function ModalShell({ title, children, onClose, width = 'md' }: { title: string; children: React.ReactNode; onClose: () => void; width?: 'sm' | 'md' | 'lg' | 'xl' }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
-      <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
-        <h3 className="text-lg font-semibold mb-4">{title}</h3>
-        {children}
-      </div>
-    </div>
+    <Modal title={title} onClose={onClose} width={width}>{children}</Modal>
   )
 }
 
 function FormActions({ onCancel, onSave, saveLabel }: { onCancel: () => void; onSave: () => void; saveLabel: string }) {
+  // 弹窗内优先软关闭（播退场动画）；弹窗保存成功直接卸载则用传入的 onCancel
+  const softClose = useModalClose()
   return (
     <div className="flex justify-end gap-2 mt-6">
-      <button onClick={onCancel} className="px-4 py-2 rounded-lg text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800">
+      <button type="button" onClick={softClose ?? onCancel} className="px-4 py-2 rounded-lg text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800">
         取消
       </button>
       <button onClick={onSave} className="px-4 py-2 rounded-lg text-sm bg-brand text-white hover:bg-brand-600">
@@ -2117,7 +2103,7 @@ export function MemoCreateModal({
             value={content}
             onChange={(e) => setContent(e.target.value)}
             rows={4}
-            placeholder="写下当前计时时间段内的想法、收获或日志..."
+            placeholder="写下当前计时时间段内的想法、收获或日志…"
             className="input mt-1"
             autoFocus
           />

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
-import { Timer, ListTodo, ChartColumn, Settings, CalendarDays, LogOut, Wifi, Tags } from 'lucide-react'
+import { Timer, ListTodo, ChartColumn, Settings, CalendarDays, LogOut, Wifi, Tags, Search } from 'lucide-react'
 import { type DomainKey } from '../domainTheme'
 import CommandPalette from './CommandPalette'
 
@@ -42,6 +42,16 @@ export default function Layout({ children, username, onLogout }: { children: Rea
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-3 focus:z-[60] focus:rounded-ctl focus:bg-brand focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-white">跳到主要内容</a>
       {/* ⌘/Ctrl+K 命令面板：自管理开关与快捷键，Portal 到 body */}
       <CommandPalette />
+      {/* 移动端命令面板触发按钮：无物理键盘时仍可打开命令面板 */}
+      <button
+        type="button"
+        aria-label="打开命令面板（⌘K）"
+        title="打开命令面板（⌘K）"
+        onClick={() => window.dispatchEvent(new CustomEvent('ittime:open-cmdk'))}
+        className="fixed bottom-[5.25rem] right-4 z-30 grid h-12 w-12 place-items-center rounded-full border border-gray-200 bg-white/85 text-gray-600 shadow-[0_4px_16px_rgba(15,23,42,.10)] backdrop-blur-lg transition-all hover:bg-white hover:text-gray-900 active:scale-95 dark:border-gray-700 dark:bg-gray-800/80 dark:text-gray-300 dark:hover:bg-gray-800 sm:right-5 lg:hidden"
+      >
+        <Search className="h-5 w-5" strokeWidth={1.8} aria-hidden="true" />
+      </button>
       {/* 悬浮玻璃侧栏（用户提案）：四周留空 + 圆角 + 面板阴影，不再通顶贴边。
           半透明底 + blur(24px) 由 .desktop-sidebar（index.css）提供，
           极光背景从面板四周与半透明底透出。内容区让位 = left 0.75rem + w-64 + 右隙 1rem。 */}

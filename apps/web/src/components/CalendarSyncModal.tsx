@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { getServerHost } from '../api'
 import { useStore } from '../store'
 import { announce } from '../announce'
+import { Modal } from './Modal'
 
 export function CalendarSyncModal({ onClose }: { onClose: () => void }) {
   const { categories } = useStore()
@@ -67,25 +68,8 @@ export function CalendarSyncModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
-      <div
-        className="modal-panel bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-lg shadow-xl border border-gray-200 dark:border-gray-800 space-y-5 max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* 标题 */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-2xl">🗓️</span>
-            <h3 className="text-lg font-bold">日历同步与订阅 (iCalendar)</h3>
-          </div>
-          <button
-            onClick={onClose}
-            className="relative after:absolute after:left-1/2 after:top-1/2 after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] w-8 h-8 rounded-lg flex items-center justify-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-          >
-            ✕
-          </button>
-        </div>
-
+    <Modal title="🗓️ 日历同步与订阅 (iCalendar)" onClose={onClose} width="lg">
+      <div className="space-y-5">
         {/* 介绍 */}
         <div className="text-xs text-gray-500 dark:text-gray-400 bg-brand-50/50 dark:bg-brand-900/20 border border-brand-200/50 dark:border-brand-800/40 rounded-xl p-3 leading-relaxed">
           💡 将 ITtime 的计时活动同步到 <strong>iPhone、Mac、安卓手机日历、Google 日历、Outlook</strong> 等日历中。订阅后，日历软件会自动定时拉取并实时显示您的活动轨迹与打点记录。
@@ -122,7 +106,7 @@ export function CalendarSyncModal({ onClose }: { onClose: () => void }) {
               <label className="block text-gray-500"><span className="block mb-1">分类过滤</span><select
                 value={selectedCat}
                 onChange={(e) => setSelectedCat(e.target.value)}
-                className="w-full py-1.5 px-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-200 focus:outline-none focus:border-brand"
+                className="w-full py-1.5 px-2.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-xs text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent"
               >
                 <option value="">全部分类 (同步所有活动)</option>
                 {categories.map((c) => (
@@ -260,13 +244,14 @@ export function CalendarSyncModal({ onClose }: { onClose: () => void }) {
         {/* 底部按钮 */}
         <div className="flex justify-end pt-2">
           <button
+            type="button"
             onClick={onClose}
-            className="px-5 py-2 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-medium transition"
+            className="btn-secondary px-5 py-2 text-xs font-medium"
           >
             完成
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   )
 }

@@ -7,6 +7,7 @@ import { DateTimeSecondPicker } from './DateTimeSecondPicker'
 import { MemoEditModal } from '../pages/TimerPage'
 import { ConfirmDialog } from './ConfirmDialog'
 import { CategoryBadge } from './CategoryBadge'
+import { Modal } from './Modal'
 
 type DaysRange = 0 | 1 | 7 | 30
 
@@ -246,12 +247,9 @@ export default function DiaryPanel() {
       </div>
 
       {previewImage && (
-        <div
-          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
-          onClick={() => setPreviewImage(null)}
-        >
-          <img src={previewImage} alt="全屏预览" className="max-w-full max-h-full rounded-lg object-contain" />
-        </div>
+        <Modal bare onClose={() => setPreviewImage(null)} ariaLabel="全屏预览图片">
+          <img src={previewImage} alt="全屏预览" className="max-h-[calc(100dvh-2rem)] max-w-full rounded-lg object-contain" />
+        </Modal>
       )}
 
       {editingMemo && (
@@ -343,13 +341,8 @@ function NewJournalModal({ onClose, onSaved }: { onClose: () => void; onSaved: (
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
-      <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-md mx-4 space-y-4" onClick={(event) => event.stopPropagation()}>
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold">✍️ 新建日记 / 随手记</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
-        </div>
-
+    <Modal title="✍️ 新建日记 / 随手记" onClose={onClose} width="md">
+      <div className="space-y-4">
         <div>
           <label className="block">
             <span className="block text-xs font-semibold text-gray-500 mb-1">日记时间（精准到秒）</span>
@@ -376,7 +369,7 @@ function NewJournalModal({ onClose, onSaved }: { onClose: () => void; onSaved: (
               value={content}
               onChange={(event) => setContent(event.target.value)}
               rows={4}
-              placeholder="写下今天的想法、生活随笔、感悟或日志..."
+              placeholder="写下今天的想法、生活随笔、感悟或日志…"
               className="input"
               autoFocus
             />
@@ -395,7 +388,7 @@ function NewJournalModal({ onClose, onSaved }: { onClose: () => void; onSaved: (
               className="block w-full text-xs text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand dark:file:bg-brand-900/40 dark:file:text-brand-300 hover:file:bg-brand-100"
             />
           </label>
-          {uploading && <div className="text-xs text-brand mt-1">上传中...</div>}
+          {uploading && <div className="text-xs text-brand mt-1">上传中…</div>}
         </div>
 
         {attachments.length > 0 && (
@@ -412,17 +405,17 @@ function NewJournalModal({ onClose, onSaved }: { onClose: () => void; onSaved: (
           </div>
         )}
 
-        {error && <div className="text-xs text-red-500">{error}</div>}
+        {error && <p role="alert" className="text-xs text-red-500">{error}</p>}
 
         <div className="flex justify-end gap-2 pt-2">
-          <button onClick={onClose} className="px-4 py-2 rounded-lg text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800">
+          <button type="button" onClick={onClose} className="btn-secondary px-4 py-2 text-sm">
             取消
           </button>
-          <button onClick={save} className="px-4 py-2 rounded-lg text-sm bg-brand text-white hover:bg-brand-600 font-medium">
+          <button type="button" onClick={save} className="btn-primary px-4 py-2 text-sm">
             保存日记
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   )
 }

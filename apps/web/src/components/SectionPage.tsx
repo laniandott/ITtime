@@ -67,7 +67,7 @@ export default function SectionPage({ tabs, children: render, label = '分区' }
             aria-controls={`${uid}-panel-${tab.id}`}
             tabIndex={tab.id === active ? 0 : -1}
             onClick={() => switchTo(tab.id)}
-            className={`whitespace-nowrap rounded-ctl px-4 py-1.5 text-sm font-medium transition-all ${
+            className={`whitespace-nowrap rounded-ctl px-4 py-1.5 text-sm font-medium transition-[color,background-color,box-shadow] ${
               tab.id === active
                 ? 'bg-brand-50 text-brand-800 dark:bg-brand-900/30 dark:bg-none dark:text-brand-100 dark:shadow-[inset_0_0_12px_rgb(var(--d-400-rgb)/.12)]'
                 : 'text-gray-500 hover:bg-gray-100 hover:text-gray-800 dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-100'

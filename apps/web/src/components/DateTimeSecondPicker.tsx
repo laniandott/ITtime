@@ -51,7 +51,7 @@ export function DateTimeSecondPicker({
           n = Math.max(min, Math.min(max, n))
           onCh(String(n).padStart(2, '0'))
         }}
-        className="w-10 text-center font-mono text-sm border border-gray-200 dark:border-gray-700 rounded-lg py-1 bg-white dark:bg-gray-900 focus:outline-none focus:border-brand"
+        className="w-10 text-center font-mono text-sm border border-gray-200 dark:border-gray-700 rounded-lg py-1 bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-400 focus:border-transparent"
       />
       <button
         type="button"

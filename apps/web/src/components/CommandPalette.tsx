@@ -67,6 +67,14 @@ export default function CommandPalette() {
     restoreRef.current = null
   })
 
+  // 打开面板的共享逻辑（快捷键和外部触发都走同一条路径）
+  const triggerOpen = () => {
+    restoreRef.current = document.activeElement as HTMLElement | null
+    setQuery('')
+    setActive(0)
+    setOpen(true)
+  }
+
   // 全局快捷键：Cmd/Ctrl+K。keydown 从输入框冒泡到 window，故输入框内也响应；
   // preventDefault 拦掉浏览器侧默认行为。面板已开时忽略（关闭走 Esc/遮罩/跳转）。
   useEffect(() => {
@@ -74,14 +82,18 @@ export default function CommandPalette() {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault()
         if (open) return
-        restoreRef.current = document.activeElement as HTMLElement | null
-        setQuery('')
-        setActive(0)
-        setOpen(true)
+        triggerOpen()
       }
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
+  }, [open])
+
+  // 外部按钮（移动端 FAB 等）触发：监听自定义事件
+  useEffect(() => {
+    const onTrigger = () => { if (!open) triggerOpen() }
+    window.addEventListener('ittime:open-cmdk', onTrigger)
+    return () => window.removeEventListener('ittime:open-cmdk', onTrigger)
   }, [open])
 
   // Esc 关闭（window 级监听，焦点在输入框/列表项都生效）

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '../api'
 import type { CalendarSubscription } from '../types'
 import { ConfirmDialog } from './ConfirmDialog'
+import { Modal } from './Modal'
 
 const PRESET_COLORS = ['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#3498db', '#9b59b6', '#1abc9c', '#e84393']
 
@@ -88,17 +89,11 @@ export function SubscriptionManager({ onClose }: { onClose: () => void }) {
 
   return (
     <>
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
-      <div className="modal-panel bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-lg mx-4 shadow-xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-bold">📡 日历订阅</h3>
-          <button onClick={onClose} className="relative after:absolute after:left-1/2 after:top-1/2 after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 transition-colors">✕</button>
-        </div>
-
-        {error && <div className="mb-3 text-xs text-red-500">{error}</div>}
+    <Modal title="📡 日历订阅" onClose={onClose} width="lg" scrollable={false} className="flex flex-col">
+        {error && <p role="alert" className="mb-3 text-xs text-red-500">{error}</p>}
 
         {/* 已有订阅列表 */}
-        <div className="flex-1 overflow-y-auto space-y-2 mb-4">
+        <div className="-mx-1 flex-1 space-y-2 overflow-y-auto px-1 pb-4">
           {loading ? (
             <div className="text-center py-6 text-gray-400 text-sm">加载中…</div>
           ) : subs.length === 0 ? (
@@ -178,8 +173,7 @@ export function SubscriptionManager({ onClose }: { onClose: () => void }) {
             + 添加新订阅
           </button>
         )}
-      </div>
-    </div>
+    </Modal>
     {/* 删除订阅确认（替代原生 confirm；作为遮罩的兄弟节点，避免点击冒泡误关外层弹窗） */}
     <ConfirmDialog
       open={!!pendingDeleteSub}

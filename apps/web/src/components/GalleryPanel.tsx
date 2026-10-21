@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api, resolveUploadUrl } from '../api'
 import type { Memo } from '../types'
+import { Modal } from './Modal'
 
 type GalleryItem = {
   id: string
@@ -133,13 +134,13 @@ export default function GalleryPanel() {
         </div>
       )}
       {preview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={() => setPreview(null)}>
+        <Modal bare onClose={() => setPreview(null)} ariaLabel="图库媒体预览">
           {preview.mimeType.startsWith('image/') ? (
-            <img src={resolveUploadUrl(preview.path)} alt="图库图片预览" className="max-h-full max-w-full rounded-lg object-contain" />
+            <img src={resolveUploadUrl(preview.path)} alt="图库图片预览" className="max-h-[calc(100dvh-2rem)] max-w-full rounded-lg object-contain" />
           ) : (
-            <video src={resolveUploadUrl(preview.path)} controls autoPlay playsInline className="max-h-full max-w-full rounded-lg" onClick={(event) => event.stopPropagation()} />
+            <video src={resolveUploadUrl(preview.path)} controls autoPlay playsInline className="max-h-[calc(100dvh-2rem)] max-w-full rounded-lg" />
           )}
-        </div>
+        </Modal>
       )}
     </section>
   )

@@ -8,6 +8,7 @@ import { DateTimeSecondPicker } from '../components/DateTimeSecondPicker'
 import { CalendarSyncModal } from '../components/CalendarSyncModal'
 import { SubscriptionManager } from '../components/SubscriptionManager'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { Modal } from '../components/Modal'
 import { PageHeader } from '../components/PageHeader'
 import { CalendarDays } from 'lucide-react'
 import { CategoryBadge } from '../components/CategoryBadge'
@@ -806,16 +807,16 @@ function PlanCreateModal({ date, plan, tags, todos, onClose, onSaved }: {
   }
   return (
     <>
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onClick={onClose}>
-      <form onSubmit={submit} className="modal-panel w-full max-w-lg space-y-4 rounded-xl bg-white p-5 shadow-xl dark:bg-gray-900" onClick={(event) => event.stopPropagation()}>
-        <div className="flex items-center justify-between"><div><h2 className="text-lg font-semibold">{plan ? '编辑计划' : '新建计划'}</h2><p className="mt-1 text-sm text-gray-500">{date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}</p></div><button type="button" onClick={onClose} className="relative after:absolute after:left-1/2 after:top-1/2 after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] grid h-8 w-8 place-items-center rounded hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="关闭">×</button></div>
+    <Modal title={plan ? '编辑计划' : '新建计划'} onClose={onClose} width="lg">
+      <form onSubmit={submit} className="space-y-4">
+        <p className="text-sm text-gray-500">{date.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })}</p>
         <label className="block text-sm font-medium">计划内容<textarea autoFocus required maxLength={2000} rows={4} value={content} onChange={(event) => setContent(event.target.value)} placeholder="写下这段时间具体要做什么" className="input mt-1 w-full resize-y" /></label>
         <div className="grid grid-cols-2 gap-3"><label className="text-sm">开始时间<input required type="time" value={start} onChange={(event) => setStart(event.target.value)} className="input mt-1 w-full" /></label><label className="text-sm">结束时间<input required type="time" value={end} onChange={(event) => setEnd(event.target.value)} className="input mt-1 w-full" /></label></div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><label className="text-sm">Tag（可选）<select value={tagId} onChange={(event) => setTagId(event.target.value)} className="input mt-1 w-full"><option value="">不挂 Tag</option>{tags.filter((tag) => !tag.parentId).map((tag) => <option key={tag.id} value={tag.id}>{tag.name}</option>)}</select></label><label className="text-sm">Todo（可选）<select value={todoId} onChange={(event) => setTodoId(event.target.value)} className="input mt-1 w-full"><option value="">不关联 Todo</option>{todos.map((todo) => <option key={todo.id} value={todo.id}>{todo.title}</option>)}</select></label></div>
         {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
         <div className="flex justify-between gap-2">{plan ? <button type="button" disabled={saving} onClick={() => setPendingDelete(true)} className="text-sm text-red-600">删除</button> : <span />}<div className="flex gap-2"><button type="button" onClick={onClose} className="btn-secondary px-3 py-2 text-sm">取消</button><button type="submit" disabled={saving || !content.trim()} className="btn-primary px-4 py-2 text-sm">{saving ? '保存中…' : '保存计划'}</button></div></div>
       </form>
-    </div>
+    </Modal>
     {/* 删除计划确认（替代原生 confirm；作为遮罩的兄弟节点，避免点击冒泡误关外层弹窗） */}
     <ConfirmDialog
       open={pendingDelete}
@@ -1390,17 +1391,16 @@ function EntryDetail({ entry, onClose, onChanged }: {
 
   return (
     <>
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
-      <div className="modal-panel bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-sm mx-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center gap-2.5 mb-5">
-          <span className="w-4 h-4 rounded-full flex-shrink-0" style={{ background: color }} />
-          <div className="min-w-0">
-            <h3 className="text-lg font-bold truncate" style={{ color }}>{entry.tag?.name}</h3>
-            {entry.tag?.category && (
-              <CategoryBadge category={entry.tag.category} size="xs" className="mt-0.5" />
-            )}
-          </div>
+    <Modal showHeader={false} ariaLabel="时间记录详情" onClose={onClose} width="md">
+      <div className="mb-5 flex items-center gap-2.5">
+        <span className="h-4 w-4 flex-shrink-0 rounded-full" style={{ background: color }} />
+        <div className="min-w-0">
+          <h3 className="truncate text-lg font-bold" style={{ color }}>{entry.tag?.name}</h3>
+          {entry.tag?.category && (
+            <CategoryBadge category={entry.tag.category} size="xs" className="mt-0.5" />
+          )}
         </div>
+      </div>
         {editing ? (
           <div className="space-y-3 mb-4">
             <div>
@@ -1456,23 +1456,22 @@ function EntryDetail({ entry, onClose, onChanged }: {
             </div>
           </div>
         )}
-        {error && <div className="text-xs text-red-500 mb-3">{error}</div>}
+        {error && <p role="alert" className="mb-3 text-xs text-red-500">{error}</p>}
         <div className="flex gap-2">
           {editing ? (
             <>
-              <button onClick={() => { setEditing(false); setError('') }} className="flex-1 py-2.5 rounded-xl text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800">取消</button>
-              <button onClick={saveEdit} disabled={saving} className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-brand text-white hover:bg-brand-600 disabled:opacity-50">{saving ? '保存中...' : '保存修改'}</button>
+              <button type="button" onClick={() => { setEditing(false); setError('') }} className="flex-1 py-2.5 rounded-xl text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800">取消</button>
+              <button type="button" onClick={saveEdit} disabled={saving} className="btn-primary flex-1 py-2.5 rounded-xl text-sm disabled:opacity-50">{saving ? '保存中…' : '保存修改'}</button>
             </>
           ) : (
             <>
-              <button onClick={onClose} className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">关闭</button>
-              <button onClick={() => setEditing(true)} className="px-3 py-2.5 rounded-xl text-sm text-brand hover:bg-brand-50 dark:hover:bg-brand-900/30">编辑</button>
-              <button onClick={removeEntry} disabled={saving} className="px-3 py-2.5 rounded-xl text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50">删除</button>
+              <button type="button" onClick={onClose} className="btn-secondary flex-1 py-2.5 rounded-xl text-sm">关闭</button>
+              <button type="button" onClick={() => setEditing(true)} className="px-3 py-2.5 rounded-xl text-sm text-brand hover:bg-brand-50 dark:hover:bg-brand-900/30">编辑</button>
+              <button type="button" onClick={removeEntry} disabled={saving} className="px-3 py-2.5 rounded-xl text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50">删除</button>
             </>
           )}
         </div>
-      </div>
-    </div>
+    </Modal>
     {/* 删除时间记录确认（替代原生 confirm；作为遮罩的兄弟节点，避免点击冒泡误关外层弹窗） */}
     <ConfirmDialog
       open={pendingDelete}
@@ -1553,20 +1552,15 @@ function QuickCreateModal({ defaultDate, defaultStartTime, defaultEndTime, onClo
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
-      <div className="modal-panel bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-md mx-4 shadow-xl space-y-4" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold">⚡ 快速创建</h3>
-          <button onClick={onClose} className="relative after:absolute after:left-1/2 after:top-1/2 after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 transition-colors">✕</button>
-        </div>
-
+    <Modal title="⚡ 快速创建" onClose={onClose} width="md">
+      <div className="space-y-4">
         <div>
-          <div className="text-xs font-semibold text-gray-500 mb-1.5">标签 *</div>
-          <div className="max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-xl p-2 space-y-2">
+          <div className="mb-1.5 text-xs font-semibold text-gray-500">标签 *</div>
+          <div className="max-h-40 space-y-2 overflow-y-auto rounded-xl border border-gray-200 p-2 dark:border-gray-700">
             {groupedTags.map((g) => (
               <div key={g.category?.id ?? '_none'}>
                 {g.category && (
-                  <div className="text-[0.667rem] font-semibold text-gray-400 uppercase tracking-wider px-1 mb-1">
+                  <div className="mb-1 px-1 text-[0.667rem] font-semibold uppercase tracking-wider text-gray-400">
                     {g.category.icon ? `${g.category.icon} ` : ''}{g.category.name}
                   </div>
                 )}
@@ -1574,10 +1568,11 @@ function QuickCreateModal({ defaultDate, defaultStartTime, defaultEndTime, onClo
                   {g.tags.map((t) => (
                     <button
                       key={t.id}
+                      type="button"
                       onClick={() => setTagId(t.id)}
-                      className={`px-2.5 py-1 rounded-full text-xs font-medium transition-shadow duration-150 ${
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium transition-shadow duration-150 ${
                         tagId === t.id
-                          ? 'ring-2 ring-offset-1 ring-offset-white dark:ring-offset-gray-900 shadow-sm'
+                          ? 'ring-2 ring-offset-1 shadow-sm ring-offset-white dark:ring-offset-gray-900'
                           : 'hover:shadow-sm'
                       }`}
                       style={{
@@ -1596,18 +1591,18 @@ function QuickCreateModal({ defaultDate, defaultStartTime, defaultEndTime, onClo
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-gray-500"><span className="block mb-1">开始时间</span><DateTimeSecondPicker value={startTime} onChange={setStartTime} /></label>
+          <label className="block text-xs font-semibold text-gray-500"><span className="mb-1 block">开始时间</span><DateTimeSecondPicker value={startTime} onChange={setStartTime} /></label>
         </div>
 
         <div>
           <label className="block text-xs font-semibold text-gray-500">
-            <span className="block mb-1">结束时间 <span className="text-gray-400 font-normal">（留空 = 开始计时）</span></span>
+            <span className="mb-1 block">结束时间 <span className="font-normal text-gray-400">（留空 = 开始计时）</span></span>
             <DateTimeSecondPicker value={endTime} onChange={setEndTime} />
           </label>
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-gray-500"><span className="block mb-1">备注</span><input
+          <label className="block text-xs font-semibold text-gray-500"><span className="mb-1 block">备注</span><input
             type="text"
             value={note}
             onChange={(e) => setNote(e.target.value)}
@@ -1617,28 +1612,27 @@ function QuickCreateModal({ defaultDate, defaultStartTime, defaultEndTime, onClo
         </div>
 
         <div>
-          <label className="block text-xs font-semibold text-gray-500"><span className="block mb-1">关联待办（可选）</span><select value={todoId} onChange={(event) => setTodoId(event.target.value)} className="input text-sm">
+          <label className="block text-xs font-semibold text-gray-500"><span className="mb-1 block">关联待办（可选）</span><select value={todoId} onChange={(event) => setTodoId(event.target.value)} className="input text-sm">
             <option value="">不关联待办</option>
             {todos.map((todo) => <option key={todo.id} value={todo.id}>{todo.title}</option>)}
           </select></label>
         </div>
 
-        {error && <div className="text-xs text-red-500">{error}</div>}
+        {error && <p role="alert" className="text-xs text-red-500">{error}</p>}
 
         <div className="flex justify-end gap-2 pt-1">
-          <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-            取消
-          </button>
+          <button type="button" onClick={onClose} className="btn-secondary px-4 py-2 text-sm">取消</button>
           <button
+            type="button"
             onClick={save}
             disabled={saving}
-            className="px-5 py-2 rounded-xl text-sm bg-brand text-white hover:bg-brand-600 font-medium transition-colors disabled:opacity-50"
+            className="btn-primary px-5 py-2 text-sm disabled:opacity-50"
           >
             {saving ? '创建中…' : endTime ? '📥 补录' : '▶️ 开始计时'}
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   )
 }
 
@@ -1677,26 +1671,32 @@ function DayDetailPopupLegacy({ date, entries, activities, dayMemos, externalEve
   const weekDay = WEEKDAYS_FULL[date.getDay() === 0 ? 6 : date.getDay() - 1]
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={onClose}>
-      <div className="modal-panel bg-white dark:bg-gray-900 rounded-2xl w-full max-w-sm mx-4 shadow-xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-        <div className="px-5 pt-5 pb-3 border-b border-gray-100 dark:border-gray-800">
+    <Modal
+      showHeader={false}
+      ariaLabel={`${date.getMonth() + 1}月${date.getDate()}日详情`}
+      onClose={onClose}
+      width="md"
+      padded={false}
+      scrollable={false}
+      className="flex flex-col"
+    >
+        <div className="border-b border-gray-100 px-5 pt-5 pb-3 dark:border-gray-800">
           <div className="flex items-center justify-between">
             <div>
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-bold">{date.getMonth() + 1}月{date.getDate()}日</span>
                 <span className="text-sm text-gray-400">{weekDay}</span>
               </div>
-              <div className="text-xs text-gray-400 mt-0.5">农历{lunarText}</div>
+              <div className="mt-0.5 text-xs text-gray-400">农历{lunarText}</div>
             </div>
-            <button onClick={onClose} className="relative after:absolute after:left-1/2 after:top-1/2 after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] w-8 h-8 rounded-full flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 transition-colors">✕</button>
           </div>
           {totalMs > 0 && (
-            <div className="text-xs text-gray-400 mt-2">
+            <div className="mt-2 text-xs text-gray-400">
               当日合计 <span className="font-mono font-medium text-brand">{formatDuration(totalMs)}</span> · {dayEntries.length} 条记录
             </div>
           )}
         </div>
-        <div className="flex-1 overflow-y-auto px-5 py-3 space-y-2">
+        <div className="flex-1 space-y-2 overflow-y-auto px-5 py-3">
           {dayActivities.length > 0 && (
             <div className="space-y-1 mb-3">
               <div className="text-[0.667rem] text-gray-400">◆ 活动 ({dayActivities.length})</div>
@@ -1766,13 +1766,12 @@ function DayDetailPopupLegacy({ date, entries, activities, dayMemos, externalEve
             </div>
           )}
         </div>
-        <div className="px-5 py-3 border-t border-gray-100 dark:border-gray-800">
-          <button onClick={onClose} className="w-full py-2 rounded-xl text-sm font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+        <div className="border-t border-gray-100 px-5 py-3 dark:border-gray-800">
+          <button type="button" onClick={onClose} className="btn-secondary w-full rounded-xl py-2 text-sm font-medium">
             关闭
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   )
 }
 

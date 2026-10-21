@@ -376,6 +376,8 @@ a,
 input,
 textarea,
 select {
+  /* 消除移动端双击缩放的 300ms 延迟（允许滚轮/手势缩放页面本身） */
+  touch-action: manipulation;
   transition: color .18s var(--ui-ease), background-color .18s var(--ui-ease),
     border-color .18s var(--ui-ease), box-shadow .18s var(--ui-ease),
     opacity .18s var(--ui-ease), transform .18s var(--ui-ease);
@@ -420,9 +422,13 @@ button:disabled {
 .stats-overview strong { color: var(--d-fg); font-size: 28px; font-variant-numeric: tabular-nums; }
 /* 暗色不再单独覆盖 border-left-color / strong 颜色：--d 与 --d-fg 本身随 html.dark 分流 */
 .dark .stats-overview { border-color: rgb(51 65 85 / .8); background: #111827; }
-.timer-empty { background: #fff; }
-.dark .timer-empty { background: #111827; }
+.dark .stats-overview span,
+.dark .stats-overview small { color: rgb(156 163 175 / .9); }
+/* 空闲态卡片走玻璃（与快速开始面板、极光背景统一），不再写死纯白 */
+.timer-empty { background: var(--glass-bg); backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur); }
 .timer-tag { min-height: 44px; border-radius: var(--radius-ctl) !important; box-shadow: none; }
+/* 弹窗面板内滚动不向背后页面链式传递 */
+[role="dialog"] { overscroll-behavior: contain; }
 
 .page-card {
   border: 1px solid rgb(209 213 219 / .9);

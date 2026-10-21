@@ -143,7 +143,7 @@ export default function PlansPage({ embedded = false }: { embedded?: boolean } =
 
       <div className="flex flex-wrap items-end justify-between gap-3 border-b border-gray-200 pb-3 dark:border-gray-800">
         <div><div className="text-lg font-semibold">{selectedDateValue.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' })}</div><div className="mt-1 text-xs text-gray-500">计划 {sortedPlans.length} 项 · {formatDuration(sortedPlans.reduce((sum, plan) => sum + plan.plannedMs!, 0))} <span className="px-1.5">|</span> 实际计时 {formatDuration(actualSummary.elapsedMs)} · {actualBlocks.length} 条记录{actualSummary.countEntries ? `（含 ${actualSummary.countEntries} 次数打卡）` : ''}</div></div>
-        <button type="button" onClick={createNextPlan} className="inline-flex items-center gap-1.5 rounded-lg bg-teal-700 px-3 py-2 text-sm font-medium text-white hover:bg-teal-800"><Plus size={16} />写计划</button>
+        <button type="button" onClick={createNextPlan} className="btn-primary inline-flex items-center gap-1.5 px-3.5 py-2 text-sm"><Plus size={16} />写计划</button>
       </div>
 
       {error && <div role="alert" className="flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">{error}<button type="button" onClick={() => void load()} className="underline">重试</button></div>}
@@ -164,7 +164,7 @@ export default function PlansPage({ embedded = false }: { embedded?: boolean } =
               {selectedDate === today && <CurrentTimeLine now={now} />}
               {sortedPlans.map((plan) => <PlanTimelineBlock key={plan.id} plan={plan} layout={planLayouts.get(plan.id)!} onClick={() => { setDraftStart(plan.startMinute); setEditing(plan) }} />)}
               {loading && <div className="absolute inset-x-1 top-4 rounded bg-white/90 py-2 text-center text-[0.667rem] text-gray-500 dark:bg-gray-900/90 sm:inset-x-4 sm:text-xs">正在加载…</div>}
-              {!loading && sortedPlans.length === 0 && <div className="pointer-events-none absolute inset-x-4 top-1/2 -translate-y-1/2 text-center text-xs text-gray-400">双击空白处写计划</div>}
+              {!loading && sortedPlans.length === 0 && <div className="pointer-events-none absolute inset-x-4 top-1/2 -translate-y-1/2 text-center text-xs text-gray-400">点击空白处写计划</div>}
             </div>
             <div className="relative min-w-0" onClick={addActualFromTimeline}>
               <TimelineGrid />
