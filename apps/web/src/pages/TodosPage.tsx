@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { createPortal } from 'react-dom'
 import { api } from '../api'
 import { useStore } from '../store'
 import type { Goal, Todo } from '../types'
-import { MoreHorizontal, Pencil, Play, Trash2 } from 'lucide-react'
+import { Pencil, Play, Trash2 } from 'lucide-react'
 import { PageHeader } from '../components/PageHeader'
 import { CategoryBadge } from '../components/CategoryBadge'
 import { ConfirmDialog } from '../components/ConfirmDialog'
@@ -165,6 +166,7 @@ export default function TodosPage({ embedded = false }: { embedded?: boolean } =
   const [togglingIds, setTogglingIds] = useState<Set<string>>(new Set())
   const [reasonPrompt, setReasonPrompt] = useState<{ kind: 'restore' | 'late'; todoId: string } | null>(null)
   const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null)
+  const todosRef = useRef<Todo[]>([])
   const loadSequence = useRef(0)
   const statusTablistRef = useRef<HTMLDivElement>(null)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -184,6 +186,7 @@ export default function TodosPage({ embedded = false }: { embedded?: boolean } =
     try {
       const all = await api.todos.list()
       if (sequence !== loadSequence.current) return
+      todosRef.current = all
       setTodos(all)
       void syncActivityNotifications(all)
       setDataReady(true)
@@ -232,9 +235,13 @@ export default function TodosPage({ embedded = false }: { embedded?: boolean } =
     try {
       // 播报要在 toggle 之前取旧状态：done→pending 是「恢复」，pending→done 是「完成」（分级表 §2.2）
       const todo = todos.find((item) => item.id === id)
-      await api.todos.toggle(id, lateReason, restoreReason)
+      const updated = await api.todos.toggle(id, lateReason, restoreReason)
       if (todo) announce(todo.status === 'done' ? `已恢复为未完成：${todo.title}` : `已完成：${todo.title}`)
-      await load()
+      // 直接用接口返回值更新本地列表，让当前项移走后下一项马上可操作。
+      const nextTodos = todosRef.current.map((item) => item.id === id ? { ...item, ...updated } : item)
+      todosRef.current = nextTodos
+      setTodos(nextTodos)
+      void syncActivityNotifications(nextTodos)
     } catch (e) {
       showError(e instanceof Error ? e.message : '更新待办状态失败')
     } finally {
@@ -662,10 +669,9 @@ function TodoCard({
    *  （用于编辑态复用等不该重播动画的场景）。 */
   animationDelay?: number
 }) {
-  const [menuOpen, setMenuOpen] = useState(false)
   return (
     <div
-      className={`group flex items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors ${
+      className={`group relative flex flex-wrap items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors sm:flex-nowrap ${
         isDone ? 'bg-green-50/70 border-green-200 dark:bg-green-950/20 dark:border-green-900/60' : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800'
       } ${animationDelay !== undefined ? 'motion-safe:animate-list-in' : ''}`}
       style={animationDelay !== undefined ? { animationDelay: `${animationDelay}ms` } : undefined}
@@ -683,7 +689,7 @@ function TodoCard({
           {isDone && <span className="text-[0.667rem]">✓</span>}
         </span>
       </button>
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0 flex-1">
         <div className={`text-sm font-medium ${todo.status === 'done' ? 'line-through text-gray-400' : ''}`}>
           {/* 优先级不能只靠色点（A11Y §2.3）：emoji 对读屏不可预期，补 sr-only 文字 */}
           {todo.priority === 2 && <><span className="text-red-500 mr-1" aria-hidden="true">🔴</span><span className="sr-only">紧急：</span></>}
@@ -721,10 +727,8 @@ function TodoCard({
           )}
         </div>
       </div>
-      {/* 操作区：移动端只留「计时 + ⋯」，编辑/删除收进菜单；桌面 hover 展开。
-          视觉 28px 不变，用伪元素把触达热区外扩到 44px；gap-4 = 16px 保证两条 44px 热区恰好相接不相叠（WCAG 2.5.8）。
-          桌面上 opacity-0 的按钮同时 pointer-events-none，避免「看不见却能点中」的陷阱，hover/焦点内才恢复。 */}
-      <div className="relative flex shrink-0 items-center gap-4 whitespace-nowrap">
+      {/* 手机上把操作放到独立行，避免卡片内容挤住编辑和删除；桌面仍在悬停/聚焦时显示。 */}
+      <div className="relative flex basis-full shrink-0 items-center justify-end gap-2 pl-9 whitespace-nowrap sm:basis-auto sm:gap-4 sm:pl-0">
         {todo.status === 'pending' && todo.categoryId && (
           running.some((r) => r.todoId === todo.id) ? (
             <span className="inline-flex items-center gap-1 px-1.5 text-xs text-green-600 dark:text-green-400" title="计时中">
@@ -736,7 +740,7 @@ function TodoCard({
               onClick={() => onPickTag(todo)}
               title="开始计时"
               aria-label={`开始计时：${todo.title}`}
-              className="relative grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-brand-50 hover:text-brand-700 after:absolute after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] dark:hover:bg-brand-900/30 dark:hover:text-brand-300"
+              className="relative grid h-10 w-10 place-items-center rounded-md text-gray-400 hover:bg-brand-50 hover:text-brand-700 after:absolute after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] dark:hover:bg-brand-900/30 dark:hover:text-brand-300 sm:h-7 sm:w-7"
             >
               <Play className="h-3.5 w-3.5" aria-hidden="true" />
             </button>
@@ -747,7 +751,7 @@ function TodoCard({
           onClick={() => onEdit(todo)}
           title="编辑"
           aria-label={`编辑：${todo.title}`}
-          className="relative hidden h-7 w-7 place-items-center rounded-md text-gray-400 transition-opacity hover:bg-gray-100 hover:text-gray-700 after:absolute after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] dark:hover:bg-gray-800 dark:hover:text-gray-200 sm:grid sm:pointer-events-none sm:opacity-0 sm:group-hover:pointer-events-auto sm:group-hover:opacity-100 sm:group-focus-within:pointer-events-auto sm:group-focus-within:opacity-100"
+          className="relative grid h-10 w-10 place-items-center rounded-md text-gray-500 hover:bg-gray-100 hover:text-gray-800 after:absolute after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200 sm:h-7 sm:w-7 sm:pointer-events-none sm:opacity-0 sm:transition-opacity sm:group-hover:pointer-events-auto sm:group-hover:opacity-100 sm:group-focus-within:pointer-events-auto sm:group-focus-within:opacity-100"
         >
           <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
@@ -756,32 +760,10 @@ function TodoCard({
           onClick={() => onDelete(todo.id)}
           title="删除"
           aria-label={`删除：${todo.title}`}
-          className="relative hidden h-7 w-7 place-items-center rounded-md text-gray-400 transition-opacity hover:bg-red-50 hover:text-red-600 after:absolute after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] dark:hover:bg-red-950/40 dark:hover:text-red-400 sm:grid sm:pointer-events-none sm:opacity-0 sm:group-hover:pointer-events-auto sm:group-hover:opacity-100 sm:group-focus-within:pointer-events-auto sm:group-focus-within:opacity-100"
+          className="relative grid h-10 w-10 place-items-center rounded-md text-gray-500 hover:bg-red-50 hover:text-red-600 after:absolute after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] dark:text-gray-400 dark:hover:bg-red-950/40 dark:hover:text-red-400 sm:h-7 sm:w-7 sm:pointer-events-none sm:opacity-0 sm:transition-opacity sm:group-hover:pointer-events-auto sm:group-hover:opacity-100 sm:group-focus-within:pointer-events-auto sm:group-focus-within:opacity-100"
         >
           <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
         </button>
-        <button
-          type="button"
-          onClick={() => setMenuOpen((open) => !open)}
-          aria-expanded={menuOpen}
-          aria-label={`更多操作：${todo.title}`}
-          className="relative grid h-7 w-7 place-items-center rounded-md text-gray-400 hover:bg-gray-100 after:absolute after:h-11 after:w-11 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[''] dark:hover:bg-gray-800 sm:hidden"
-        >
-          <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
-        </button>
-        {menuOpen && (
-          <>
-            <div className="fixed inset-0 z-30" onClick={() => setMenuOpen(false)} aria-hidden="true" />
-            <div className="absolute right-0 top-8 z-40 w-28 rounded-ctl border border-gray-200 bg-white py-1 shadow-float dark:border-gray-700 dark:bg-gray-800" role="menu">
-              <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); onEdit(todo) }} className="flex min-h-[44px] w-full items-center gap-2 px-3 py-2 text-left text-xs text-gray-700 hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-700">
-                <Pencil className="h-3.5 w-3.5" aria-hidden="true" />编辑
-              </button>
-              <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); onDelete(todo.id) }} className="flex min-h-[44px] w-full items-center gap-2 px-3 py-2 text-left text-xs text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40">
-                <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />删除
-              </button>
-            </div>
-          </>
-        )}
       </div>
     </div>
   )
@@ -845,8 +827,9 @@ function TodoEditModal({ todo, categories, tags, onClose, onSaved }: {
 
   return (
     // 遮罩用 onMouseDown 关闭（A11Y §1.4）：按住拖拽选择文本时 onClick 会误关
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" role="dialog" aria-modal="true" aria-labelledby="todo-edit-title" onMouseDown={onClose}>
-      <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-md mx-4" onClick={(e) => e.stopPropagation()}>
+    createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-3 sm:p-4" role="dialog" aria-modal="true" aria-labelledby="todo-edit-title" onMouseDown={onClose}>
+      <div className="my-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-4 dark:bg-gray-900 sm:max-h-[calc(100dvh-2rem)] sm:p-6" onClick={(e) => e.stopPropagation()}>
         <h3 id="todo-edit-title" className="text-lg font-semibold mb-4">编辑待办</h3>
         <div className="space-y-4">
           <label className="block text-sm text-gray-500">
@@ -963,7 +946,7 @@ function TodoEditModal({ todo, categories, tags, onClose, onSaved }: {
           </button>
         </div>
       </div>
-    </div>
+    </div>, document.body)
   )
 }
 
@@ -989,8 +972,8 @@ function TagPickerModal({ todo, tags, onClose, onPick }: {
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose])
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" role="dialog" aria-modal="true" aria-labelledby="todo-tagpick-title" onMouseDown={onClose}>
+  return createPortal(
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-3 sm:p-4" role="dialog" aria-modal="true" aria-labelledby="todo-tagpick-title" onMouseDown={onClose}>
       <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
         <h3 id="todo-tagpick-title" className="text-lg font-semibold mb-1">选择标签开始计时</h3>
         <p className="text-sm text-gray-400 mb-4">{todo.title}</p>
@@ -1019,6 +1002,5 @@ function TagPickerModal({ todo, tags, onClose, onPick }: {
           </button>
         </div>
       </div>
-    </div>
-  )
+    </div>, document.body)
 }
