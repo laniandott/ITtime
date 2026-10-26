@@ -269,24 +269,20 @@ export default function TodosPage({ embedded = false }: { embedded?: boolean } =
     await applyToggle(id)
   }
 
+  // 空值校验放在退场动画之前（PromptDialog validate）：未通过时弹窗原地保留并显示顶部错误条，
+  // 不会先播退场再闪退回
+  const validateReason = (rawReason: string) => {
+    if (rawReason.trim()) return true
+    showError(reasonPrompt?.kind === 'restore' ? '恢复未完成必须填写原因' : '超时完成必须填写原因')
+    return false
+  }
+
   const confirmReasonPrompt = async (rawReason: string) => {
     if (!reasonPrompt) return
     const reason = rawReason.trim()
-    if (reasonPrompt.kind === 'restore') {
-      if (!reason) {
-        showError('恢复未完成必须填写原因')
-        return
-      }
-      setReasonPrompt(null)
-      await applyToggle(reasonPrompt.todoId, undefined, reason)
-    } else {
-      if (!reason) {
-        showError('超时完成必须填写原因')
-        return
-      }
-      setReasonPrompt(null)
-      await applyToggle(reasonPrompt.todoId, reason)
-    }
+    setReasonPrompt(null)
+    if (reasonPrompt.kind === 'restore') await applyToggle(reasonPrompt.todoId, undefined, reason)
+    else await applyToggle(reasonPrompt.todoId, reason)
   }
 
   const remove = async (id: string) => {
@@ -354,8 +350,10 @@ export default function TodosPage({ embedded = false }: { embedded?: boolean } =
     if (nextIndex === null) return
     event.preventDefault()
     const nextId = ids[nextIndex]
-    setFilters({ view: nextId })
-    if (nextId === 'done') setFilters({ scope: 'all' })
+    // view 与 scope 必须合并成一次 setFilters：setSearchParams 的函数式更新基于
+    // 同一渲染快照的 searchParams，连续两次调用会互相覆盖（第二次只带 scope 时
+    // view=done 会丢失，切不到「已完成」）。
+    setFilters(nextId === 'done' ? { view: nextId, scope: 'all' } : { view: nextId })
     statusTablistRef.current?.querySelector<HTMLButtonElement>(`[data-tab-id="${nextId}"]`)?.focus()
   }
 
@@ -407,10 +405,7 @@ export default function TodosPage({ embedded = false }: { embedded?: boolean } =
                     aria-selected={statusView === value}
                     aria-controls="todo-status-panel"
                     tabIndex={statusView === value ? 0 : -1}
-                    onClick={() => {
-                      setFilters({ view: value })
-                      if (value === 'done') setFilters({ scope: 'all' })
-                    }}
+                    onClick={() => setFilters(value === 'done' ? { view: value, scope: 'all' } : { view: value })}
                     className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${statusView === value ? 'bg-white text-brand shadow-sm dark:bg-gray-700 dark:text-brand-300' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'}`}
                   >
                     {label}
@@ -567,6 +562,7 @@ export default function TodosPage({ embedded = false }: { embedded?: boolean } =
         message={reasonPrompt?.kind === 'restore' ? '请填写恢复未完成的原因' : '这项活动已经超时，请填写原因'}
         label="原因"
         confirmLabel="确定"
+        validate={validateReason}
         onConfirm={(value) => void confirmReasonPrompt(value)}
         onCancel={() => setReasonPrompt(null)}
       />
@@ -826,9 +822,11 @@ function TodoEditModal({ todo, categories, tags, onClose, onSaved }: {
   }
 
   return (
-    // 遮罩用 onMouseDown 关闭（A11Y §1.4）：按住拖拽选择文本时 onClick 会误关
+    // 遮罩用 onMouseDown 关闭（A11Y §1.4）：按住拖拽选择文本时 onClick 会误关。
+    // 必须只在命中遮罩自身时关闭：面板只拦截 onClick，若不判断 target，
+    // 面板内任何鼠标按下（点下拉框/按钮/输入框）都会冒泡到遮罩把弹窗强制关掉。
     createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-3 sm:p-4" role="dialog" aria-modal="true" aria-labelledby="todo-edit-title" onMouseDown={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-3 sm:p-4" role="dialog" aria-modal="true" aria-labelledby="todo-edit-title" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
       <div className="my-auto max-h-[calc(100dvh-1.5rem)] w-full max-w-md overflow-y-auto rounded-2xl bg-white p-4 dark:bg-gray-900 sm:max-h-[calc(100dvh-2rem)] sm:p-6" onClick={(e) => e.stopPropagation()}>
         <h3 id="todo-edit-title" className="text-lg font-semibold mb-4">编辑待办</h3>
         <div className="space-y-4">
@@ -973,7 +971,7 @@ function TagPickerModal({ todo, tags, onClose, onPick }: {
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose])
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-3 sm:p-4" role="dialog" aria-modal="true" aria-labelledby="todo-tagpick-title" onMouseDown={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/40 p-3 sm:p-4" role="dialog" aria-modal="true" aria-labelledby="todo-tagpick-title" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}>
       <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-sm mx-4" onClick={(e) => e.stopPropagation()}>
         <h3 id="todo-tagpick-title" className="text-lg font-semibold mb-1">选择标签开始计时</h3>
         <p className="text-sm text-gray-400 mb-4">{todo.title}</p>

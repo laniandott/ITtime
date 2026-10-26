@@ -9,7 +9,9 @@ import { useClosing } from './ConfirmDialog'
  * 与 ConfirmDialog 同一套遮罩/面板/动效/焦点规范；额外提供：
  * - 每次打开重置为 defaultValue 并聚焦选中输入框，保持原生 prompt 的默认值语义；
  * - 表单提交（Enter 或点「确定」）把原始字符串交给 onConfirm——
- *   空值/校验语义由调用方决定（各调用点原有逻辑不同，不在组件内裁剪）。
+ *   空值/校验语义由调用方决定（各调用点原有逻辑不同，不在组件内裁剪）；
+ * - validate 在退场动画启动前同步执行，返回 false 表示校验未通过、弹窗原地保留
+ *   （由调用方自行提示错误）。没有这一层时，校验失败要等退场播完才发现，弹窗只能闪退回。
  */
 export function PromptDialog({
   open,
@@ -20,6 +22,7 @@ export function PromptDialog({
   defaultValue = '',
   confirmLabel = '确定',
   cancelLabel = '取消',
+  validate,
   onConfirm,
   onCancel,
 }: {
@@ -31,6 +34,8 @@ export function PromptDialog({
   defaultValue?: string
   confirmLabel?: string
   cancelLabel?: string
+  /** 同步校验；返回 false 时不启动退场、弹窗保持打开（错误提示由调用方负责）。 */
+  validate?: (value: string) => boolean
   onConfirm: (value: string) => void | Promise<void>
   onCancel: () => void
 }) {
@@ -80,6 +85,8 @@ export function PromptDialog({
         onClick={(event) => event.stopPropagation()}
         onSubmit={(event) => {
           event.preventDefault()
+          // 校验先行：未通过就原地保留弹窗，不播退场
+          if (validate && !validate(value)) return
           // 确认与取消同一套两段式关闭：closing 期间防重入，退场结束后再提交
           request(() => onConfirm(value))
         }}

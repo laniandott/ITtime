@@ -12,18 +12,29 @@ import { announce } from '../announce'
  * 所有关闭路径（取消/Esc/遮罩/确认）共用同一个 closing 状态：
  * 退场播放中任何路径再触发都会被拦截（防重入）。
  * request(done) 供非取消路径（如确认）走同一套退场——
- * 延迟到动画结束后才调用，父组件随后的同步 setXxx(null) 卸载时退场已完成。
+ * 延迟结束后才复位 closing 并调用 done，父组件随后的同步 setXxx(null) 卸载时退场已完成。
  * close 内部走 request(onCancel)，无参、可直接作事件处理器。
+ *
+ * 复位是关键：弹窗在 open=false 后只是返回 null，组件实例与 hooks 状态仍存活。
+ * closing 若不复位，下一次打开会直接带着 data-closing 渲染——退场动画一闪而过，
+ * 遮罩停在 opacity:0 却仍 fixed inset-0 拦截全部点击，页面看起来「闪一下后全部按钮失效」。
+ * 防重入改用 ref：它只在 190ms 退场窗口内为 true，不受状态复位时序影响。
  */
 export function useClosing(onDone: () => void) {
   const [closing, setClosing] = useState(false)
+  const busyRef = useRef(false)
   const request = useCallback((done: () => void) => {
-    if (closing) return
+    if (busyRef.current) return
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
     if (reduce) { done(); return }
+    busyRef.current = true
     setClosing(true)
-    window.setTimeout(done, 190)
-  }, [closing])
+    window.setTimeout(() => {
+      busyRef.current = false
+      setClosing(false)
+      done()
+    }, 190)
+  }, [])
   const close = useCallback(() => request(onDone), [request, onDone])
   return { closing, close, request }
 }
