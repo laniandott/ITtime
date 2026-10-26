@@ -92,10 +92,8 @@ async function getTag(tagId: unknown, categoryId: unknown, reply: FastifyReply) 
     reply.code(404).send({ error: '标签不存在' })
     return null
   }
-  if (!tag.parentId) {
-    reply.code(400).send({ error: '活动必须挂在二级标签下' })
-    return null
-  }
+  // 活动标签只关联一级标签（二级标签是 todo/习惯的来源，不参与计时等）；
+  // 兼容历史数据挂在二级上，这里不再限制层级。
   if (categoryId && tag.categoryId !== categoryId) {
     reply.code(400).send({ error: '活动标签必须属于所选分类' })
     return null
@@ -106,10 +104,12 @@ async function getTag(tagId: unknown, categoryId: unknown, reply: FastifyReply) 
 async function recordCompletionInTimeEntry(todo: Pick<TodoRecord, 'title' | 'tagId'>, completedAt: Date) {
   if (!todo.tagId) return
   const activityTag = await prisma.tag.findUnique({ where: { id: todo.tagId }, select: { parentId: true } })
-  if (!activityTag?.parentId) return
+  if (!activityTag) return
+  // 计时挂在一级标签上：活动关联二级（历史来源数据）时归到父一级，直接关联一级时归到自身
+  const entryTagId = activityTag.parentId ?? todo.tagId
   const matchingEntry = await prisma.timeEntry.findFirst({
     where: {
-      tagId: activityTag.parentId,
+      tagId: entryTagId,
       dismissed: false,
       // 只记录到完成瞬间仍在运行的父活动计时中。
       // 已结束的历史计时不应被回填为当前活动的点记录。
@@ -124,7 +124,7 @@ async function recordCompletionInTimeEntry(todo: Pick<TodoRecord, 'title' | 'tag
       content: todo.title,
       type: 'point',
       timeEntryId: matchingEntry.id,
-      tagId: activityTag.parentId,
+      tagId: entryTagId,
       createdAt: completedAt,
     },
   })

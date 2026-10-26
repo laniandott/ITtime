@@ -665,6 +665,10 @@ function TodoCard({
    *  （用于编辑态复用等不该重播动画的场景）。 */
   animationDelay?: number
 }) {
+  // 标签只显示一级（设计：二级标签是 todo/习惯的来源，不参与计时等）：
+  // 历史数据可能挂在二级上，显示时归一到一级父标签，不套娃露出二级。
+  const { tags } = useStore()
+  const displayTag = todo.tag ? (tags.find((t) => t.id === todo.tag!.parentId) ?? todo.tag) : null
   return (
     <div
       className={`group relative flex flex-wrap items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors sm:flex-nowrap ${
@@ -703,9 +707,9 @@ function TodoCard({
         )}
         <div className="flex items-center gap-2 mt-1 flex-wrap">
           {todo.category && <CategoryBadge category={todo.category} />}
-          {todo.tag && (
+          {displayTag && (
             <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-300">
-              {todo.tag.name}
+              {displayTag.name}
             </span>
           )}
           {todo.repeatType !== 'none' && (
@@ -769,7 +773,7 @@ function TodoCard({
 function TodoEditModal({ todo, categories, tags, onClose, onSaved }: {
   todo: Todo
   categories: { id: string; name: string; color: string }[]
-  tags: { id: string; name: string; categoryId: string | null }[]
+  tags: { id: string; name: string; categoryId: string | null; parentId: string | null }[]
   onClose: () => void
   onSaved: () => void
 }) {
@@ -777,7 +781,12 @@ function TodoEditModal({ todo, categories, tags, onClose, onSaved }: {
   const [description, setDescription] = useState(todo.description ?? '')
   const [priority, setPriority] = useState(todo.priority)
   const [categoryId, setCategoryId] = useState(todo.categoryId ?? '')
-  const [tagId, setTagId] = useState(todo.tagId ?? '')
+  // 活动标签只关联一级（设计：二级标签是 todo/习惯的来源，不参与计时等）：
+  // 历史数据挂在二级上时，编辑态归一到其一级父标签。
+  const [tagId, setTagId] = useState(() => {
+    const current = todo.tagId ? tags.find((t) => t.id === todo.tagId) : null
+    return (current?.parentId ? current.parentId : todo.tagId) ?? ''
+  })
   const [repeatType, setRepeatType] = useState(todo.repeatType ?? 'none')
   const [dueDate, setDueDate] = useState(
     todo.dueDate ? new Date(todo.dueDate).toISOString().slice(0, 10) : ''
@@ -900,7 +909,8 @@ function TodoEditModal({ todo, categories, tags, onClose, onSaved }: {
                 活动标签
                 <select value={tagId} onChange={(e) => setTagId(e.target.value)} className="input mt-1" disabled={!categoryId}>
                   <option value="">无活动标签</option>
-                  {tags.filter((tag) => tag.categoryId === categoryId).map((tag) => (
+                  {/* 只列一级标签：二级标签是 todo/习惯的来源，不参与计时等，不套娃列出 */}
+                  {tags.filter((tag) => tag.categoryId === categoryId && !tag.parentId).map((tag) => (
                     <option key={tag.id} value={tag.id}>{tag.name}</option>
                   ))}
                 </select>

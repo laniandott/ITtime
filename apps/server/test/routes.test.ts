@@ -964,7 +964,7 @@ test('完成子活动待办时，只写入正在进行的父活动点记录', as
   assert.notEqual(points[0].timeEntryId, endedEntry.id)
 })
 
-test('标签层级：只能把一级标签设为上级，二级标签不能直接计时', async () => {
+test('标签层级：只能把一级标签设为上级，二级标签不能直接计时，活动可关联一级标签', async () => {
   const category = await prisma.category.create({ data: { name: `层级分类-${Date.now()}` } })
   const root = await app.inject({
     method: 'POST',
@@ -985,10 +985,12 @@ test('标签层级：只能把一级标签设为上级，二级标签不能直�
   const invalidTimer = await app.inject({ method: 'POST', url: '/api/timer/start', payload: { tagId: child.json().id } })
   assert.equal(invalidTimer.statusCode, 400)
 
-  const invalidActivity = await app.inject({
+  // 设计：活动标签只关联一级（二级是 todo/习惯的来源，不参与计时等），挂一级应创建成功
+  const activity = await app.inject({
     method: 'POST',
     url: '/api/todos',
-    payload: { title: '不能挂一级标签', categoryId: category.id, tagId: parent.id },
+    payload: { title: '活动挂一级标签', categoryId: category.id, tagId: parent.id },
   })
-  assert.equal(invalidActivity.statusCode, 400)
+  assert.equal(activity.statusCode, 200)
+  assert.equal(activity.json().tagId, parent.id)
 })
